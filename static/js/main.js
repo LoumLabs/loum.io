@@ -470,9 +470,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             padding: 15,
                             stepSize: 1,
                             callback: function(value) {
-                                return value === 0 ? '0 dB' : 
-                                       value === -37 ? '-37 dB' :
-                                       value % 4 === 0 ? value + ' dB' : value;
+                                if (value === 0) return '0 dB';
+                                if (value === -37) return '-37 dB';
+                                return value;
                             }
                         },
                         title: {
