@@ -277,48 +277,71 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${file.name}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     }
 
-    // File selection and removal
-    fileList.addEventListener('click', (e) => {
-        const item = e.target.closest('.file-list-item');
-        if (item) {
-            item.classList.toggle('selected');
-            const index = parseInt(item.dataset.index);
-            if (item.classList.contains('selected')) {
-                selectedFiles.add(index);
-            } else {
-                selectedFiles.delete(index);
-            }
-        }
-    });
-
-    removeSelectedBtn.addEventListener('click', () => {
-        const indicesToRemove = Array.from(selectedFiles).sort((a, b) => b - a);
-        for (const index of indicesToRemove) {
+    function removeFiles(indices) {
+        // Remove files from fileListData
+        indices.sort((a, b) => b - a); // Sort in descending order to avoid index shifting
+        indices.forEach(index => {
+            const filename = fileListData[index].name;
             fileListData.splice(index, 1);
-        }
+            
+            // Remove from all results tables
+            removeFromTable('#file-info tbody', filename);
+            removeFromTable('#loudness-results tbody', filename);
+            removeFromTable('#multiband-rms tbody', filename);
+            removeFromTable('#multiband-ratios tbody', filename);
+        });
+        
+        // Clear selected files and update display
         selectedFiles.clear();
         updateFileList();
+
+        // Clear chart if no files remain
+        if (fileListData.length === 0 && window.multibandChart) {
+            window.multibandChart.destroy();
+            window.multibandChart = null;
+            chartDataHash = null;
+            currentChartData = null;
+        }
+    }
+
+    function removeFromTable(tableSelector, filename) {
+        const tbody = document.querySelector(tableSelector);
+        if (!tbody) return;
+        
+        const rows = tbody.getElementsByTagName('tr');
+        for (let i = rows.length - 1; i >= 0; i--) {
+            if (rows[i].cells[0].textContent === filename) {
+                tbody.deleteRow(i);
+            }
+        }
+    }
+
+    // Event listeners for file removal
+    removeSelectedBtn.addEventListener('click', () => {
+        if (!isProcessing && selectedFiles.size > 0) {
+            removeFiles(Array.from(selectedFiles));
+        }
     });
 
     clearFilesBtn.addEventListener('click', () => {
-        fileListData = [];
-        selectedFiles.clear();
-        updateFileList();
-        
-        // Clear all tables
-        ['#file-info tbody', '#loudness-results tbody', '#multiband-rms tbody', '#multiband-ratios tbody']
-            .forEach(selector => {
-                const tbody = document.querySelector(selector);
-                if (tbody) tbody.innerHTML = '';
-            });
-
-        // Clear chart
-        if (window.multibandChart) {
-            window.multibandChart.destroy();
-            window.multibandChart = null;
+        if (!isProcessing) {
+            removeFiles(Array.from(fileListData.keys()));
         }
-        chartDataHash = null;
-        currentChartData = null;
+    });
+
+    // File selection handling
+    fileList.addEventListener('click', (e) => {
+        const item = e.target.closest('.file-list-item');
+        if (!item) return;
+
+        const index = parseInt(item.dataset.index);
+        if (selectedFiles.has(index)) {
+            selectedFiles.delete(index);
+            item.classList.remove('selected');
+        } else {
+            selectedFiles.add(index);
+            item.classList.add('selected');
+        }
     });
 
     // Add chart modal HTML
