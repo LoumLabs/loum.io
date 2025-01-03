@@ -144,8 +144,9 @@
         </div>
     </div>
 
-    <!-- Load Chart.js before our scripts -->
+    <!-- Load Chart.js and plugins before our scripts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
 
     <!-- Load JavaScript modules in correct order -->
     <script src="{{ url_for('static', filename='js/filters.js') }}"></script>

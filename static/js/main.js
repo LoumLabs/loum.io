@@ -409,6 +409,12 @@ document.addEventListener('DOMContentLoaded', () => {
             window.multibandChart.destroy();
         }
 
+        // Variables for selection box
+        let isSelecting = false;
+        let startY = 0;
+        let currentY = 0;
+        let selectionBox = null;
+
         // Create frequency bands array
         const frequencyBands = ['Low', 'Mid', 'High'];
 
@@ -448,6 +454,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         bottom: 10,
                         left: 80
                     }
+                },
+                onHover: (event, elements) => {
+                    event.native.target.style.cursor = 'crosshair';
                 },
                 scales: {
                     y: {
@@ -587,7 +596,71 @@ document.addEventListener('DOMContentLoaded', () => {
                     ctx.fillRect(0, 0, chart.width, chart.height);
                     ctx.restore();
                 }
+            }, {
+                id: 'selectionBox',
+                afterDraw: (chart) => {
+                    if (isSelecting && selectionBox) {
+                        const ctx = chart.ctx;
+                        const yAxis = chart.scales.y;
+                        const chartArea = chart.chartArea;
+                        
+                        // Draw selection box
+                        ctx.save();
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                        ctx.lineWidth = 1;
+                        
+                        const boxTop = Math.min(startY, currentY);
+                        const boxHeight = Math.abs(currentY - startY);
+                        
+                        ctx.fillRect(chartArea.left, boxTop, chartArea.right - chartArea.left, boxHeight);
+                        ctx.strokeRect(chartArea.left, boxTop, chartArea.right - chartArea.left, boxHeight);
+
+                        // Draw dB range label
+                        const startDb = yAxis.getValueForPixel(startY);
+                        const currentDb = yAxis.getValueForPixel(currentY);
+                        const dbRange = Math.abs(startDb - currentDb).toFixed(1);
+                        
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                        ctx.font = '12px monospace';
+                        ctx.textAlign = 'right';
+                        const text = `Range: ${dbRange} dB`;
+                        ctx.fillText(text, chartArea.right - 10, boxTop - 5);
+                        
+                        ctx.restore();
+                    }
+                }
             }]
+        });
+
+        // Add mouse event listeners for selection box
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const y = e.clientY - rect.top;
+            
+            if (y >= window.multibandChart.chartArea.top && y <= window.multibandChart.chartArea.bottom) {
+                isSelecting = true;
+                startY = y;
+                currentY = y;
+                selectionBox = { start: y, end: y };
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isSelecting) {
+                const rect = canvas.getBoundingClientRect();
+                currentY = e.clientY - rect.top;
+                selectionBox.end = currentY;
+                window.multibandChart.draw();
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (isSelecting) {
+                isSelecting = false;
+                selectionBox = null;
+                window.multibandChart.draw();
+            }
         });
     }
 
