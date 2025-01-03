@@ -53,6 +53,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Add click handler for upload zone
+    uploadZone.addEventListener('click', () => {
+        if (!isProcessing) {
+            fileInput.click();
+        }
+    });
+
     document.querySelector('.upload-button').addEventListener('click', () => {
         if (!isProcessing) {
             fileInput.click();
@@ -213,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateMultibandTables(results) {
         const rmsTableBody = document.querySelector('#multiband-rms tbody');
-        const ratiosTableBody = document.querySelector('#multiband-ratios tbody');
+        // const ratiosTableBody = document.querySelector('#multiband-ratios tbody');
         const createChartBtn = document.getElementById('create-chart');
 
         results.forEach(result => {
@@ -227,7 +234,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             updateTableRow(rmsTableBody, result.filename, rmsRowContent);
 
-            // Calculate and update ratios
+            // Calculate and update ratios - commented out for now
+            /*
             const lowMidRatio = Math.pow(10, (result.low - result.mid) / 20);
             const midHighRatio = Math.pow(10, (result.mid - result.high) / 20);
             
@@ -238,6 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
 
             updateTableRow(ratiosTableBody, result.filename, ratiosRowContent);
+            */
         });
 
         // Enable chart button if we have data
@@ -344,29 +353,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Add chart modal HTML
-    const chartModal = document.createElement('div');
-    chartModal.className = 'chart-modal';
-    chartModal.style.display = 'none';
-    chartModal.innerHTML = `
-        <div class="chart-modal-content">
-            <span class="close-button">&times;</span>
-            <canvas id="multiband-chart"></canvas>
-        </div>
-    `;
-    document.body.appendChild(chartModal);
-
-    // Chart modal controls
-    const closeButton = chartModal.querySelector('.close-button');
-    closeButton.onclick = () => chartModal.style.display = 'none';
-    window.onclick = (e) => {
-        if (e.target === chartModal) {
-            chartModal.style.display = 'none';
-        }
-    };
-
     // Create Chart button handler
     document.getElementById('create-chart')?.addEventListener('click', () => {
+        console.log('Chart button clicked');
         const rows = document.querySelectorAll('#multiband-rms tbody tr');
         if (!rows || rows.length === 0) {
             showError('No data available to view chart');
@@ -379,31 +368,44 @@ document.addEventListener('DOMContentLoaded', () => {
             mid: parseFloat(row.cells[2].textContent),
             high: parseFloat(row.cells[3].textContent)
         }));
+        console.log('Data prepared:', data);
 
-        // Generate hash of current data
-        const newHash = JSON.stringify(data);
+        // Show modal
+        const modal = document.getElementById('chart-modal');
+        modal.style.display = 'flex';
+        console.log('Modal shown');
 
-        // If data hasn't changed and we have a chart, just show it
-        if (newHash === chartDataHash && window.multibandChart) {
-            chartModal.style.display = 'block';
-            return;
-        }
-
-        // Otherwise, create new chart
+        // Create new chart
         createMultibandChart(data);
-        chartDataHash = newHash;
+        chartDataHash = JSON.stringify(data);
         currentChartData = data;
-        chartModal.style.display = 'block';
+        console.log('Chart created');
+    });
+
+    // Modal close button handler
+    document.querySelector('.close-button')?.addEventListener('click', () => {
+        document.getElementById('chart-modal').style.display = 'none';
+    });
+
+    // Close modal when clicking outside
+    window.addEventListener('click', (event) => {
+        const modal = document.getElementById('chart-modal');
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
     });
 
     function createMultibandChart(data) {
-        const ctx = document.getElementById('multiband-chart').getContext('2d');
+        console.log('Creating chart with data:', data);
+        const canvas = document.getElementById('multiband-chart');
+        console.log('Canvas element:', canvas);
         
-        // Set canvas background to match Python's dark theme
-        ctx.canvas.style.backgroundColor = '#2b2b2b';
+        const ctx = canvas.getContext('2d');
+        console.log('Canvas context:', ctx);
         
         // Destroy existing chart if it exists
         if (window.multibandChart) {
+            console.log('Destroying existing chart');
             window.multibandChart.destroy();
         }
 
@@ -415,16 +417,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Create datasets - one line per file
         const datasets = data.map((fileData, index) => ({
-            label: fileData.filename.replace('.wav', ''),  // Remove .wav extension
+            label: fileData.filename.replace('.wav', ''),
             data: [fileData.low, fileData.mid, fileData.high],
             borderColor: colors[index],
-            backgroundColor: 'transparent',
-            borderWidth: 2.5,
-            pointRadius: 7,
-            pointHoverRadius: 9,
-            tension: 0,
-            pointStyle: 'circle'
+            backgroundColor: colors[index],
+            borderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            tension: 0.1,
+            pointStyle: 'circle',
+            fill: false
         }));
+
+        console.log('Creating new chart with datasets:', datasets);
 
         window.multibandChart = new Chart(ctx, {
             type: 'line',
@@ -435,12 +440,13 @@ document.addEventListener('DOMContentLoaded', () => {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                aspectRatio: 0.01,
                 layout: {
                     padding: {
-                        top: 40,
+                        top: 20,
                         right: 60,
-                        bottom: 40,
-                        left: 70
+                        bottom: 10,
+                        left: 80
                     }
                 },
                 scales: {
@@ -449,39 +455,50 @@ document.addEventListener('DOMContentLoaded', () => {
                         min: -37,
                         max: 0,
                         grid: {
-                            color: 'rgba(85, 85, 85, 0.7)',
-                            lineWidth: 1,
+                            color: function(context) {
+                                if (context.tick && context.tick.value % 5 === 0) {
+                                    return 'rgba(255, 255, 255, 0.15)';
+                                }
+                                return 'rgba(255, 255, 255, 0.05)';
+                            },
+                            lineWidth: function(context) {
+                                if (context.tick && context.tick.value % 5 === 0) {
+                                    return 1;
+                                }
+                                return 0.5;
+                            },
                             drawBorder: true,
-                            borderColor: '#555555',
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
                             tickLength: 10,
                             drawTicks: true,
-                            offset: false
+                            offset: false,
+                            display: true
                         },
                         border: {
                             width: 1,
-                            color: '#555555'
+                            color: 'rgba(255, 255, 255, 0.1)'
                         },
                         ticks: {
-                            color: 'white',
+                            color: 'rgba(255, 255, 255, 0.8)',
                             font: {
-                                size: 14,
+                                size: 11,
                                 family: 'monospace'
                             },
-                            padding: 15,
+                            padding: 8,
                             stepSize: 1,
+                            autoSkip: false,
+                            maxRotation: 0,
                             callback: function(value) {
-                                if (value === 0) return '0 dB';
-                                if (value === -37) return '-37 dB';
-                                return value;
+                                return value % 5 === 0 ? value : '';
                             }
                         },
                         title: {
                             display: true,
                             text: 'RMS Level (dB)',
-                            color: 'white',
+                            color: 'rgba(255, 255, 255, 0.8)',
                             font: {
-                                size: 14,
-                                weight: 'bold',
+                                size: 12,
+                                weight: 'normal',
                                 family: 'monospace'
                             },
                             padding: {
@@ -492,38 +509,38 @@ document.addEventListener('DOMContentLoaded', () => {
                     },
                     x: {
                         grid: {
-                            color: 'rgba(85, 85, 85, 0.7)',
-                            lineWidth: 1,
+                            color: 'rgba(255, 255, 255, 0.05)',
+                            lineWidth: 0.5,
                             drawBorder: true,
-                            borderColor: '#555555',
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
                             tickLength: 10,
                             drawTicks: true,
                             offset: false
                         },
                         border: {
                             width: 1,
-                            color: '#555555'
+                            color: 'rgba(255, 255, 255, 0.1)'
                         },
                         ticks: {
-                            color: 'white',
+                            color: 'rgba(255, 255, 255, 0.8)',
                             font: {
-                                size: 14,
+                                size: 12,
                                 family: 'monospace'
                             },
-                            padding: 15
+                            padding: 12
                         },
                         title: {
                             display: true,
                             text: 'Frequency Bands',
-                            color: 'white',
+                            color: 'rgba(255, 255, 255, 0.8)',
                             font: {
-                                size: 14,
-                                weight: 'bold',
+                                size: 12,
+                                weight: 'normal',
                                 family: 'monospace'
                             },
                             padding: {
-                                top: 25,
-                                bottom: 15
+                                top: 15,
+                                bottom: 10
                             }
                         }
                     }
@@ -532,31 +549,31 @@ document.addEventListener('DOMContentLoaded', () => {
                     title: {
                         display: true,
                         text: 'Multiband RMS Analysis',
-                        color: 'white',
+                        color: 'rgba(255, 255, 255, 0.9)',
                         font: {
-                            size: 18,
-                            weight: 'bold',
+                            size: 16,
+                            weight: 'normal',
                             family: 'monospace'
                         },
                         padding: {
-                            top: 25,
-                            bottom: 35
+                            top: 20,
+                            bottom: 25
                         }
                     },
                     legend: {
                         position: 'top',
                         align: 'start',
                         labels: {
-                            color: 'white',
-                            padding: 25,
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            padding: 20,
                             usePointStyle: true,
                             pointStyle: 'circle',
                             font: {
-                                size: 14,
+                                size: 12,
                                 family: 'monospace'
                             },
-                            boxWidth: 12,
-                            boxHeight: 12
+                            boxWidth: 8,
+                            boxHeight: 8
                         }
                     }
                 }

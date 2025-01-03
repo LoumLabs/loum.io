@@ -105,7 +105,7 @@
                     </div>
 
                     <!-- Ratios Table -->
-                    <div class="table-container">
+                    <div class="table-container" style="display: none;">
                         <table id="multiband-ratios" class="results-table">
                             <thead>
                                 <tr>
@@ -130,6 +130,16 @@
                 <div id="metadata" class="tab-pane">
                     <!-- Metadata content will be added later -->
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart Modal -->
+    <div id="chart-modal" class="chart-modal" style="display: none;">
+        <div class="chart-modal-content">
+            <span class="close-button">&times;</span>
+            <div class="chart-container">
+                <canvas id="multiband-chart"></canvas>
             </div>
         </div>
     </div>
