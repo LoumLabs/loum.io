@@ -10,16 +10,215 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabButtons = document.querySelectorAll('.tab-button');
     const tabPanes = document.querySelectorAll('.tab-pane');
     
+    // Initialize navigation buttons to disabled state
+    document.querySelectorAll('.prev-button').forEach(button => {
+        button.disabled = true;
+    });
+    document.querySelectorAll('.next-button').forEach(button => {
+        button.disabled = true;
+    });
+    
     // State
     let isProcessing = false;
     let selectedFiles = new Set();
     let fileListData = [];
     let audioProcessor = new AudioProcessor();
+    let currentFileIndex = -1;
     
     // Chart state
     let currentChartData = null;
     let chartDataHash = null;
     
+    // Metadata handling
+    let metadataTemplate = localStorage.getItem('metadataTemplate') || '{artist} - {track_name} - {comments}';
+    let defaultEngineer = localStorage.getItem('defaultEngineer') || '';
+    let currentMetadata = null;
+
+    // Metadata settings modal
+    const settingsModal = document.createElement('div');
+    settingsModal.className = 'settings-modal';
+    settingsModal.innerHTML = `
+        <div class="settings-modal-content">
+            <div class="settings-row">
+                <label>Filename Template:</label>
+                <input type="text" id="template-input" value="${metadataTemplate}">
+            </div>
+            <div class="settings-row">
+                <label>Default Engineer:</label>
+                <input type="text" id="engineer-input" value="${defaultEngineer}">
+            </div>
+            <div class="button-container">
+                <button id="save-settings" class="control-button">Save</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(settingsModal);
+
+    // Metadata event handlers
+    document.getElementById('metadata-settings')?.addEventListener('click', () => {
+        settingsModal.style.display = 'flex';
+    });
+
+    settingsModal.addEventListener('click', (e) => {
+        if (e.target === settingsModal) {
+            settingsModal.style.display = 'none';
+        }
+    });
+
+    document.getElementById('save-settings')?.addEventListener('click', () => {
+        metadataTemplate = document.getElementById('template-input').value;
+        defaultEngineer = document.getElementById('engineer-input').value;
+        localStorage.setItem('metadataTemplate', metadataTemplate);
+        localStorage.setItem('defaultEngineer', defaultEngineer);
+        settingsModal.style.display = 'none';
+    });
+
+    document.getElementById('suggest-metadata')?.addEventListener('click', () => {
+        if (!currentMetadata || !fileListData.length) return;
+
+        const currentFile = fileListData[currentFileIndex];
+        const fileName = currentFile.name;
+        const fileNameWithoutExt = fileName.replace(/\.[^/.]+$/, "");
+        
+        // Parse filename using template
+        const parts = fileNameWithoutExt.split(' - ');
+        const templateParts = metadataTemplate.split(' - ');
+        
+        const metadata = {};
+        templateParts.forEach((part, index) => {
+            if (parts[index]) {
+                if (part === '{artist}') metadata.artist = parts[index];
+                if (part === '{track_name}') metadata.title = parts[index];
+                if (part === '{comments}') metadata.comments = parts[index];
+            }
+        });
+
+        // Set suggested values
+        if (metadata.title) setMetadataInputValue('Title', metadata.title);
+        if (metadata.artist) setMetadataInputValue('Artist', metadata.artist);
+        if (defaultEngineer) setMetadataInputValue('Engineer', defaultEngineer);
+    });
+
+    document.getElementById('save-metadata')?.addEventListener('click', async () => {
+        if (!fileListData.length || currentFileIndex === -1) return;
+
+        const currentFile = fileListData[currentFileIndex];
+        
+        // Collect metadata from inputs
+        const metadata = {};
+        document.querySelectorAll('.metadata-input').forEach(input => {
+            const field = input.closest('tr').cells[0].textContent;
+            const value = input.value.trim();
+            if (value) metadata[field] = value;
+        });
+
+        try {
+            // Save metadata using the analyzer
+            const result = await audioProcessor.metadataAnalyzer.saveMetadata(currentFile.file, metadata);
+            if (result.success) {
+                // Store the modified file just for metadata purposes
+                // but keep the original file for audio analysis
+                fileListData[currentFileIndex].metadataFile = result.file;
+                
+                // Update display with new metadata
+                const updatedMetadata = await audioProcessor.metadataAnalyzer.getMetadata(result.file);
+                updateMetadataDisplay(updatedMetadata);
+                
+                // Create download link for the modified file
+                const url = URL.createObjectURL(result.file);
+                const downloadLink = document.createElement('a');
+                downloadLink.href = url;
+                downloadLink.download = result.file.name;
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+                URL.revokeObjectURL(url);
+                
+                showSuccess('Metadata saved successfully');
+            } else {
+                throw new Error(result.error || 'Failed to save metadata');
+            }
+        } catch (error) {
+            showError('Error saving metadata: ' + error.message);
+        }
+    });
+
+    function updateMetadataDisplay(metadata) {
+        currentMetadata = metadata;
+        
+        // Update display
+        Object.entries(metadata).forEach(([field, value]) => {
+            const row = findMetadataRow(field);
+            if (row) {
+                row.cells[1].textContent = value || '';
+                const input = row.cells[2].querySelector('input');
+                if (input) input.value = value || '';
+            }
+        });
+
+        // Clear fields that don't have metadata
+        document.querySelectorAll('#metadata-table tbody tr').forEach(row => {
+            const field = row.cells[0].textContent;
+            if (!metadata[field]) {
+                row.cells[1].textContent = '';
+                const input = row.cells[2].querySelector('input');
+                if (input) input.value = '';
+            }
+        });
+    }
+
+    async function loadMetadata(file) {
+        try {
+            const metadata = await audioProcessor.metadataAnalyzer.getMetadata(file);
+            currentMetadata = metadata;
+
+            // Update display
+            Object.entries(metadata).forEach(([field, value]) => {
+                const row = findMetadataRow(field);
+                if (row) {
+                    row.cells[1].textContent = value || '';
+                    const input = row.cells[2].querySelector('input');
+                    if (input) input.value = value || '';
+                }
+            });
+
+            // Clear fields that don't have metadata
+            document.querySelectorAll('#metadata-table tbody tr').forEach(row => {
+                const field = row.cells[0].textContent;
+                if (!metadata[field]) {
+                    row.cells[1].textContent = '';
+                    const input = row.cells[2].querySelector('input');
+                    if (input) input.value = '';
+                }
+            });
+        } catch (error) {
+            console.error('Error loading metadata:', error);
+            showError('Error loading metadata: ' + error.message);
+            throw error;
+        }
+    }
+
+    function findMetadataRow(field) {
+        const rows = document.querySelectorAll('#metadata-table tbody tr');
+        return Array.from(rows).find(row => row.cells[0].textContent === field);
+    }
+
+    function setMetadataInputValue(field, value) {
+        const row = findMetadataRow(field);
+        if (row) {
+            const input = row.cells[2].querySelector('input');
+            if (input) input.value = value;
+        }
+    }
+
+    function showSuccess(message) {
+        const successDiv = document.createElement('div');
+        successDiv.className = 'success-message';
+        successDiv.textContent = message;
+        document.body.appendChild(successDiv);
+        setTimeout(() => successDiv.remove(), 3000);
+    }
+
     // Initialize tabs
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
@@ -85,13 +284,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             updateFileList();
 
-            // Stage 1: Get file info for all files
-            showProcessingStatus('', 'Stage 1/3: Reading file info...');
+            // Stage 1: Get file info and metadata for all files
+            showProcessingStatus('', 'Stage 1/4: Reading file info and metadata...');
             const fileInfoResults = [];
             for (const file of files) {
                 try {
                     const fileInfo = await audioProcessor.getFileInfo(file);
                     fileInfoResults.push({ filename: file.name, file_info: fileInfo });
+                    
+                    // Load metadata for the file
+                    const metadata = await audioProcessor.metadataAnalyzer.getMetadata(file);
+                    if (metadata) {
+                        updateMetadataDisplay(metadata);
+                    }
                 } catch (error) {
                     console.error(`Error getting file info for ${file.name}:`, error);
                     showError(`Error reading ${file.name}: ${error.message}`);
@@ -100,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateFileInfoTable(fileInfoResults);
 
             // Stage 2: Process loudness for all files
-            showProcessingStatus('', 'Stage 2/3: Analyzing loudness...');
+            showProcessingStatus('', 'Stage 2/4: Analyzing loudness...');
             const loudnessResults = [];
             for (const file of files) {
                 try {
@@ -122,7 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Stage 3: Process multiband for all files
-            showProcessingStatus('', 'Stage 3/3: Analyzing frequency bands...');
+            showProcessingStatus('', 'Stage 3/4: Analyzing frequency bands...');
             const multibandResults = [];
             for (const file of files) {
                 try {
@@ -132,11 +337,43 @@ document.addEventListener('DOMContentLoaded', () => {
                         filename: file.name,
                         ...results
                     });
-                    updateMultibandTables(multibandResults);
+                    updateMultibandTables([...multibandResults]);
                 } catch (error) {
                     console.error(`Error analyzing multiband for ${file.name}:`, error);
                     showError(`Error analyzing ${file.name}: ${error.message}`);
                 }
+            }
+
+            // Initialize navigation buttons state
+            document.querySelectorAll('.prev-button').forEach(button => {
+                button.disabled = true;
+            });
+            document.querySelectorAll('.next-button').forEach(button => {
+                button.disabled = true;
+            });
+
+            // Stage 4: Select the first file and show its metadata
+            showProcessingStatus('', 'Stage 4/4: Loading metadata...');
+            if (fileListData.length > 0) {
+                currentFileIndex = 0;
+                const firstFile = fileListData[0];
+                
+                // Update file name display immediately
+                const fileNameDisplay = document.querySelector('.current-file-name');
+                if (fileNameDisplay) {
+                    fileNameDisplay.textContent = firstFile.name;
+                }
+                
+                // Update all navigation buttons state
+                document.querySelectorAll('.prev-button').forEach(button => {
+                    button.disabled = currentFileIndex <= 0;
+                });
+                document.querySelectorAll('.next-button').forEach(button => {
+                    button.disabled = currentFileIndex >= fileListData.length - 1;
+                });
+                
+                const metadata = await audioProcessor.metadataAnalyzer.getMetadata(firstFile.file);
+                updateMetadataDisplay(metadata);
             }
 
         } finally {
@@ -175,9 +412,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const rowContent = `
                     <td>${result.filename}</td>
-                    <td>${info.format}</td>
-                    <td>${info.sample_rate}</td>
-                    <td>${info.bit_depth}</td>
+                    <td>WAV</td>
+                    <td>${info.sample_rate.toLocaleString()} Hz</td>
+                    <td>${info.bit_depth}-bit</td>
                     <td>${info.duration}</td>
                     <td>${info.file_size}</td>
                 `;
@@ -274,11 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const errorDiv = document.createElement('div');
         errorDiv.className = 'error-message';
         errorDiv.textContent = message;
-        
-        const existingErrors = uploadZone.querySelectorAll('.error-message');
-        existingErrors.forEach(err => err.remove());
-        
-        uploadZone.appendChild(errorDiv);
+        document.body.appendChild(errorDiv);
         setTimeout(() => errorDiv.remove(), 5000);
     }
 
@@ -311,6 +544,31 @@ document.addEventListener('DOMContentLoaded', () => {
             chartDataHash = null;
             currentChartData = null;
         }
+
+        // Clear metadata display if no files remain
+        if (fileListData.length === 0) {
+            currentFileIndex = -1;
+            // Clear file name display
+            const fileNameDisplay = document.querySelector('.current-file-name');
+            if (fileNameDisplay) {
+                fileNameDisplay.textContent = '';
+            }
+            // Clear metadata fields
+            document.querySelectorAll('#metadata-table tbody tr').forEach(row => {
+                row.cells[1].textContent = '';
+                const input = row.cells[2].querySelector('input');
+                if (input) input.value = '';
+            });
+            // Disable navigation buttons
+            const prevButton = document.querySelector('.prev-button');
+            const nextButton = document.querySelector('.next-button');
+            if (prevButton) prevButton.disabled = true;
+            if (nextButton) nextButton.disabled = true;
+        } else {
+            // If files remain, show the first one
+            currentFileIndex = 0;
+            updateMetadataView();
+        }
     }
 
     function removeFromTable(tableSelector, filename) {
@@ -339,11 +597,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // File selection handling
-    fileList.addEventListener('click', (e) => {
+    fileList.addEventListener('click', async (e) => {
         const item = e.target.closest('.file-list-item');
         if (!item) return;
 
         const index = parseInt(item.dataset.index);
+        
+        // Toggle selection for file operations
         if (selectedFiles.has(index)) {
             selectedFiles.delete(index);
             item.classList.remove('selected');
@@ -351,6 +611,17 @@ document.addEventListener('DOMContentLoaded', () => {
             selectedFiles.add(index);
             item.classList.add('selected');
         }
+
+        // Update current file index and immediately update file name display
+        currentFileIndex = index;
+        const currentFile = fileListData[currentFileIndex];
+        const fileNameDisplay = document.querySelector('.current-file-name');
+        if (fileNameDisplay && currentFile) {
+            fileNameDisplay.textContent = currentFile.name;
+        }
+
+        // Update metadata view
+        updateMetadataView();
     });
 
     // Create Chart button handler
@@ -686,5 +957,79 @@ document.addEventListener('DOMContentLoaded', () => {
         if (statusDiv) {
             statusDiv.textContent = '';
         }
+    }
+
+    // Navigation buttons
+    document.querySelectorAll('.prev-button').forEach(button => {
+        button.addEventListener('click', () => {
+            if (currentFileIndex > 0) {
+                currentFileIndex--;
+                updateMetadataView();
+            }
+        });
+    });
+
+    document.querySelectorAll('.next-button').forEach(button => {
+        button.addEventListener('click', () => {
+            if (currentFileIndex < fileListData.length - 1) {
+                currentFileIndex++;
+                updateMetadataView();
+            }
+        });
+    });
+
+    async function updateMetadataView() {
+        // Update current file name display
+        const currentFile = fileListData[currentFileIndex];
+        const fileNameDisplay = document.querySelector('.current-file-name');
+        if (fileNameDisplay) {
+            fileNameDisplay.textContent = currentFile.name;
+        }
+
+        // Update all navigation buttons state
+        document.querySelectorAll('.prev-button').forEach(button => {
+            button.disabled = currentFileIndex <= 0;
+        });
+        document.querySelectorAll('.next-button').forEach(button => {
+            button.disabled = currentFileIndex >= fileListData.length - 1;
+        });
+
+        // Load metadata for current file
+        try {
+            const fileToRead = currentFile.metadataFile || currentFile.file;
+            const metadata = await audioProcessor.metadataAnalyzer.getMetadata(fileToRead);
+            updateMetadataDisplay(metadata);
+        } catch (error) {
+            console.error('Error loading metadata:', error);
+            showError('Error loading metadata: ' + error.message);
+        }
+    }
+
+    // Update file info in the table
+    function updateFileInfo(file, audioBuffer) {
+        const duration = formatDuration(audioBuffer.duration);
+        const sampleRate = audioBuffer.sampleRate;
+        const bitDepth = 16; // WAV files are typically 16-bit
+        const format = 'WAV';
+        
+        const fileInfo = {
+            name: file.name,
+            format: format,
+            sampleRate: `${sampleRate.toLocaleString()} Hz`,
+            bitDepth: `${bitDepth}-bit`,
+            duration: duration,
+            size: formatFileSize(file.size)
+        };
+
+        // Update file info table
+        const table = document.getElementById('file-info-table');
+        const row = table.insertRow(-1);
+        
+        Object.values(fileInfo).forEach(value => {
+            const cell = row.insertCell(-1);
+            cell.textContent = value;
+        });
+
+        return fileInfo;
     }
 }); 

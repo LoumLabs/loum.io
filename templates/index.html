@@ -128,7 +128,44 @@
 
                 <!-- Metadata Tab -->
                 <div id="metadata" class="tab-pane">
-                    <!-- Metadata content will be added later -->
+                    <div class="metadata-header">
+                        <button class="nav-button prev-button" title="Previous file">←</button>
+                        <div class="current-file-name"></div>
+                        <button class="nav-button next-button" title="Next file">→</button>
+                    </div>
+                    <div class="table-container">
+                        <table id="metadata-table" class="results-table">
+                            <thead>
+                                <tr>
+                                    <th>Field</th>
+                                    <th>Current Value</th>
+                                    <th>New Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>Title</td><td></td><td><input type="text" class="metadata-input"></td></tr>
+                                <tr><td>Artist</td><td></td><td><input type="text" class="metadata-input"></td></tr>
+                                <tr><td>Album</td><td></td><td><input type="text" class="metadata-input"></td></tr>
+                                <tr><td>Genre</td><td></td><td><input type="text" class="metadata-input"></td></tr>
+                                <tr><td>Year</td><td></td><td><input type="text" class="metadata-input"></td></tr>
+                                <tr><td>Composer</td><td></td><td><input type="text" class="metadata-input"></td></tr>
+                                <tr><td>Publisher</td><td></td><td><input type="text" class="metadata-input"></td></tr>
+                                <tr><td>Copyright</td><td></td><td><input type="text" class="metadata-input"></td></tr>
+                                <tr><td>ISRC</td><td></td><td><input type="text" class="metadata-input"></td></tr>
+                                <tr><td>Engineer</td><td></td><td><input type="text" class="metadata-input"></td></tr>
+                                <tr><td>Encoder</td><td></td><td><input type="text" class="metadata-input"></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="metadata-buttons">
+                        <button class="nav-button prev-button" title="Previous file">←</button>
+                        <div class="center-group">
+                            <button id="suggest-metadata" class="control-button">Suggest</button>
+                            <button id="save-metadata" class="control-button">Save Metadata</button>
+                            <button id="metadata-settings" class="control-button narrow" title="Metadata Settings">⚙</button>
+                        </div>
+                        <button class="nav-button next-button" title="Next file">→</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -144,11 +181,10 @@
         </div>
     </div>
 
-    <!-- Load Chart.js and plugins before our scripts -->
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
-
-    <!-- Load JavaScript modules in correct order -->
+    <script src="{{ url_for('static', filename='js/metadata.js') }}"></script>
     <script src="{{ url_for('static', filename='js/filters.js') }}"></script>
     <script src="{{ url_for('static', filename='js/loudness.js') }}"></script>
     <script src="{{ url_for('static', filename='js/audioProcessor.js') }}"></script>

@@ -1,69 +1,82 @@
-.chart-modal {
+.modal-backdrop {
     display: none;
     position: fixed;
-    z-index: 1000;
-    left: 0;
     top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 9000;
 }
 
-.chart-modal-content {
-    background-color: #2b2b2b;
-    padding: 30px;
+.modal-backdrop.show {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-dialog {
+    background: #2b2b2b;
+    width: 90vw;
+    height: 90vh;
     border-radius: 8px;
-    width: 80%;
-    max-width: 1200px;
-    height: 80%;
     position: relative;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     display: flex;
     flex-direction: column;
 }
 
-.close-button {
+.modal-header {
+    padding: 15px 20px;
+    position: relative;
+}
+
+.modal-title {
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    font-family: monospace;
+    margin: 0;
+    text-align: center;
+}
+
+.modal-close {
     position: absolute;
-    right: 20px;
-    top: 15px;
+    right: 15px;
+    top: 12px;
     color: #aaa;
     font-size: 24px;
     font-weight: bold;
     cursor: pointer;
-    z-index: 1;
+    background: none;
+    border: none;
+    padding: 0;
+    line-height: 1;
 }
 
-.close-button:hover {
-    color: #fff;
+.modal-close:hover {
+    color: white;
+}
+
+.modal-body {
+    flex: 1;
+    padding: 20px;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-wrapper {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    width: 100%;
+    height: 100%;
 }
 
 #multiband-chart {
-    flex: 1;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
     width: 100% !important;
     height: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-#status-text {
-    text-align: center;
-    margin-top: 15px;
-    color: #3498db;
-    font-size: 0.9em;
-}
-
-/* Remove all other status styles */
-.processing-status,
-.processing-text,
-.status-details,
-.track-progress,
-.sub-status,
-.main-text,
-.stage-text,
-#status-container,
-#processing-status {
-    display: none !important;
 } 

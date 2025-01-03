@@ -1,10 +1,13 @@
-class AudioFilters {
-    constructor() {
-        this.lowMidCrossover = 250;    // Hz
-        this.midHighCrossover = 4000;  // Hz
-        this.filterOrder = 5;          // Butterworth order
-        this.blockSize = 3.0;          // seconds
-        this.stepSize = 1.0;           // seconds
+class FilterAnalyzer {
+    constructor(audioContext) {
+        this.audioContext = audioContext;
+        this.settings = {
+            lowMidCrossover: 250,    // Hz
+            midHighCrossover: 4000,  // Hz
+            filterOrder: 5,          // Butterworth order
+            blockSize: 3.0,          // seconds
+            stepSize: 1.0           // seconds
+        };
     }
 
     async processMultiband(audioBuffer) {
@@ -70,8 +73,7 @@ class AudioFilters {
         // Create a single filter with higher order
         const filter = context.createBiquadFilter();
         filter.type = 'lowpass';
-        filter.frequency.value = this.lowMidCrossover;
-        // Adjust Q to approximate higher order Butterworth
+        filter.frequency.value = this.settings.lowMidCrossover;
         filter.Q.value = Math.SQRT1_2; // 0.707 for Butterworth
         
         // Connect filter
@@ -92,8 +94,7 @@ class AudioFilters {
         // Create a single filter with higher order
         const filter = context.createBiquadFilter();
         filter.type = 'highpass';
-        filter.frequency.value = this.midHighCrossover;
-        // Adjust Q to approximate higher order Butterworth
+        filter.frequency.value = this.settings.midHighCrossover;
         filter.Q.value = Math.SQRT1_2; // 0.707 for Butterworth
         
         // Connect filter
@@ -115,9 +116,9 @@ class AudioFilters {
         const filter = context.createBiquadFilter();
         filter.type = 'bandpass';
         // Use geometric mean of cutoff frequencies for center frequency
-        filter.frequency.value = Math.sqrt(this.lowMidCrossover * this.midHighCrossover);
+        filter.frequency.value = Math.sqrt(this.settings.lowMidCrossover * this.settings.midHighCrossover);
         // Set Q to create the desired bandwidth
-        const bandwidth = this.midHighCrossover - this.lowMidCrossover;
+        const bandwidth = this.settings.midHighCrossover - this.settings.lowMidCrossover;
         filter.Q.value = filter.frequency.value / bandwidth;
         
         // Connect filter
@@ -135,16 +136,16 @@ class AudioFilters {
     }
 
     calculateBlockRMS(samples, sampleRate) {
-        const blockSamples = Math.floor(this.blockSize * sampleRate);
-        const stepSamples = Math.floor(this.stepSize * sampleRate);
+        const blockSamples = Math.floor(this.settings.blockSize * sampleRate);
+        const stepSamples = Math.floor(this.settings.stepSize * sampleRate);
         
-        // Collect all RMS values first, like Python version
+        // Collect all RMS values first
         const rmsValues = [];
         
         for (let start = 0; start < samples.length; start += stepSamples) {
             const end = start + blockSamples;
             if (end > samples.length) {
-                // Handle last block exactly like Python
+                // Handle last block exactly like reference
                 let block = samples.slice(start, samples.length);
                 const paddedBlock = new Float32Array(blockSamples);
                 paddedBlock.set(block);
@@ -186,4 +187,4 @@ class AudioFilters {
 }
 
 // Make it available globally
-window.AudioFilters = AudioFilters; 
+window.FilterAnalyzer = FilterAnalyzer; 

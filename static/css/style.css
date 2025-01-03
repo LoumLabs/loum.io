@@ -73,7 +73,8 @@ body {
 .button-group {
     display: flex;
     justify-content: center;
-    gap: 10px;
+    gap: 20px;
+    margin: 15px 0;
 }
 
 .control-button {
@@ -180,7 +181,7 @@ body {
 
 /* Tab Content */
 .tab-content {
-    padding: 15px;
+    padding: 15px 30px;
     background-color: #2b2b2b;
     flex: 1;
     overflow: auto;
@@ -200,6 +201,7 @@ body {
     width: 100%;
     overflow-x: auto;
     margin-bottom: 20px;
+    max-width: 100%;
 }
 
 /* Base table styles */
@@ -207,12 +209,14 @@ body {
 #file-info-table,
 #loudness-results,
 #multiband-rms,
-#multiband-ratios {
+#multiband-ratios,
+#metadata-table {
     width: 100%;
     border-collapse: collapse;
     background-color: #2b2b2b;
     color: #ffffff;
     font-family: monospace;
+    table-layout: fixed;
 }
 
 /* Header styles */
@@ -240,7 +244,8 @@ body {
 #file-info-table td,
 #loudness-results td,
 #multiband-rms td,
-#multiband-ratios td {
+#multiband-ratios td,
+#metadata-table td {
     padding: 8px 10px;
     border-bottom: 1px solid #1e1e1e;
     white-space: nowrap;
@@ -408,11 +413,11 @@ body {
 
 /* File Info Table */
 #file-info-table th:nth-child(2),
-#file-info-table td:nth-child(2) { width: 8%; }   /* Format */
+#file-info-table td:nth-child(2) { width: 10%; }   /* Format */
 #file-info-table th:nth-child(3),
-#file-info-table td:nth-child(3) { width: 15%; }  /* Sample Rate */
+#file-info-table td:nth-child(3) { width: 12%; }  /* Sample Rate */
 #file-info-table th:nth-child(4),
-#file-info-table td:nth-child(4) { width: 9%; }   /* Bit Depth */
+#file-info-table td:nth-child(4) { width: 10%; }   /* Bit Depth */
 #file-info-table th:nth-child(5),
 #file-info-table td:nth-child(5) { width: 8%; }   /* Duration */
 #file-info-table th:nth-child(6),
@@ -492,4 +497,277 @@ body {
 canvas#multiband-chart {
     width: 100% !important;
     height: 100% !important;
+}
+
+.metadata-input {
+    width: 100%;
+    background-color: #3c3f41;
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid #555;
+    padding: 4px 8px;
+    font-family: monospace;
+    font-size: 14px;
+    border-radius: 3px;
+    transition: all 0.2s;
+    box-sizing: border-box;
+    height: 28px;
+}
+
+.metadata-input:focus {
+    background-color: #4c4f51;
+    border-color: #0078d4;
+    outline: none;
+}
+
+.metadata-input:hover {
+    background-color: #454749;
+    border-color: #666;
+}
+
+/* Metadata table specific styles */
+#metadata-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-bottom: 20px !important;
+    table-layout: fixed !important;
+}
+
+#metadata-table th {
+    background-color: #1e1e1e !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+    font-weight: normal !important;
+    padding: 10px !important;
+    text-align: left !important;
+    border-bottom: 1px solid #3c3f41 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+    font-family: monospace !important;
+}
+
+/* Keep the existing cell styles */
+#metadata-table td {
+    padding: 8px !important;
+    border: none !important;
+    border-bottom: 1px solid #1e1e1e !important;
+    vertical-align: top !important;
+    background-color: #2b2b2b !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    text-align: left !important;
+}
+
+/* Field column */
+#metadata-table th:first-child,
+#metadata-table td:first-child {
+    width: 120px !important;
+    min-width: 120px !important;
+    max-width: 120px !important;
+    white-space: nowrap !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+    padding: 8px 12px !important;
+}
+
+/* Current Value column */
+#metadata-table th:nth-child(2),
+#metadata-table td:nth-child(2) {
+    width: 400px !important;
+    min-width: 400px !important;
+    max-width: 400px !important;
+    font-family: monospace !important;
+    padding-left: 20px !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    text-align: left !important;
+}
+
+/* New Value column - fill remaining space */
+#metadata-table th:last-child,
+#metadata-table td:last-child {
+    width: auto !important;
+    font-family: monospace !important;
+    padding-left: 20px !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    text-align: left !important;
+}
+
+/* Style the input fields */
+#metadata-table .metadata-input {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    background-color: #3c3f41 !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    border: 1px solid #555 !important;
+    padding: 4px 8px !important;
+    font-family: monospace !important;
+    font-size: 14px !important;
+    border-radius: 3px !important;
+    height: 28px !important;
+}
+
+/* Settings button */
+.control-button.narrow {
+    min-width: 40px;
+    padding: 6px 8px;
+    font-size: 16px;
+}
+
+/* Metadata settings modal */
+.settings-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.settings-modal-content {
+    background-color: #2b2b2b;
+    border-radius: 8px;
+    padding: 20px;
+    width: 90%;
+    max-width: 500px;
+}
+
+.settings-row {
+    margin-bottom: 15px;
+}
+
+.settings-row label {
+    display: block;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 5px;
+    font-family: monospace;
+    font-size: 14px;
+}
+
+.settings-row input {
+    width: 100%;
+    background-color: #3c3f41;
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid #555;
+    padding: 8px;
+    font-family: monospace;
+    font-size: 14px;
+    border-radius: 3px;
+}
+
+.metadata-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 10px;
+    background-color: #1e1e1e;
+    border-radius: 4px;
+}
+
+.current-file-name {
+    color: #fff;
+    font-family: monospace;
+    font-size: 14px;
+    text-align: center;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 10px;
+}
+
+.nav-button {
+    background-color: #3c3f41;
+    color: #a0a0a0;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 16px;
+    min-width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-button:hover {
+    background-color: #4c4f51;
+    color: #fff;
+}
+
+.nav-button:disabled {
+    background-color: #252525;
+    color: #555;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Metadata buttons container */
+.metadata-buttons {
+    display: flex;
+    justify-content: space-between;  /* This will push items to the edges */
+    align-items: center;
+    margin-top: 20px;
+    padding: 10px 0;  /* Remove horizontal padding */
+    position: relative;
+}
+
+/* Center group of buttons */
+.metadata-buttons .center-group {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Metadata buttons */
+.metadata-buttons .control-button {
+    min-width: 100px;
+    background-color: #3c3f41;
+    color: #a0a0a0;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+}
+
+.metadata-buttons .control-button:hover {
+    background-color: #4c4f51;
+    color: #fff;
+}
+
+.metadata-buttons .control-button.narrow {
+    min-width: 40px;
+    padding: 6px 8px;
+    font-size: 16px;
+}
+
+/* Navigation buttons in metadata buttons container */
+.metadata-buttons .nav-button {
+    /* Remove duplicate styles as they're now handled by the shared class above */
+}
+
+.metadata-buttons .nav-button:hover {
+    background-color: #4c4f51;
+    color: #fff;
+}
+
+.metadata-buttons .nav-button:disabled {
+    background-color: #333333;
+    color: #888;
+    cursor: not-allowed;
 } 
