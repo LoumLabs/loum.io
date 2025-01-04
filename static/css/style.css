@@ -202,9 +202,10 @@ body {
     overflow-x: auto;
     margin-bottom: 20px;
     max-width: 100%;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }
 
-/* Base table styles */
+/* Base table styles - Set minimum widths for columns */
 .table-container table,
 #file-info-table,
 #loudness-results,
@@ -212,6 +213,7 @@ body {
 #multiband-ratios,
 #metadata-table {
     width: 100%;
+    min-width: 800px; /* Ensure table doesn't collapse too narrow */
     border-collapse: collapse;
     background-color: #2b2b2b;
     color: #ffffff;
@@ -770,4 +772,100 @@ canvas#multiband-chart {
     background-color: #333333;
     color: #888;
     cursor: not-allowed;
+}
+
+/* File Info Table Column Widths */
+#file-info-table th:first-child,
+#file-info-table td:first-child { 
+    width: 40%;
+    min-width: 200px; 
+}
+#file-info-table th:nth-child(2),
+#file-info-table td:nth-child(2) { 
+    width: 10%;
+    min-width: 80px; 
+}
+#file-info-table th:nth-child(3),
+#file-info-table td:nth-child(3) { 
+    width: 15%;
+    min-width: 120px; 
+}
+#file-info-table th:nth-child(4),
+#file-info-table td:nth-child(4) { 
+    width: 10%;
+    min-width: 80px; 
+}
+#file-info-table th:nth-child(5),
+#file-info-table td:nth-child(5) { 
+    width: 12%;
+    min-width: 100px; 
+}
+#file-info-table th:nth-child(6),
+#file-info-table td:nth-child(6) { 
+    width: 13%;
+    min-width: 100px; 
+}
+
+/* Loudness Results Table Column Widths */
+#loudness-results th:first-child,
+#loudness-results td:first-child {
+    width: 40%;
+    min-width: 200px;
+}
+#loudness-results th:not(:first-child),
+#loudness-results td:not(:first-child) {
+    width: 12%;
+    min-width: 100px;
+}
+
+/* Multiband RMS Table Column Widths */
+#multiband-rms th:first-child,
+#multiband-rms td:first-child {
+    width: 40%;
+    min-width: 200px;
+}
+#multiband-rms th:not(:first-child),
+#multiband-rms td:not(:first-child) {
+    width: 20%;
+    min-width: 120px;
+}
+
+/* Metadata Table Column Widths */
+#metadata-table th:first-child,
+#metadata-table td:first-child {
+    width: 120px !important;
+    min-width: 120px !important;
+    max-width: 120px !important;
+}
+
+#metadata-table th:nth-child(2),
+#metadata-table td:nth-child(2) {
+    width: 400px !important;
+    min-width: 300px !important;
+    max-width: 400px !important;
+}
+
+#metadata-table th:last-child,
+#metadata-table td:last-child {
+    width: auto !important;
+    min-width: 300px !important;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+    .app-container {
+        padding: 10px;
+        height: calc(100vh - 20px);
+    }
+
+    .tab-content {
+        padding: 10px;
+    }
+
+    /* Ensure tables can scroll horizontally on mobile */
+    .table-container {
+        margin: 0 -10px;  /* Negative margin to allow full-width scrolling */
+        padding: 0 10px;
+        width: calc(100% + 20px);
+    }
 } 
