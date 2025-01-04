@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loum Audiodata</title>
+    <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- File List Panel -->
+        <div class="file-panel">
+            <h1>Add files to analyze</h1>
+            <div id="file-list" class="file-list">
+                <!-- Files will be listed here -->
+            </div>
+            <div class="file-controls">
+                <div id="upload-zone" class="upload-zone">
+                    <div class="upload-content">
+                        <p>Drag & drop audio files here</p>
+                        <p class="upload-hint">Supported formats: .wav, .mp3, .aac, .m4a, .ogg, .flac</p>
+                        <p class="upload-hint">Files are processed locally - no uploading, no modifications to your original files.</p>
+                    </div>
+                    <div id="status-text"></div>
+                </div>
+                <div class="button-group">
+                    <button class="upload-button control-button">Choose Files</button>
+                    <button id="remove-selected" class="control-button">Remove Selected</button>
+                    <button id="clear-files" class="control-button">Clear Files</button>
+                    <input type="file" id="file-input" multiple accept=".wav,.mp3,.aac,.m4a,.ogg,.flac" style="display: none;">
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-container">
+            <div class="tab-nav">
+                <button class="tab-button active" data-tab="file-info">File Info</button>
+                <button class="tab-button" data-tab="loudness">Loudness</button>
+                <button class="tab-button" data-tab="multiband">Multiband RMS</button>
+                <button class="tab-button" data-tab="metadata">Metadata</button>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="tab-content">
+                <!-- File Info Tab -->
+                <div id="file-info" class="tab-pane active">
+                    <div class="table-container">
+                        <table id="file-info-table">
+                            <thead>
+                                <tr>
+                                    <th>File Name</th>
+                                    <th>Format</th>
+                                    <th>Sample Rate</th>
+                                    <th>Bit Depth</th>
+                                    <th>Duration</th>
+                                    <th>File Size</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- File info will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Loudness Tab -->
+                <div id="loudness" class="tab-pane">
+                    <div class="table-container">
+                        <table id="loudness-results" class="results-table">
+                            <thead>
+                                <tr>
+                                    <th>File Name</th>
+                                    <th>LUFS-I</th>
+                                    <th>LUFS-S Max</th>
+                                    <th>LRA</th>
+                                    <th>S Peak</th>
+                                    <th>T Peak</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Loudness results will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Multiband RMS Tab -->
+                <div id="multiband" class="tab-pane">
+                    <!-- Multiband RMS Max Table -->
+                    <div class="table-container">
+                        <table id="multiband-rms" class="results-table">
+                            <thead>
+                                <tr>
+                                    <th>File Name</th>
+                                    <th>Low</th>
+                                    <th>Mid</th>
+                                    <th>High</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Multiband RMS results will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Ratios Table -->
+                    <div class="table-container" style="display: none;">
+                        <table id="multiband-ratios" class="results-table">
+                            <thead>
+                                <tr>
+                                    <th>File Name</th>
+                                    <th>Low/Mid Ratio</th>
+                                    <th>Mid/High Ratio</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Ratio results will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Chart Button -->
+                    <div class="button-container">
+                        <button id="create-chart" class="control-button">View Chart</button>
+                    </div>
+                </div>
+
+                <!-- Metadata Tab -->
+                <div id="metadata" class="tab-pane">
+                    <div class="metadata-header">
+                        <button class="nav-button prev-button" title="Previous file">←</button>
+                        <div class="current-file-name"></div>
+                        <button class="nav-button next-button" title="Next file">→</button>
+                    </div>
+                    <div class="table-container">
+                        <table id="metadata-table" class="results-table">
+                            <thead>
+                                <tr>
+                                    <th>Field</th>
+                                    <th>Current Value</th>
+                                    <th>New Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>Title</td><td></td><td><input type="text" class="metadata-input"></td></tr>
+                                <tr><td>Artist</td><td></td><td><input type="text" class="metadata-input"></td></tr>
+                                <tr><td>Album</td><td></td><td><input type="text" class="metadata-input"></td></tr>
+                                <tr><td>Genre</td><td></td><td><input type="text" class="metadata-input"></td></tr>
+                                <tr><td>Year</td><td></td><td><input type="text" class="metadata-input"></td></tr>
+                                <tr><td>Composer</td><td></td><td><input type="text" class="metadata-input"></td></tr>
+                                <tr><td>Publisher</td><td></td><td><input type="text" class="metadata-input"></td></tr>
+                                <tr><td>Copyright</td><td></td><td><input type="text" class="metadata-input"></td></tr>
+                                <tr><td>ISRC</td><td></td><td><input type="text" class="metadata-input"></td></tr>
+                                <tr><td>Engineer</td><td></td><td><input type="text" class="metadata-input"></td></tr>
+                                <tr><td>Encoder</td><td></td><td><input type="text" class="metadata-input"></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="metadata-buttons">
+                        <button class="nav-button prev-button" title="Previous file">←</button>
+                        <div class="center-group">
+                            <button id="suggest-metadata" class="control-button">Suggest</button>
+                            <button id="save-metadata" class="control-button">Save Metadata</button>
+                            <button id="metadata-settings" class="control-button narrow" title="Metadata Settings">⚙</button>
+                        </div>
+                        <button class="nav-button next-button" title="Next file">→</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart Modal -->
+    <div id="chart-modal" class="chart-modal" style="display: none;">
+        <div class="chart-modal-content">
+            <span class="close-button">&times;</span>
+            <div class="chart-container">
+                <canvas id="multiband-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+    <script src="static/js/metadata.js"></script>
+    <script src="static/js/filters.js"></script>
+    <script src="static/js/loudness.js"></script>
+    <script src="static/js/audioProcessor.js"></script>
+    <script src="static/js/main.js"></script>
+</body>
+</html> 
