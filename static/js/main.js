@@ -116,32 +116,86 @@ document.addEventListener('DOMContentLoaded', () => {
             // Save metadata using the analyzer
             const result = await audioProcessor.metadataAnalyzer.saveMetadata(currentFile.file, metadata);
             if (result.success) {
-                // Store the modified file just for metadata purposes
-                // but keep the original file for audio analysis
-                fileListData[currentFileIndex].metadataFile = result.file;
-                
-                // Update display with new metadata
-                const updatedMetadata = await audioProcessor.metadataAnalyzer.getMetadata(result.file);
-                updateMetadataDisplay(updatedMetadata);
-                
-                // Create download link for the modified file
-                const url = URL.createObjectURL(result.file);
-                const downloadLink = document.createElement('a');
-                downloadLink.href = url;
-                downloadLink.download = result.file.name;
-                document.body.appendChild(downloadLink);
-                downloadLink.click();
-                document.body.removeChild(downloadLink);
-                URL.revokeObjectURL(url);
-                
-                showSuccess('Metadata saved successfully');
+                try {
+                    // Show save file picker with default location
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: currentFile.name,
+                        types: [{
+                            description: 'WAV files',
+                            accept: {'audio/wav': ['.wav']}
+                        }]
+                    });
+                    
+                    // Create writable stream
+                    const writable = await handle.createWritable();
+                    await writable.write(result.file);
+                    await writable.close();
+
+                    // Get the new filename from the handle
+                    const newFileName = handle.name;
+                    
+                    // Only update references if the filename has changed
+                    if (newFileName !== currentFile.name) {
+                        // Update the filename in fileListData
+                        fileListData[currentFileIndex].name = newFileName;
+                        
+                        // Update file list display
+                        updateFileList();
+                        
+                        // Update file name in all tables
+                        updateFileNameInTable('#file-info tbody', currentFile.name, newFileName);
+                        updateFileNameInTable('#loudness-results tbody', currentFile.name, newFileName);
+                        updateFileNameInTable('#multiband-rms tbody', currentFile.name, newFileName);
+                        
+                        // Update current file name display
+                        const fileNameDisplay = document.querySelector('.current-file-name');
+                        if (fileNameDisplay) {
+                            fileNameDisplay.textContent = newFileName;
+                        }
+                    }
+
+                    // Now that we've successfully saved the file, update the file reference
+                    // and reload metadata from the actual saved file
+                    const savedFile = await handle.getFile();
+                    fileListData[currentFileIndex].file = savedFile;
+                    fileListData[currentFileIndex].metadataFile = null; // Clear any temporary metadata file
+                    
+                    // Read and display the actual metadata from the saved file
+                    const updatedMetadata = await audioProcessor.metadataAnalyzer.getMetadata(savedFile);
+                    updateMetadataDisplay(updatedMetadata);
+                    
+                    showSuccess('Metadata saved successfully');
+                } catch (error) {
+                    if (error.name !== 'AbortError') {
+                        // If save was aborted, reload original metadata
+                        const originalMetadata = await audioProcessor.metadataAnalyzer.getMetadata(currentFile.file);
+                        updateMetadataDisplay(originalMetadata);
+                        throw error;
+                    }
+                }
             } else {
                 throw new Error(result.error || 'Failed to save metadata');
             }
         } catch (error) {
             showError('Error saving metadata: ' + error.message);
+            // On any error, reload original metadata
+            const originalMetadata = await audioProcessor.metadataAnalyzer.getMetadata(currentFile.file);
+            updateMetadataDisplay(originalMetadata);
         }
     });
+
+    // Helper function to update filename in a table
+    function updateFileNameInTable(tableSelector, oldName, newName) {
+        const tbody = document.querySelector(tableSelector);
+        if (!tbody) return;
+        
+        const rows = tbody.getElementsByTagName('tr');
+        for (let i = 0; i < rows.length; i++) {
+            if (rows[i].cells[0].textContent === oldName) {
+                rows[i].cells[0].textContent = newName;
+            }
+        }
+    }
 
     function updateMetadataDisplay(metadata) {
         currentMetadata = metadata;
