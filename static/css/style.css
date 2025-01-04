@@ -547,71 +547,58 @@ canvas#multiband-chart {
     font-size: 12px !important;
     line-height: 1.4 !important;
     font-family: monospace !important;
+    vertical-align: middle !important;
 }
 
-/* Keep the existing cell styles */
+/* Data cell styles with reduced padding */
 #metadata-table td {
-    padding: 8px !important;
+    padding: 4px 8px !important;
     border: none !important;
     border-bottom: 1px solid #1e1e1e !important;
-    vertical-align: top !important;
+    vertical-align: middle !important;
     background-color: #2b2b2b !important;
     color: rgba(255, 255, 255, 0.9) !important;
     white-space: normal !important;
     overflow: visible !important;
     text-overflow: clip !important;
     text-align: left !important;
+    line-height: 1.4 !important;
 }
 
 /* Field column */
-#metadata-table th:first-child,
 #metadata-table td:first-child {
-    width: 120px !important;
-    min-width: 120px !important;
-    max-width: 120px !important;
-    white-space: nowrap !important;
-    color: rgba(255, 255, 255, 0.8) !important;
-    padding: 8px 12px !important;
+    padding: 4px 12px !important;
 }
 
-/* Current Value column */
-#metadata-table th:nth-child(2),
-#metadata-table td:nth-child(2) {
-    width: 400px !important;
-    min-width: 400px !important;
-    max-width: 400px !important;
-    font-family: monospace !important;
-    padding-left: 20px !important;
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    text-align: left !important;
-}
-
-/* New Value column - fill remaining space */
-#metadata-table th:last-child,
+/* Current Value and New Value columns */
+#metadata-table td:nth-child(2),
 #metadata-table td:last-child {
-    width: auto !important;
-    font-family: monospace !important;
-    padding-left: 20px !important;
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    text-align: left !important;
+    padding: 4px 20px !important;
 }
 
-/* Style the input fields */
+/* Keep header padding consistent with other tables */
+#metadata-table th:first-child {
+    padding: 10px 12px !important;
+}
+
+#metadata-table th:nth-child(2),
+#metadata-table th:last-child {
+    padding: 10px 20px !important;
+}
+
+/* Style the input fields - adjust height to match more compact rows */
 #metadata-table .metadata-input {
     width: 100% !important;
     box-sizing: border-box !important;
     background-color: #3c3f41 !important;
     color: rgba(255, 255, 255, 0.9) !important;
     border: 1px solid #555 !important;
-    padding: 4px 8px !important;
+    padding: 2px 8px !important;
     font-family: monospace !important;
     font-size: 14px !important;
     border-radius: 3px !important;
-    height: 28px !important;
+    height: 24px !important;
+    line-height: 20px !important;
 }
 
 /* Settings button */
