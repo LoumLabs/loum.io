@@ -1,11 +1,3 @@
-<<<<<<< HEAD
-.DS_Store
-node_modules/
-*.log
-.env
-__pycache__/
-*.pyc 
-=======
 # Python
 __pycache__/
 *.py[cod]
@@ -27,6 +19,11 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+*.pyc
+
+# Node.js
+node_modules/
+*.log
 
 # Virtual Environment
 venv/
@@ -41,5 +38,7 @@ env/
 
 # OS
 .DS_Store
-Thumbs.db 
->>>>>>> 914dc5548f9aff0f1a7657858fd272be2a032df6
+Thumbs.db
+
+# Environment
+.env
