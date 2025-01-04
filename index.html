@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>loum.io</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            font-family: 'Courier New', Courier, monospace;
+            line-height: 1.6;
+            margin: 0;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #333;
+            padding-bottom: 0.5rem;
+        }
+        .directory {
+            margin-left: 1rem;
+        }
+        a {
+            color: #4a9eff;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        a:hover {
+            color: #66b3ff;
+            text-decoration: underline;
+        }
+        .tree-structure {
+            font-size: 1.1rem;
+            margin-top: 2rem;
+        }
+        .tree-item {
+            margin: 0.5rem 0;
+        }
+        .tree-item::before {
+            content: "├── ";
+            color: #666;
+        }
+        .tree-item:last-child::before {
+            content: "└── ";
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>loum.io</h1>
+        <div class="tree-structure">
+            <div class="tree-item">
+                <a href="/audiodata">audiodata/</a> - Audio Analysis Tools
+            </div>
+            <!-- Add more tree items here as you add more applications -->
+        </div>
+    </div>
+</body>
+</html> 
