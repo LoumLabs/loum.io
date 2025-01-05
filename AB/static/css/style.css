@@ -607,3 +607,21 @@ input[type="range"]::-webkit-slider-runnable-track {
         justify-content: center;
     }
 }
+
+.home-link {
+    position: absolute;
+    top: 0;
+    left: 0;
+    font-family: monospace;
+    font-size: 13px;
+    color: #a0a0a0;
+    text-decoration: none;
+    background-color: #1e1e1e;
+    padding: 8px 12px;
+    z-index: 1;
+    transition: color 0.2s ease;
+}
+
+.home-link:hover {
+    color: #fff;
+}
