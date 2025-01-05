@@ -286,10 +286,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const trackAGain = Math.pow(10, (trackA.gainAdjustment || 0) / 20);
             const trackBGain = Math.pow(10, (trackB.gainAdjustment || 0) / 20);
             
-            // Immediate switch for visual feedback
+            // Update track state and visual feedback
             currentTrack = nextTrack;
             updateActiveTrack();
-            document.getElementById('current-track-display').textContent = currentTrack;
+            document.getElementById('current-track-display').textContent = nextTrack;
             
             // Quick crossfade between tracks
             if (nextTrack === 'B') {
@@ -317,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             currentTrack = nextTrack;
             updateActiveTrack();
-            document.getElementById('current-track-display').textContent = currentTrack;
+            document.getElementById('current-track-display').textContent = nextTrack;
         }
     }
 
@@ -465,6 +465,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (bothTracksLoaded) {
             updateActiveTrack();
+            document.getElementById('current-track-display').textContent = currentTrack;
         }
     }
 
