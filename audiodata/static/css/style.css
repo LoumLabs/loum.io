@@ -3,7 +3,7 @@ body {
     margin: 0;
     padding: 0;
     background-color: #1e1e1e;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: monospace;
     height: 100vh;
     overflow: hidden;
 }
@@ -53,6 +53,7 @@ body {
     cursor: pointer;
     transition: background-color 0.2s;
     font-size: 14px;
+    font-family: monospace;
 }
 
 .file-list-item:hover {
@@ -87,6 +88,7 @@ body {
     transition: all 0.2s;
     font-size: 14px;
     min-width: 100px;
+    font-family: monospace;
 }
 
 .control-button:hover {
@@ -153,6 +155,7 @@ body {
     padding: 8px 15px;
     cursor: pointer;
     font-size: 14px;
+    font-family: monospace;
     transition: all 0.2s;
     position: relative;
     margin-right: 2px;
@@ -304,12 +307,13 @@ body {
 
 #create-chart {
     min-width: 120px;
-    background-color: #0078d4;
-    color: white;
+    background-color: #3c3f41;
+    color: #a0a0a0;
 }
 
 #create-chart:hover {
-    background-color: #006cbd;
+    background-color: #4c4f51;
+    color: #fff;
 }
 
 #create-chart:disabled {
@@ -685,6 +689,7 @@ canvas#multiband-chart {
     cursor: pointer;
     transition: all 0.2s;
     font-size: 16px;
+    font-family: monospace;
     min-width: 40px;
     display: flex;
     align-items: center;
