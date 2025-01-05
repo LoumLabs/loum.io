@@ -109,6 +109,7 @@ body {
     align-items: flex-start;
     justify-content: space-between;
     padding: 0 20px;
+    box-sizing: border-box;
 }
 
 #match-loudness {
@@ -133,6 +134,7 @@ body {
     border-radius: 4px;
     padding: 12px;
     width: 250px;
+    box-sizing: border-box;
 }
 
 .track-loudness {
@@ -332,11 +334,99 @@ input[type="range"]::-webkit-slider-runnable-track {
     .app-container {
         padding: 10px;
         gap: 10px;
+        width: 100%;
+        box-sizing: border-box;
     }
 
+    /* Consistent padding for all sections */
+    .upload-panel,
+    .loudness-panel,
+    .playback-panel {
+        padding: 10px;
+    }
+
+    .waveform-container {
+        padding: 10px;
+        margin: 0;
+    }
+
+    .progress-container {
+        padding: 0 10px;
+    }
+
+    /* Reset any section-specific padding */
+    .track-upload-container,
+    .loudness-controls,
+    .playback-controls {
+        padding: 0;
+    }
+
+    /* Loudness panel mobile layout */
+    .loudness-panel {
+        flex-direction: column;
+        padding: 10px;
+        width: 100%;
+    }
+
+    .loudness-buttons {
+        width: 100%;
+        display: flex;
+        gap: 10px;
+    }
+
+    .loudness-controls {
+        flex-direction: column;
+        width: 100%;
+        gap: 10px;
+    }
+
+    .track-info {
+        width: 100%;
+        margin: 0;
+    }
+
+    .gain-control {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .gain-adjust {
+        margin-left: auto;
+    }
+
+    /* Touch targets */
+    .control-button,
+    #match-loudness,
+    #reset-loudness {
+        width: 100%;
+        min-height: 44px;
+        font-size: 16px;
+    }
+
+    .gain-button {
+        min-width: 44px;
+        min-height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Other mobile adjustments */
     .track-upload-container {
         flex-direction: column;
         gap: 10px;
+    }
+
+    .upload-zone {
+        min-height: 60px;
+        padding: 8px;
+    }
+
+    .clear-button {
+        width: 32px;
+        height: 32px;
+        font-size: 24px;
     }
 
     .playback-controls {
@@ -355,18 +445,6 @@ input[type="range"]::-webkit-slider-runnable-track {
         gap: 15px;
     }
 
-    .control-button {
-        width: 100%;
-        min-height: 44px;  /* Minimum touch target size */
-        font-size: 16px;   /* Larger text for mobile */
-    }
-
-    .gain-button {
-        min-height: 44px;
-        padding: 12px 16px;
-        font-size: 14px;
-    }
-
     .volume-control {
         flex-direction: column;
         align-items: stretch;
@@ -376,30 +454,10 @@ input[type="range"]::-webkit-slider-runnable-track {
     .volume-control input[type="range"] {
         width: 100%;
         margin: 10px 0;
-        height: 30px;  /* Larger touch target for slider */
+        height: 30px;
     }
 
-    .loudness-display {
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .track-info {
-        width: 100%;
-        padding: 12px;
-    }
-
-    .gain-control {
-        flex-wrap: wrap;
-        gap: 10px;
-    }
-
-    .gain-adjust {
-        flex: 1;
-        justify-content: space-between;
-    }
-
-    /* Improve touch targets for range inputs */
+    /* Touch-friendly inputs */
     input[type="range"]::-webkit-slider-thumb {
         width: 24px;
         height: 24px;
@@ -409,17 +467,15 @@ input[type="range"]::-webkit-slider-runnable-track {
         height: 6px;
     }
 
-    /* Make waveforms more touch-friendly */
     .waveform {
-        min-height: 120px;  /* Taller waveforms on mobile */
+        min-height: 120px;
         margin: 5px 0;
     }
 
     .waveform canvas {
-        touch-action: none;  /* Prevent unwanted touch behaviors */
+        touch-action: none;
     }
 
-    /* Improve checkbox touch target */
     .blind-test {
         padding: 8px 0;
     }
@@ -428,122 +484,6 @@ input[type="range"]::-webkit-slider-runnable-track {
         width: 24px;
         height: 24px;
         margin-right: 8px;
-    }
-
-    .loudness-controls {
-        gap: 10px;
-    }
-
-    .loudness-display {
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    #match-loudness {
-        width: 100%;
-        min-height: 44px;
-        font-size: 16px;
-    }
-
-    .track-info {
-        width: 100%;
-        padding: 12px;
-        margin: 0;
-    }
-
-    .loudness-panel {
-        flex-direction: column;
-        padding: 0 10px;
-    }
-
-    #match-loudness {
-        width: 100%;
-        min-height: 44px;
-        font-size: 16px;
-    }
-
-    .loudness-controls {
-        width: 100%;
-    }
-
-    .track-info {
-        margin: 0;
-    }
-
-    .gain-button {
-        min-width: 44px;
-        min-height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .loudness-panel {
-        flex-direction: column;
-        padding: 10px;
-    }
-
-    .loudness-controls {
-        flex-direction: column;
-        width: 100%;
-        gap: 10px;
-    }
-
-    #match-loudness {
-        width: 100%;
-        min-height: 44px;
-        font-size: 16px;
-    }
-
-    .track-info {
-        margin: 0;
-    }
-
-    .gain-button {
-        min-width: 44px;
-        min-height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .upload-zone {
-        min-height: 60px;
-        padding: 8px;
-    }
-
-    .loudness-panel {
-        flex-direction: column;
-        padding: 0 10px;
-    }
-
-    .loudness-controls {
-        flex-direction: column;
-        width: 100%;
-    }
-
-    #match-loudness {
-        width: 100%;
-        min-height: 44px;
-        font-size: 16px;
-    }
-
-    .track-info {
-        width: 100%;
-    }
-
-    .clear-button {
-        width: 32px;
-        height: 32px;
-        font-size: 24px;
-    }
-
-    .loudness-buttons {
-        width: 100%;
-    }
-    
-    .loudness-buttons button {
-        flex: 1;
     }
 }
 
