@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A/B Track Comparison - loum.io</title>
+    <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Track Upload Section -->
+        <div class="upload-panel">
+            <h1>A/B Track Comparison</h1>
+            <div class="track-upload-container">
+                <div class="track-upload" id="track-a">
+                    <h2>Track A</h2>
+                    <div class="upload-zone" id="upload-zone-a">
+                        <div class="upload-content">
+                            <p>Drag & drop audio file here</p>
+                            <p class="upload-hint">Supported formats: .wav, .mp3, .aac, .m4a, .ogg, .flac</p>
+                        </div>
+                    </div>
+                    <button class="upload-button">Choose File</button>
+                    <input type="file" class="file-input" accept=".wav,.mp3,.aac,.m4a,.ogg,.flac" style="display: none;">
+                </div>
+                <div class="track-upload" id="track-b">
+                    <h2>Track B</h2>
+                    <div class="upload-zone" id="upload-zone-b">
+                        <div class="upload-content">
+                            <p>Drag & drop audio file here</p>
+                            <p class="upload-hint">Supported formats: .wav, .mp3, .aac, .m4a, .ogg, .flac</p>
+                        </div>
+                    </div>
+                    <button class="upload-button">Choose File</button>
+                    <input type="file" class="file-input" accept=".wav,.mp3,.aac,.m4a,.ogg,.flac" style="display: none;">
+                </div>
+            </div>
+        </div>
+
+        <!-- Loudness Matching Section -->
+        <div class="loudness-panel">
+            <div class="loudness-controls">
+                <button id="match-loudness" class="control-button" disabled>Match Loudness</button>
+                <div class="loudness-display">
+                    <div class="track-loudness">
+                        <span>Track A: </span>
+                        <span id="track-a-loudness">--</span> LUFS
+                    </div>
+                    <div class="track-loudness">
+                        <span>Track B: </span>
+                        <span id="track-b-loudness">--</span> LUFS
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Playback Section -->
+        <div class="playback-panel">
+            <div class="waveform-container">
+                <div id="waveform-a" class="waveform"></div>
+                <div id="waveform-b" class="waveform"></div>
+            </div>
+            <div class="playback-controls">
+                <div class="transport-controls">
+                    <button id="play-pause" class="control-button" disabled>Play</button>
+                    <button id="stop" class="control-button" disabled>Stop</button>
+                </div>
+                <div class="ab-controls">
+                    <button id="ab-toggle" class="control-button large" disabled>Switch A/B</button>
+                    <label class="blind-test">
+                        <input type="checkbox" id="blind-test-toggle">
+                        Blind Test Mode
+                    </label>
+                </div>
+                <div class="volume-control">
+                    <label for="volume">Volume</label>
+                    <input type="range" id="volume" min="0" max="100" value="100">
+                </div>
+            </div>
+            <div class="progress-container">
+                <div class="time-display">
+                    <span id="current-time">0:00</span> / <span id="total-time">0:00</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="static/js/main.js"></script>
+</body>
+</html>
