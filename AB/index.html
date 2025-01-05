@@ -15,6 +15,7 @@
                 <div class="track-upload" id="track-a">
                     <h2>Track A</h2>
                     <div class="upload-zone" id="upload-zone-a">
+                        <button class="clear-button" id="clear-a">×</button>
                         <div class="upload-content">
                             <p>Drag & drop audio file here</p>
                             <p class="upload-hint">Supported formats: .wav, .mp3, .aac, .m4a, .ogg, .flac</p>
@@ -26,6 +27,7 @@
                 <div class="track-upload" id="track-b">
                     <h2>Track B</h2>
                     <div class="upload-zone" id="upload-zone-b">
+                        <button class="clear-button" id="clear-b">×</button>
                         <div class="upload-content">
                             <p>Drag & drop audio file here</p>
                             <p class="upload-hint">Supported formats: .wav, .mp3, .aac, .m4a, .ogg, .flac</p>
@@ -39,16 +41,37 @@
 
         <!-- Loudness Matching Section -->
         <div class="loudness-panel">
-            <div class="loudness-controls">
+            <div class="loudness-buttons">
                 <button id="match-loudness" class="control-button" disabled>Match Loudness</button>
-                <div class="loudness-display">
+                <button id="reset-loudness" class="control-button" disabled>Reset</button>
+            </div>
+            <div class="loudness-controls">
+                <div class="track-info">
                     <div class="track-loudness">
                         <span>Track A: </span>
-                        <span id="track-a-loudness">--</span> LUFS
+                        <span id="track-a-loudness">--</span> LUFS-S Max
                     </div>
+                    <div class="gain-control">
+                        <span>Gain: </span>
+                        <span id="track-a-gain">0.0</span> dB
+                        <div class="gain-adjust">
+                            <button class="gain-button" data-track="a" data-adjust="-0.1">-0.1</button>
+                            <button class="gain-button" data-track="a" data-adjust="+0.1">+0.1</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="track-info">
                     <div class="track-loudness">
                         <span>Track B: </span>
-                        <span id="track-b-loudness">--</span> LUFS
+                        <span id="track-b-loudness">--</span> LUFS-S Max
+                    </div>
+                    <div class="gain-control">
+                        <span>Gain: </span>
+                        <span id="track-b-gain">0.0</span> dB
+                        <div class="gain-adjust">
+                            <button class="gain-button" data-track="b" data-adjust="-0.1">-0.1</button>
+                            <button class="gain-button" data-track="b" data-adjust="+0.1">+0.1</button>
+                        </div>
                     </div>
                 </div>
             </div>
