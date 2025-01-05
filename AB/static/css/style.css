@@ -522,3 +522,21 @@ input[type="range"]::-webkit-slider-runnable-track {
     min-width: 80px;
     background-color: #3c3f41;
 }
+
+.track-state {
+    font-size: 24px;
+    font-weight: bold;
+    color: #fff;
+    font-family: monospace;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#current-track-display {
+    color: #4a9eff;
+}
+
+.blind-test-mode .track-state {
+    display: none;
+}
