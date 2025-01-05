@@ -27,9 +27,9 @@ body {
 }
 
 .upload-panel h1 {
-    color: #fff;
-    font-size: 24px;
-    margin: 0 0 20px 0;
+    color: white;
+    font-size: 20px;
+    margin: 0 0 15px 0;
     text-align: center;
 }
 
@@ -48,7 +48,7 @@ body {
 
 .track-upload h2 {
     color: #fff;
-    font-size: 18px;
+    font-size: 14px;
     margin: 0;
 }
 
