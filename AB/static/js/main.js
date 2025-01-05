@@ -289,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Immediate switch for visual feedback
             currentTrack = nextTrack;
             updateActiveTrack();
-            abToggle.textContent = blindTestMode ? 'Switch Track' : `Switch to Track ${currentTrack}`;
+            abToggle.textContent = blindTestMode ? 'Switch Track' : `Switch to Track ${currentTrack === 'A' ? 'B' : 'A'}`;
             
             // Quick crossfade between tracks
             if (nextTrack === 'B') {
@@ -317,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             currentTrack = nextTrack;
             updateActiveTrack();
-            abToggle.textContent = blindTestMode ? 'Switch Track' : `Switch to Track ${currentTrack}`;
+            abToggle.textContent = blindTestMode ? 'Switch Track' : `Switch to Track ${currentTrack === 'A' ? 'B' : 'A'}`;
         }
     }
 
@@ -414,7 +414,7 @@ document.addEventListener('DOMContentLoaded', () => {
     blindTestToggle.addEventListener('change', (e) => {
         blindTestMode = e.target.checked;
         document.body.classList.toggle('blind-test-mode', blindTestMode);
-        abToggle.textContent = blindTestMode ? 'Switch Track' : `Switch to Track ${currentTrack}`;
+        abToggle.textContent = blindTestMode ? 'Switch Track' : `Switch to Track ${currentTrack === 'A' ? 'B' : 'A'}`;
     });
 
     volumeControl.addEventListener('input', (e) => {
