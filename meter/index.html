@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meter - loum.io</title>
+    <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+    <a href="/" class="home-link">loum.io</a>
+    <h1 class="page-title">Meter</h1>
+    
+    <div class="container">
+        <div class="meter-container">
+            <!-- VU Meter -->
+            <div class="vu-section">
+                <canvas id="vuMeter"></canvas>
+                <div class="meter-values">
+                    <div class="value-display">
+                        <span class="label">AVG</span>
+                        <span id="avgValue" class="value">-∞</span>
+                    </div>
+                    <div class="value-display">
+                        <span class="label">PEAK</span>
+                        <span id="peakValue" class="value">-∞</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="controls">
+                <button id="startButton">Start</button>
+                <div class="view-controls">
+                    <button id="spectrumButton" class="active">Spectrum</button>
+                    <button id="spectrogramButton">Spectrogram</button>
+                </div>
+            </div>
+            
+            <!-- Visualization -->
+            <div class="visualization-container">
+                <canvas id="spectrum" class="active"></canvas>
+                <canvas id="spectrogram"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script src="static/js/audioProcessor.js"></script>
+    <script src="static/js/vuMeter.js"></script>
+    <script src="static/js/spectrum.js"></script>
+    <script src="static/js/spectrogram.js"></script>
+    <script src="static/js/main.js"></script>
+</body>
+</html> 

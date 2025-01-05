@@ -1,0 +1,254 @@
+/* Base Styles */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: monospace;
+    background-color: #2b2b2b;
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.home-link {
+    position: absolute;
+    top: 0;
+    left: 0;
+    font-family: monospace;
+    font-size: 13px;
+    color: #a0a0a0;
+    text-decoration: none;
+    background-color: #1e1e1e;
+    padding: 8px 12px;
+    z-index: 1;
+    transition: color 0.2s ease;
+    border-bottom-right-radius: 4px;
+}
+
+.home-link:hover {
+    color: #fff;
+}
+
+.page-title {
+    text-align: center;
+    color: #fff;
+    font-size: 20px;
+    margin: 0;
+    padding: 20px 0;
+    font-weight: normal;
+    font-family: monospace;
+}
+
+.container {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.meter-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    background-color: #2b2b2b;
+    border-radius: 4px;
+    padding: 20px;
+}
+
+.vu-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #1e1e1e;
+    border-radius: 4px;
+    padding: 20px;
+    width: 100%;
+    box-sizing: border-box;
+    position: relative;
+}
+
+#vuMeter {
+    width: 100%;
+    height: 200px;
+    background-color: transparent;
+}
+
+.controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    background-color: #1e1e1e;
+    border-radius: 4px;
+}
+
+.view-controls {
+    display: flex;
+    gap: 5px;
+    margin: 0 10px;
+}
+
+.visualization-container {
+    background-color: #1e1e1e;
+    border-radius: 4px;
+    overflow: hidden;
+    height: 300px;
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: stretch;
+}
+
+#spectrum, #spectrogram {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    background-color: #2b2b2b;
+}
+
+#spectrum.active, #spectrogram.active {
+    display: block;
+}
+
+button {
+    background-color: #3c3f41;
+    border: none;
+    color: #a0a0a0;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+    font-family: monospace;
+}
+
+button:hover {
+    background-color: #4c4f51;
+    color: #fff;
+}
+
+button.active {
+    background-color: #4a9eff;
+    color: #fff;
+}
+
+.meter-values {
+    position: absolute;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 40px;
+    box-sizing: border-box;
+}
+
+.value-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.value-display .label {
+    font-size: 14px;
+    color: #808080;
+}
+
+.value-display .value {
+    font-size: 32px;
+    color: #4a9eff;
+}
+
+.settings {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+}
+
+.setting {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 200px;
+}
+
+label {
+    font-size: 14px;
+    color: #808080;
+}
+
+input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: #1e1e1e;
+    border-radius: 2px;
+    outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #4a9eff;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    background: #6ab0ff;
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .meter-container {
+        padding: 10px;
+    }
+    
+    .vu-section {
+        padding: 15px;
+    }
+    
+    #vuMeter {
+        height: 140px;
+    }
+    
+    .meter-values {
+        padding: 0 20px;
+        bottom: 15px;
+    }
+    
+    .value-display .value {
+        font-size: 24px;
+    }
+    
+    .visualization-container {
+        height: 250px;
+    }
+    
+    .controls {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    button {
+        font-size: 13px;
+        padding: 6px 12px;
+    }
+} 
