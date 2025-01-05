@@ -1,0 +1,28 @@
+/* Universal font setting */
+* {
+    font-family: monospace !important;
+}
+
+/* App Container */
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #1e1e1e;
+    font-family: monospace;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.app-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #2b2b2b;
+    height: calc(100vh - 40px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-family: monospace;
+}
+
+[Previous content remains exactly the same until the end of the file] 

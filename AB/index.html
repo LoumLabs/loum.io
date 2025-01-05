@@ -15,11 +15,12 @@
                 <div class="track-upload" id="track-a">
                     <h2>Track A</h2>
                     <div class="upload-zone" id="upload-zone-a">
-                        <button class="clear-button" id="clear-a">×</button>
                         <div class="upload-content">
                             <p>Drag & drop audio file here</p>
                             <p class="upload-hint">Supported formats: .wav, .mp3, .aac, .m4a, .ogg, .flac</p>
+                            <p class="upload-hint">Files are processed locally</p>
                         </div>
+                        <button class="clear-button" id="clear-a">×</button>
                     </div>
                     <button class="upload-button">Choose File</button>
                     <input type="file" class="file-input" accept=".wav,.mp3,.aac,.m4a,.ogg,.flac" style="display: none;">
@@ -27,11 +28,12 @@
                 <div class="track-upload" id="track-b">
                     <h2>Track B</h2>
                     <div class="upload-zone" id="upload-zone-b">
-                        <button class="clear-button" id="clear-b">×</button>
                         <div class="upload-content">
                             <p>Drag & drop audio file here</p>
                             <p class="upload-hint">Supported formats: .wav, .mp3, .aac, .m4a, .ogg, .flac</p>
+                            <p class="upload-hint">Files are processed locally</p>
                         </div>
+                        <button class="clear-button" id="clear-b">×</button>
                     </div>
                     <button class="upload-button">Choose File</button>
                     <input type="file" class="file-input" accept=".wav,.mp3,.aac,.m4a,.ogg,.flac" style="display: none;">
@@ -59,6 +61,14 @@
                             <button class="gain-button" data-track="a" data-adjust="+0.1">+0.1</button>
                         </div>
                     </div>
+                    <div class="delay-control">
+                        <span>Delay: </span>
+                        <span id="track-a-delay">0</span> ms
+                        <div class="delay-adjust">
+                            <button class="delay-button" data-track="a" data-adjust="-1">-1</button>
+                            <button class="delay-button" data-track="a" data-adjust="+1">+1</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="track-info">
                     <div class="track-loudness">
@@ -71,6 +81,14 @@
                         <div class="gain-adjust">
                             <button class="gain-button" data-track="b" data-adjust="-0.1">-0.1</button>
                             <button class="gain-button" data-track="b" data-adjust="+0.1">+0.1</button>
+                        </div>
+                    </div>
+                    <div class="delay-control">
+                        <span>Delay: </span>
+                        <span id="track-b-delay">0</span> ms
+                        <div class="delay-adjust">
+                            <button class="delay-button" data-track="b" data-adjust="-1">-1</button>
+                            <button class="delay-button" data-track="b" data-adjust="+1">+1</button>
                         </div>
                     </div>
                 </div>
@@ -89,7 +107,7 @@
                     <button id="stop" class="control-button" disabled>Stop</button>
                 </div>
                 <div class="ab-controls">
-                    <div class="track-state">Track <span id="current-track-display">A</span></div>
+                    <div class="track-state"><span id="current-track-display">A</span></div>
                     <button id="ab-toggle" class="control-button large" disabled>Switch Track</button>
                     <label class="blind-test">
                         <input type="checkbox" id="blind-test-toggle">

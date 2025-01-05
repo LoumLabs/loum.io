@@ -53,28 +53,35 @@ body {
 }
 
 .upload-zone {
-    border: 2px dashed #3c3f41;
+    border: 1px dashed #3c3f41;
     border-radius: 4px;
-    padding: 12px;
+    padding: 15px;
     text-align: center;
     cursor: pointer;
     transition: all 0.2s;
     background-color: #2b2b2b;
+    position: relative;
     min-height: 80px;
     display: flex;
-    align-items: center;
+    flex-direction: column;
     justify-content: center;
-    position: relative;
 }
 
 .upload-zone:hover {
     border-color: #4c4f51;
-    background-color: #333;
+    background-color: rgba(60, 63, 65, 0.3);
 }
 
 .upload-zone.dragover {
     border-color: #0078d4;
     background-color: rgba(0, 120, 212, 0.1);
+}
+
+.upload-content {
+    color: #a0a0a0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .upload-content p {
@@ -84,7 +91,7 @@ body {
 .upload-hint {
     color: #666;
     font-size: 12px;
-    margin-top: 8px;
+    margin-top: 8px !important;
 }
 
 .upload-button {
@@ -535,8 +542,68 @@ input[type="range"]::-webkit-slider-runnable-track {
 
 #current-track-display {
     color: #4a9eff;
+    transition: color 0.2s ease;
 }
 
 .blind-test-mode .track-state {
-    display: none;
+    display: flex;
+}
+
+.blind-test-mode #current-track-display {
+    color: #4a9eff;
+}
+
+@keyframes flash {
+    0% { opacity: 1; }
+    1% { opacity: 0.2; }
+    100% { opacity: 1; }
+}
+
+.flash {
+    animation: flash 0.8s ease-in-out;
+}
+
+.blind-test-mode #current-track-display {
+    color: #4a9eff;
+}
+
+.blind-test-mode #current-track-display.flash {
+    animation: flash 0.3s ease-out;
+}
+
+.delay-control {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.delay-adjust {
+    display: flex;
+    gap: 4px;
+}
+
+.delay-button {
+    padding: 4px 8px;
+    font-size: 12px;
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    color: #fff;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.delay-button:hover {
+    background: #3a3a3a;
+}
+
+/* Update mobile styles */
+@media (max-width: 768px) {
+    .delay-button {
+        min-width: 44px;
+        min-height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 }

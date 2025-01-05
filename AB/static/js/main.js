@@ -5,8 +5,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let trackB = null;
     let sourceA = null;
     let sourceB = null;
-    let gainA = null;
-    let gainB = null;
     let masterGain = null;
     let startTime = 0;
     let pauseTime = 0;
@@ -77,17 +75,33 @@ document.addEventListener('DOMContentLoaded', () => {
             canvasA.width = width;
             canvasB.width = width;
             
-            // Redraw waveforms if they exist
-            if (trackA?.buffer) drawWaveform(trackA.buffer, ctxA, WAVE_COLOR_A);
-            if (trackB?.buffer) drawWaveform(trackB.buffer, ctxB, WAVE_COLOR_B);
+            // Only redraw if we have buffers
+            if (trackA?.buffer || trackB?.buffer) {
+                // Draw waveforms with time alignment
+                if (trackA?.buffer) drawWaveform(trackA.buffer, ctxA, WAVE_COLOR_A);
+                if (trackB?.buffer) drawWaveform(trackB.buffer, ctxB, WAVE_COLOR_B);
+            }
         }
     }
 
     function drawWaveform(audioBuffer, ctx, color) {
         const width = ctx.canvas.width;
         const height = ctx.canvas.height;
+        
+        // Find the longest duration between tracks
+        const maxDuration = Math.max(
+            trackA?.buffer?.duration || 0,
+            trackB?.buffer?.duration || 0
+        );
+        
+        // Calculate pixels per second based on longest duration
+        const pixelsPerSecond = width / maxDuration;
+        
+        // Calculate the width needed for this buffer
+        const bufferWidth = Math.floor(audioBuffer.duration * pixelsPerSecond);
+        
         const data = audioBuffer.getChannelData(0); // Use first channel
-        const step = Math.ceil(data.length / width);
+        const step = Math.ceil(data.length / bufferWidth);
         const amp = height / 2;
 
         ctx.fillStyle = WAVE_BG;
@@ -97,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.strokeStyle = color;
         ctx.lineWidth = 1;
 
-        for (let i = 0; i < width; i++) {
+        for (let i = 0; i < bufferWidth; i++) {
             let min = 1.0;
             let max = -1.0;
             
@@ -169,36 +183,53 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // File Upload Processing
+    function cleanupAudioNodes() {
+        if (sourceA) {
+            sourceA.disconnect();
+            sourceA = null;
+        }
+        if (sourceB) {
+            sourceB.disconnect();
+            sourceB = null;
+        }
+    }
+
+    // File Upload Processing with improved cleanup
     async function handleFileUpload(file, isTrackA) {
         initAudioContext();
         try {
             const arrayBuffer = await file.arrayBuffer();
             const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
             
+            // Clean up existing track if it exists
+            if (isTrackA && trackA?.gainNode) {
+                trackA.gainNode.disconnect();
+            } else if (!isTrackA && trackB?.gainNode) {
+                trackB.gainNode.disconnect();
+            }
+
+            // Create new track object
+            const newTrack = {
+                buffer: audioBuffer,
+                name: file.name,
+                gainNode: audioContext.createGain(),      // For level adjustments
+                switchNode: audioContext.createGain(),     // For A/B switching
+                delayNode: audioContext.createDelay(2),    // Max 2 seconds delay
+                delayTime: 0                              // Store delay time in ms
+            };
+            // Connect nodes in series: source -> delayNode -> gainNode -> switchNode -> masterGain
+            newTrack.delayNode.connect(newTrack.gainNode);
+            newTrack.gainNode.connect(newTrack.switchNode);
+            newTrack.switchNode.connect(masterGain);
+
+            // Assign to appropriate track
             if (isTrackA) {
-                if (trackA?.gainNode) {
-                    trackA.gainNode.disconnect();
-                }
-                trackA = {
-                    buffer: audioBuffer,
-                    name: file.name,
-                    gainNode: audioContext.createGain()
-                };
-                trackA.gainNode.connect(masterGain);
+                trackA = newTrack;
                 updateTrackDisplay('A', file.name);
                 drawWaveform(audioBuffer, ctxA, WAVE_COLOR_A);
                 document.getElementById('upload-zone-a').classList.add('has-file');
             } else {
-                if (trackB?.gainNode) {
-                    trackB.gainNode.disconnect();
-                }
-                trackB = {
-                    buffer: audioBuffer,
-                    name: file.name,
-                    gainNode: audioContext.createGain()
-                };
-                trackB.gainNode.connect(masterGain);
+                trackB = newTrack;
                 updateTrackDisplay('B', file.name);
                 drawWaveform(audioBuffer, ctxB, WAVE_COLOR_B);
                 document.getElementById('upload-zone-b').classList.add('has-file');
@@ -213,44 +244,49 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Modify startPlayback to include playhead animation
+    // Modify startPlayback to include proper cleanup
     function startPlayback() {
         if (!trackA || !trackB) return;
+        
+        cleanupAudioNodes();
         
         const offset = pauseTime;
         startTime = audioContext.currentTime - offset;
 
-        // Create and configure source nodes
         sourceA = audioContext.createBufferSource();
         sourceB = audioContext.createBufferSource();
         
         sourceA.buffer = trackA.buffer;
         sourceB.buffer = trackB.buffer;
 
-        sourceA.connect(trackA.gainNode);
-        sourceB.connect(trackB.gainNode);
+        // Connect nodes in series
+        sourceA.connect(trackA.delayNode);
+        sourceB.connect(trackB.delayNode);
 
-        // Set initial gain values based on current track and stored gain adjustments
+        // Set initial gain values based on stored gain adjustments
         const trackAGain = Math.pow(10, (trackA.gainAdjustment || 0) / 20);
         const trackBGain = Math.pow(10, (trackB.gainAdjustment || 0) / 20);
 
-        trackA.gainNode.gain.setValueAtTime(
-            currentTrack === 'A' ? trackAGain : 0, 
+        // Set level adjustments
+        trackA.gainNode.gain.setValueAtTime(trackAGain, audioContext.currentTime);
+        trackB.gainNode.gain.setValueAtTime(trackBGain, audioContext.currentTime);
+
+        // Set switch states
+        trackA.switchNode.gain.setValueAtTime(
+            currentTrack === 'A' ? 1 : 0, 
             audioContext.currentTime
         );
-        trackB.gainNode.gain.setValueAtTime(
-            currentTrack === 'B' ? trackBGain : 0, 
+        trackB.switchNode.gain.setValueAtTime(
+            currentTrack === 'B' ? 1 : 0, 
             audioContext.currentTime
         );
 
-        // Start both sources in sync
         sourceA.start(0, offset);
         sourceB.start(0, offset);
 
         isPlaying = true;
         playPauseButton.textContent = 'Pause';
 
-        // Start progress and playhead updates
         requestAnimationFrame(updateProgress);
         requestAnimationFrame(drawPlayhead);
     }
@@ -259,11 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isPlaying) return;
 
         pauseTime = audioContext.currentTime - startTime;
-        sourceA?.stop();
-        sourceB?.stop();
-        sourceA = null;
-        sourceB = null;
-
+        cleanupAudioNodes();
         isPlaying = false;
         playPauseButton.textContent = 'Play';
     }
@@ -278,6 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!trackA || !trackB) return;
 
         const nextTrack = currentTrack === 'A' ? 'B' : 'A';
+        const trackDisplay = document.getElementById('current-track-display');
         
         if (isPlaying) {
             const currentTime = audioContext.currentTime;
@@ -286,38 +319,58 @@ document.addEventListener('DOMContentLoaded', () => {
             const trackAGain = Math.pow(10, (trackA.gainAdjustment || 0) / 20);
             const trackBGain = Math.pow(10, (trackB.gainAdjustment || 0) / 20);
             
+            // Cancel any scheduled values for switch nodes
+            trackA.switchNode.gain.cancelScheduledValues(currentTime);
+            trackB.switchNode.gain.cancelScheduledValues(currentTime);
+            
             // Update track state and visual feedback
             currentTrack = nextTrack;
             updateActiveTrack();
-            document.getElementById('current-track-display').textContent = nextTrack;
             
-            // Quick crossfade between tracks
-            if (nextTrack === 'B') {
-                trackA.gainNode.gain.cancelScheduledValues(currentTime);
-                trackB.gainNode.gain.cancelScheduledValues(currentTime);
-                trackA.gainNode.gain.setValueAtTime(trackA.gainNode.gain.value, currentTime);
-                trackB.gainNode.gain.setValueAtTime(trackB.gainNode.gain.value, currentTime);
-                trackA.gainNode.gain.linearRampToValueAtTime(0, currentTime + FADE_TIME);
-                trackB.gainNode.gain.linearRampToValueAtTime(trackBGain, currentTime + FADE_TIME);
-            } else {
-                trackA.gainNode.gain.cancelScheduledValues(currentTime);
-                trackB.gainNode.gain.cancelScheduledValues(currentTime);
-                trackA.gainNode.gain.setValueAtTime(trackA.gainNode.gain.value, currentTime);
-                trackB.gainNode.gain.setValueAtTime(trackB.gainNode.gain.value, currentTime);
-                trackB.gainNode.gain.linearRampToValueAtTime(0, currentTime + FADE_TIME);
-                trackA.gainNode.gain.linearRampToValueAtTime(trackAGain, currentTime + FADE_TIME);
+            // Update display - flash only in blind test mode
+            if (blindTestMode) {
+                trackDisplay.classList.remove('flash');
+                void trackDisplay.offsetWidth; // Force reflow
+                trackDisplay.classList.add('flash');
             }
+            trackDisplay.textContent = blindTestMode ? '-' : nextTrack;
+            
+            // Quick crossfade between tracks using switch nodes, maintaining gain adjustments
+            if (nextTrack === 'B') {
+                trackA.switchNode.gain.setValueAtTime(trackA.switchNode.gain.value, currentTime);
+                trackB.switchNode.gain.setValueAtTime(trackB.switchNode.gain.value, currentTime);
+                trackA.switchNode.gain.linearRampToValueAtTime(0, currentTime + FADE_TIME);
+                trackB.switchNode.gain.linearRampToValueAtTime(1, currentTime + FADE_TIME);
+            } else {
+                trackA.switchNode.gain.setValueAtTime(trackA.switchNode.gain.value, currentTime);
+                trackB.switchNode.gain.setValueAtTime(trackB.switchNode.gain.value, currentTime);
+                trackB.switchNode.gain.linearRampToValueAtTime(0, currentTime + FADE_TIME);
+                trackA.switchNode.gain.linearRampToValueAtTime(1, currentTime + FADE_TIME);
+            }
+
+            // Ensure gain nodes maintain their adjusted values
+            trackA.gainNode.gain.setValueAtTime(trackAGain, currentTime);
+            trackB.gainNode.gain.setValueAtTime(trackBGain, currentTime);
         } else {
-            // If not playing, instant switch
+            // If not playing, instant switch using switch nodes
             const trackAGain = Math.pow(10, (trackA.gainAdjustment || 0) / 20);
             const trackBGain = Math.pow(10, (trackB.gainAdjustment || 0) / 20);
             
-            trackA.gainNode.gain.value = nextTrack === 'A' ? trackAGain : 0;
-            trackB.gainNode.gain.value = nextTrack === 'B' ? trackBGain : 0;
+            trackA.gainNode.gain.setValueAtTime(trackAGain, audioContext.currentTime);
+            trackB.gainNode.gain.setValueAtTime(trackBGain, audioContext.currentTime);
+            trackA.switchNode.gain.setValueAtTime(nextTrack === 'A' ? 1 : 0, audioContext.currentTime);
+            trackB.switchNode.gain.setValueAtTime(nextTrack === 'B' ? 1 : 0, audioContext.currentTime);
             
             currentTrack = nextTrack;
             updateActiveTrack();
-            document.getElementById('current-track-display').textContent = nextTrack;
+            
+            // Update display - flash only in blind test mode
+            if (blindTestMode) {
+                trackDisplay.classList.remove('flash');
+                void trackDisplay.offsetWidth; // Force reflow
+                trackDisplay.classList.add('flash');
+            }
+            trackDisplay.textContent = blindTestMode ? '-' : nextTrack;
         }
     }
 
@@ -382,9 +435,12 @@ document.addEventListener('DOMContentLoaded', () => {
     uploadZoneA.addEventListener('dragover', handleDragOver);
     uploadZoneA.addEventListener('dragleave', handleDragLeave);
     uploadZoneA.addEventListener('drop', handleDrop);
+    uploadZoneA.addEventListener('click', () => fileInputs[0].click());
+    
     uploadZoneB.addEventListener('dragover', handleDragOver);
     uploadZoneB.addEventListener('dragleave', handleDragLeave);
     uploadZoneB.addEventListener('drop', handleDrop);
+    uploadZoneB.addEventListener('click', () => fileInputs[1].click());
 
     fileInputs.forEach((input, index) => {
         input.addEventListener('change', (e) => {
@@ -414,6 +470,8 @@ document.addEventListener('DOMContentLoaded', () => {
     blindTestToggle.addEventListener('change', (e) => {
         blindTestMode = e.target.checked;
         document.body.classList.toggle('blind-test-mode', blindTestMode);
+        // Update the track display when toggling blind test mode
+        document.getElementById('current-track-display').textContent = blindTestMode ? '-' : currentTrack;
     });
 
     volumeControl.addEventListener('input', (e) => {
@@ -461,6 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
         stopButton.disabled = !bothTracksLoaded;
         abToggle.disabled = !bothTracksLoaded;
         matchLoudnessButton.disabled = !bothTracksLoaded;
+        autoAlignButton.disabled = !bothTracksLoaded;
         document.getElementById('reset-loudness').disabled = !bothTracksLoaded;
         
         if (bothTracksLoaded) {
@@ -627,28 +686,33 @@ document.addEventListener('DOMContentLoaded', () => {
             pausePlayback();
         }
 
-        // Find the quieter track's loudness
+        const currentTime = audioContext.currentTime;
         const targetLoudness = Math.min(trackA.loudness, trackB.loudness);
 
-        // Calculate and apply gain adjustments
         if (trackA.loudness > targetLoudness) {
             const gainAdjust = targetLoudness - trackA.loudness;
-            trackA.gainNode.gain.value = Math.pow(10, gainAdjust / 20);
             trackA.gainAdjustment = gainAdjust;
-            updateGainDisplay('A');
+            const gainValue = Math.pow(10, gainAdjust / 20);
             
-            // Update loudness display
+            trackA.gainNode.gain.cancelScheduledValues(currentTime);
+            trackA.gainNode.gain.setValueAtTime(trackA.gainNode.gain.value, currentTime);
+            trackA.gainNode.gain.linearRampToValueAtTime(gainValue, currentTime + 0.01);
+            
+            updateGainDisplay('A');
             const loudnessDisplay = document.getElementById('track-a-loudness');
             loudnessDisplay.textContent = targetLoudness.toFixed(1);
         }
         
         if (trackB.loudness > targetLoudness) {
             const gainAdjust = targetLoudness - trackB.loudness;
-            trackB.gainNode.gain.value = Math.pow(10, gainAdjust / 20);
             trackB.gainAdjustment = gainAdjust;
-            updateGainDisplay('B');
+            const gainValue = Math.pow(10, gainAdjust / 20);
             
-            // Update loudness display
+            trackB.gainNode.gain.cancelScheduledValues(currentTime);
+            trackB.gainNode.gain.setValueAtTime(trackB.gainNode.gain.value, currentTime);
+            trackB.gainNode.gain.linearRampToValueAtTime(gainValue, currentTime + 0.01);
+            
+            updateGainDisplay('B');
             const loudnessDisplay = document.getElementById('track-b-loudness');
             loudnessDisplay.textContent = targetLoudness.toFixed(1);
         }
@@ -670,7 +734,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function adjustGain(track, adjustment) {
         const trackObj = track === 'A' ? trackA : trackB;
         if (!trackObj) return;
-
+        
         // Initialize gainAdjustment if not set
         if (typeof trackObj.gainAdjustment !== 'number') {
             trackObj.gainAdjustment = 0;
@@ -681,12 +745,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Calculate and apply the new gain value
         const gainValue = Math.pow(10, trackObj.gainAdjustment / 20);
-        trackObj.gainNode.gain.value = gainValue;
+        const currentTime = audioContext.currentTime;
+        
+        trackObj.gainNode.gain.cancelScheduledValues(currentTime);
+        trackObj.gainNode.gain.setValueAtTime(trackObj.gainNode.gain.value, currentTime);
+        trackObj.gainNode.gain.linearRampToValueAtTime(gainValue, currentTime + 0.01);
 
-        // Update the gain display
+        // Update displays
         updateGainDisplay(track);
-
-        // Update the loudness display with the new effective loudness
         const newLoudness = trackObj.loudness + trackObj.gainAdjustment;
         const loudnessDisplay = document.getElementById(`track-${track.toLowerCase()}-loudness`);
         loudnessDisplay.textContent = newLoudness.toFixed(1);
@@ -802,7 +868,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 trackA.gainNode.disconnect();
             }
             trackA = null;
-            updateTrackDisplay('A', '<p>Drag & drop audio file here</p><p class="upload-hint">Supported formats: .wav, .mp3, .aac, .m4a, .ogg, .flac</p>');
+            updateTrackDisplay('A', '<p>Drag & drop audio file here</p><p class="upload-hint">Supported formats: .wav, .mp3, .aac, .m4a, .ogg, .flac</p><p class="upload-hint">Files are processed locally</p>');
             document.getElementById('upload-zone-a').classList.remove('has-file');
             if (ctxA) {
                 ctxA.fillStyle = WAVE_BG;
@@ -813,7 +879,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 trackB.gainNode.disconnect();
             }
             trackB = null;
-            updateTrackDisplay('B', '<p>Drag & drop audio file here</p><p class="upload-hint">Supported formats: .wav, .mp3, .aac, .m4a, .ogg, .flac</p>');
+            updateTrackDisplay('B', '<p>Drag & drop audio file here</p><p class="upload-hint">Supported formats: .wav, .mp3, .aac, .m4a, .ogg, .flac</p><p class="upload-hint">Files are processed locally</p>');
             document.getElementById('upload-zone-b').classList.remove('has-file');
             if (ctxB) {
                 ctxB.fillStyle = WAVE_BG;
@@ -834,25 +900,193 @@ document.addEventListener('DOMContentLoaded', () => {
             pausePlayback();
         }
 
-        // Reset gain adjustments
+        const currentTime = audioContext.currentTime;
+
+        // Reset gain and delay adjustments
         if (trackA) {
             trackA.gainAdjustment = 0;
-            trackA.gainNode.gain.value = 1;
+            trackA.delayTime = 0;
+            trackA.gainNode.gain.cancelScheduledValues(currentTime);
+            trackA.gainNode.gain.setValueAtTime(trackA.gainNode.gain.value, currentTime);
+            trackA.gainNode.gain.linearRampToValueAtTime(1, currentTime + 0.01);
+            trackA.delayNode.delayTime.setValueAtTime(0, currentTime);
             updateGainDisplay('A');
+            updateDelayDisplay('A');
             const loudnessDisplay = document.getElementById('track-a-loudness');
             loudnessDisplay.textContent = trackA.loudness.toFixed(1);
         }
 
         if (trackB) {
             trackB.gainAdjustment = 0;
-            trackB.gainNode.gain.value = 1;
+            trackB.delayTime = 0;
+            trackB.gainNode.gain.cancelScheduledValues(currentTime);
+            trackB.gainNode.gain.setValueAtTime(trackB.gainNode.gain.value, currentTime);
+            trackB.gainNode.gain.linearRampToValueAtTime(1, currentTime + 0.01);
+            trackB.delayNode.delayTime.setValueAtTime(0, currentTime);
             updateGainDisplay('B');
+            updateDelayDisplay('B');
             const loudnessDisplay = document.getElementById('track-b-loudness');
             loudnessDisplay.textContent = trackB.loudness.toFixed(1);
         }
 
         if (wasPlaying) {
             startPlayback();
+        }
+    });
+
+    // Update cursor style for upload zones
+    uploadZoneA.style.cursor = 'pointer';
+    uploadZoneB.style.cursor = 'pointer';
+
+    // Add space bar control for playback
+    document.addEventListener('keydown', (e) => {
+        // Only handle space bar when not typing in an input
+        if (e.code === 'Space' && e.target === document.body) {
+            e.preventDefault(); // Prevent page scroll
+            if (!playPauseButton.disabled) {
+                if (!isPlaying) {
+                    startPlayback();
+                } else {
+                    pausePlayback();
+                }
+            }
+        }
+    });
+
+    // Add delay adjustment functionality
+    document.querySelectorAll('.delay-button').forEach(button => {
+        button.addEventListener('click', () => {
+            const track = button.dataset.track.toUpperCase();
+            const adjustment = parseFloat(button.dataset.adjust);
+            adjustDelay(track, adjustment);
+        });
+    });
+
+    function adjustDelay(track, adjustment) {
+        const trackObj = track === 'A' ? trackA : trackB;
+        if (!trackObj) return;
+        
+        // Convert ms to seconds for Web Audio API
+        const newDelayMs = Math.max(0, (trackObj.delayTime || 0) + adjustment);
+        const newDelaySec = newDelayMs / 1000;
+        
+        // Update delay time
+        trackObj.delayTime = newDelayMs;
+        trackObj.delayNode.delayTime.setValueAtTime(newDelaySec, audioContext.currentTime);
+
+        // Update display
+        updateDelayDisplay(track);
+    }
+
+    function updateDelayDisplay(track) {
+        const trackObj = track === 'A' ? trackA : trackB;
+        if (!trackObj) return;
+
+        const delayDisplay = document.getElementById(`track-${track.toLowerCase()}-delay`);
+        delayDisplay.textContent = Math.round(trackObj.delayTime);
+    }
+
+    // Add auto-align button to loudness buttons
+    const loudnessButtons = document.querySelector('.loudness-buttons');
+    const autoAlignButton = document.createElement('button');
+    autoAlignButton.id = 'auto-align';
+    autoAlignButton.className = 'control-button';
+    autoAlignButton.textContent = 'Auto Align';
+    autoAlignButton.disabled = true;
+    
+    // Insert auto-align button after match-loudness button
+    const matchButton = document.getElementById('match-loudness');
+    matchButton.parentNode.insertBefore(autoAlignButton, matchButton.nextSibling);
+
+    // Auto alignment function
+    async function findOptimalAlignment(trackABuffer, trackBBuffer) {
+        // Use first 100ms for analysis
+        const sampleRate = trackABuffer.sampleRate;
+        const windowSize = Math.floor(sampleRate * 0.1); // 100ms window
+        const dataA = trackABuffer.getChannelData(0).slice(0, windowSize);
+        const dataB = trackBBuffer.getChannelData(0).slice(0, windowSize);
+        
+        // Find RMS values in small chunks to detect peaks
+        const chunkSize = Math.floor(sampleRate * 0.001); // 1ms chunks
+        const rmsA = calculateRMSChunks(dataA, chunkSize);
+        const rmsB = calculateRMSChunks(dataB, chunkSize);
+        
+        // Find first significant peak in each track
+        const thresholdA = Math.max(...rmsA) * 0.3; // 30% of max RMS
+        const thresholdB = Math.max(...rmsB) * 0.3;
+        
+        let peakA = findFirstPeak(rmsA, thresholdA);
+        let peakB = findFirstPeak(rmsB, thresholdB);
+        
+        // Calculate delay in milliseconds
+        const delayMs = ((peakB - peakA) * chunkSize / sampleRate) * 1000;
+        
+        console.log('Peak A:', peakA, 'Peak B:', peakB, 'Delay:', delayMs);
+        return delayMs;
+    }
+
+    function calculateRMSChunks(data, chunkSize) {
+        const rmsValues = [];
+        for (let i = 0; i < data.length; i += chunkSize) {
+            let sum = 0;
+            const end = Math.min(i + chunkSize, data.length);
+            for (let j = i; j < end; j++) {
+                sum += data[j] * data[j];
+            }
+            rmsValues.push(Math.sqrt(sum / (end - i)));
+        }
+        return rmsValues;
+    }
+
+    function findFirstPeak(rmsValues, threshold) {
+        // Find the first value that exceeds the threshold
+        for (let i = 0; i < rmsValues.length; i++) {
+            if (rmsValues[i] > threshold) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    // Add auto-align button handler
+    autoAlignButton.addEventListener('click', async () => {
+        if (!trackA?.buffer || !trackB?.buffer) return;
+        
+        const wasPlaying = isPlaying;
+        if (wasPlaying) {
+            pausePlayback();
+        }
+        
+        try {
+            // Show loading state
+            autoAlignButton.textContent = 'Aligning...';
+            autoAlignButton.disabled = true;
+            
+            // Find optimal delay
+            const delayMs = await findOptimalAlignment(trackA.buffer, trackB.buffer);
+            
+            // Reset both delays first
+            adjustDelay('A', -trackA.delayTime);
+            adjustDelay('B', -trackB.delayTime);
+            
+            // Apply the new delay
+            if (delayMs > 0) {
+                adjustDelay('B', delayMs);
+            } else {
+                adjustDelay('A', -delayMs);
+            }
+            
+            // Restore button state
+            autoAlignButton.textContent = 'Auto Align';
+            autoAlignButton.disabled = false;
+            
+            if (wasPlaying) {
+                startPlayback();
+            }
+        } catch (error) {
+            console.error('Error in auto alignment:', error);
+            autoAlignButton.textContent = 'Auto Align';
+            autoAlignButton.disabled = false;
         }
     });
 });
