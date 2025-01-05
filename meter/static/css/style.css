@@ -60,24 +60,72 @@ body {
     padding: 20px;
 }
 
-.vu-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+/* Level Meter */
+.level-meter {
     background-color: #1e1e1e;
     border-radius: 4px;
     padding: 20px;
-    width: 100%;
-    box-sizing: border-box;
-    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
-#vuMeter {
+.meter-bar {
     width: 100%;
-    height: 200px;
-    background-color: transparent;
+    height: 8px;
+    background-color: #2b2b2b;
+    border-radius: 4px;
+    overflow: hidden;
 }
 
+.meter-fill {
+    height: 100%;
+    width: 30%;  /* Will be controlled by JS */
+    background: linear-gradient(90deg, #4a9eff 0%, #4a9eff 70%, #ff5555 100%);
+    border-radius: 4px;
+    transition: width 0.1s ease;
+}
+
+.digital-display {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 0 20px;
+}
+
+.display-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.display-group.main {
+    transform: scale(1.5);
+    transform-origin: center;
+}
+
+.display-label {
+    font-size: 14px;
+    color: #808080;
+}
+
+.display-value {
+    font-size: 32px;
+    color: #fff;
+    font-weight: bold;
+}
+
+.display-value.large {
+    font-size: 48px;
+}
+
+.display-unit {
+    font-size: 14px;
+    color: #808080;
+}
+
+/* Controls */
 .controls {
     display: flex;
     gap: 10px;
@@ -94,6 +142,7 @@ body {
     margin: 0 10px;
 }
 
+/* Visualization */
 .visualization-container {
     background-color: #1e1e1e;
     border-radius: 4px;
@@ -121,6 +170,7 @@ body {
     display: block;
 }
 
+/* Buttons */
 button {
     background-color: #3c3f41;
     border: none;
@@ -143,75 +193,7 @@ button.active {
     color: #fff;
 }
 
-.meter-values {
-    position: absolute;
-    bottom: 20px;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: space-between;
-    padding: 0 40px;
-    box-sizing: border-box;
-}
-
-.value-display {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-}
-
-.value-display .label {
-    font-size: 14px;
-    color: #808080;
-}
-
-.value-display .value {
-    font-size: 32px;
-    color: #4a9eff;
-}
-
-.settings {
-    display: flex;
-    gap: 20px;
-    justify-content: center;
-}
-
-.setting {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    min-width: 200px;
-}
-
-label {
-    font-size: 14px;
-    color: #808080;
-}
-
-input[type="range"] {
-    -webkit-appearance: none;
-    width: 100%;
-    height: 4px;
-    background: #1e1e1e;
-    border-radius: 2px;
-    outline: none;
-}
-
-input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
-    background: #4a9eff;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-input[type="range"]::-webkit-slider-thumb:hover {
-    background: #6ab0ff;
-}
-
+/* Responsive Design */
 @media (max-width: 768px) {
     .container {
         padding: 10px;
@@ -221,21 +203,20 @@ input[type="range"]::-webkit-slider-thumb:hover {
         padding: 10px;
     }
     
-    .vu-section {
+    .level-meter {
         padding: 15px;
     }
     
-    #vuMeter {
-        height: 140px;
+    .digital-display {
+        padding: 0 10px;
     }
     
-    .meter-values {
-        padding: 0 20px;
-        bottom: 15px;
-    }
-    
-    .value-display .value {
+    .display-value {
         font-size: 24px;
+    }
+    
+    .display-value.large {
+        font-size: 36px;
     }
     
     .visualization-container {

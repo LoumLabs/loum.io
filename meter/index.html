@@ -12,17 +12,25 @@
     
     <div class="container">
         <div class="meter-container">
-            <!-- VU Meter -->
-            <div class="vu-section">
-                <canvas id="vuMeter"></canvas>
-                <div class="meter-values">
-                    <div class="value-display">
-                        <span class="label">AVG</span>
-                        <span id="avgValue" class="value">-∞</span>
+            <!-- Level Meter -->
+            <div class="level-meter">
+                <div class="meter-bar">
+                    <div class="meter-fill"></div>
+                </div>
+                <div class="digital-display">
+                    <div class="display-group">
+                        <div class="display-label">PEAK</div>
+                        <div class="display-value" id="peakValue">70</div>
+                        <div class="display-unit">SPL</div>
                     </div>
-                    <div class="value-display">
-                        <span class="label">PEAK</span>
-                        <span id="peakValue" class="value">-∞</span>
+                    <div class="display-group main">
+                        <div class="display-value large" id="currentValue">65</div>
+                        <div class="display-unit">SPL</div>
+                    </div>
+                    <div class="display-group">
+                        <div class="display-label">AVG</div>
+                        <div class="display-value" id="avgValue">50</div>
+                        <div class="display-unit">SPL</div>
                     </div>
                 </div>
             </div>
@@ -30,6 +38,7 @@
             <!-- Controls -->
             <div class="controls">
                 <button id="startButton">Start</button>
+                <button id="holdButton">Hold</button>
                 <div class="view-controls">
                     <button id="spectrumButton" class="active">Spectrum</button>
                     <button id="spectrogramButton">Spectrogram</button>

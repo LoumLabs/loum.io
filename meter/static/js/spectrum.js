@@ -2,19 +2,21 @@ class SpectrumAnalyzer {
     constructor(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
-        this.sensitivity = -30;
-        this.minDb = -90;
+        this.sensitivity = 50;
+        this.minDb = -100;
         this.maxDb = 0;
-        this.barSpacing = 2;
-        this.frequencyLabels = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
+        this.frequencyLabels = [10, 20, 50, 100, 200, 500, '1k', '2k', '5k', '10k', '20k'];
+        this.sampleRate = 44100;  // Default to 44.1kHz, but will be updated when drawing
         
-        // Colors for gradient
+        // Create gradient colors for fill with deeper blue like reference
         this.gradientColors = [
-            { pos: 0.0, color: '#0d47a1' },  // Deep blue
-            { pos: 0.5, color: '#4a9eff' },  // Light blue
-            { pos: 0.8, color: '#ffaa00' },  // Orange
-            { pos: 1.0, color: '#ff5555' }   // Red
+            { pos: 0.0, color: 'rgba(30, 100, 255, 0.8)' },
+            { pos: 1.0, color: 'rgba(30, 100, 255, 0.2)' }
         ];
+
+        // Previous frequency data for smoothing
+        this.prevFrequencyData = null;
+        this.smoothingFactor = 0.3;
 
         // Initial resize
         this.handleResize();
@@ -44,51 +46,125 @@ class SpectrumAnalyzer {
         this.sensitivity = value;
     }
 
-    draw(dataArray) {
+    getFrequencyForBin(bin, sampleRate, totalBins) {
+        return (bin * sampleRate) / (totalBins * 2);
+    }
+
+    getBinForFrequency(freq, sampleRate, totalBins) {
+        return Math.round((freq * totalBins * 2) / sampleRate);
+    }
+
+    draw(frequencyData, sampleRate) {
         if (!this.ctx || !this.width || !this.height) return;
+        
+        // Update sample rate if provided
+        if (sampleRate) {
+            if (this.sampleRate !== sampleRate) {
+                console.log('Sample rate changed from', this.sampleRate, 'to', sampleRate, 'Hz');
+                this.sampleRate = sampleRate;
+            }
+        }
 
         const ctx = this.ctx;
         const width = this.width;
         const height = this.height;
         
-        // Clear canvas with background
-        ctx.fillStyle = '#2b2b2b';
-        ctx.fillRect(0, 0, width, height);
+        // Clear the canvas
+        ctx.clearRect(0, 0, width, height);
         
-        // Draw grid lines and labels
+        // Check if we should draw anything (when stopped or no signal)
+        if (frequencyData[0] <= -180) {
+            this.drawGrid();
+            return;
+        }
+        
+        // Draw grid first
         this.drawGrid();
         
         // Create gradient
-        const gradient = ctx.createLinearGradient(0, height, 0, 0);
-        this.gradientColors.forEach(({ pos, color }) => {
-            gradient.addColorStop(pos, color);
+        const gradient = ctx.createLinearGradient(0, 0, 0, height);
+        this.gradientColors.forEach(color => {
+            gradient.addColorStop(color.pos, color.color);
         });
         
-        // Calculate bar width and spacing
-        const binCount = dataArray.length;
-        const effectiveWidth = width - 50; // Leave space for labels
-        const barWidth = (effectiveWidth / binCount) - this.barSpacing;
-        
-        // Draw frequency bars
-        ctx.save();
-        ctx.translate(50, 0); // Move right to make space for dB scale
-
-        for (let i = 0; i < binCount; i++) {
-            // Always use logarithmic scale
-            const x = (Math.log10(1 + i) / Math.log10(1 + binCount)) * effectiveWidth;
-            
-            // Normalize dB value between 0 and 1
-            const dbValue = Math.max(this.minDb, Math.min(this.maxDb, dataArray[i]));
-            const normalizedDb = (dbValue - this.minDb) / (this.maxDb - this.minDb);
-            
-            // Apply sensitivity
-            const adjustedHeight = normalizedDb * height * (1 + (this.sensitivity + 60) / 60);
-            
-            ctx.fillStyle = gradient;
-            ctx.fillRect(x, height - adjustedHeight, barWidth, adjustedHeight);
+        // Initialize previous data if needed
+        if (!this.prevFrequencyData || this.prevFrequencyData.length !== frequencyData.length) {
+            this.prevFrequencyData = new Float32Array(frequencyData);
         }
         
-        ctx.restore();
+        // Begin path for the continuous line
+        ctx.beginPath();
+        ctx.moveTo(50, height); // Start at bottom left
+        
+        const binCount = frequencyData.length;
+        let points = [];
+        let lastX = 50;
+
+        // Calculate Nyquist frequency (half the sample rate)
+        const nyquistFreq = this.sampleRate / 2;
+
+        // First pass: collect and smooth the points
+        for (let i = 0; i < binCount; i++) {
+            // Get the actual frequency for this bin
+            const freq = this.getFrequencyForBin(i, this.sampleRate, binCount * 2);
+            
+            // Skip if frequency is outside our display range
+            if (freq < 10 || freq > Math.min(20000, nyquistFreq)) continue;
+            
+            // Convert frequency to x position (logarithmic)
+            const x = 50 + ((Math.log10(freq) - Math.log10(10)) / (Math.log10(20000) - Math.log10(10))) * (width - 50);
+            
+            if (x >= lastX && x <= width) {
+                // Smooth the frequency data
+                this.prevFrequencyData[i] = this.prevFrequencyData[i] * this.smoothingFactor + 
+                                          frequencyData[i] * (1 - this.smoothingFactor);
+                
+                // Get dB value and apply sensitivity boost
+                let db = this.prevFrequencyData[i];
+                db = Math.min(this.maxDb, db + this.sensitivity);
+                db = Math.max(this.minDb, db);
+                
+                // Convert to y position with smoother scaling
+                const normalizedDb = (db - this.minDb) / (this.maxDb - this.minDb);
+                // Use linear scaling like reference
+                const y = height - (normalizedDb * height);
+                
+                points.push({x, y});
+                lastX = x;
+            }
+        }
+        
+        // Second pass: draw smooth curve through points
+        if (points.length > 0) {
+            ctx.moveTo(50, height);
+            ctx.lineTo(points[0].x, points[0].y);
+            
+            // Draw curve through points
+            for (let i = 1; i < points.length - 2; i++) {
+                const xc = (points[i].x + points[i + 1].x) / 2;
+                const yc = (points[i].y + points[i + 1].y) / 2;
+                ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+            }
+            
+            // Handle last two points
+            if (points.length > 2) {
+                const last = points[points.length - 1];
+                const secondLast = points[points.length - 2];
+                ctx.quadraticCurveTo(secondLast.x, secondLast.y, last.x, last.y);
+            }
+            
+            // Complete the path
+            ctx.lineTo(width, height);
+        }
+        
+        // Fill with gradient
+        ctx.fillStyle = gradient;
+        ctx.fill();
+        
+        // Draw the line on top with brighter blue
+        ctx.strokeStyle = 'rgba(100, 150, 255, 0.9)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
     }
 
     drawGrid() {
@@ -101,8 +177,8 @@ class SpectrumAnalyzer {
         ctx.font = '12px monospace';
         ctx.lineWidth = 1;
         
-        // Draw dB scale
-        const dbStep = 20;
+        // Draw dB scale with 10dB steps like reference
+        const dbStep = 10;
         for (let db = this.minDb; db <= this.maxDb; db += dbStep) {
             const y = height - ((db - this.minDb) / (this.maxDb - this.minDb)) * height;
             
@@ -115,19 +191,26 @@ class SpectrumAnalyzer {
             // Draw label
             ctx.textAlign = 'right';
             ctx.textBaseline = 'middle';
-            ctx.fillText(`${db}dB`, 45, y);
+            ctx.fillText(`${db}`, 45, y);
         }
         
         // Draw frequency scale
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
         this.frequencyLabels.forEach(freq => {
-            // Always use logarithmic scale for labels
-            const x = 50 + ((Math.log10(freq) - Math.log10(20)) / (Math.log10(20000) - Math.log10(20))) * (width - 50);
+            const numericFreq = typeof freq === 'string' ? 
+                parseInt(freq.replace('k', '000')) : freq;
+            
+            const x = 50 + ((Math.log10(numericFreq) - Math.log10(10)) / (Math.log10(20000) - Math.log10(10))) * (width - 50);
             
             if (x >= 50 && x <= width) {
-                const label = freq >= 1000 ? `${freq/1000}k` : freq;
-                ctx.fillText(label, x, height - 20);
+                // Draw vertical grid line
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height - 25);
+                ctx.stroke();
+                // Draw label
+                ctx.fillText(freq, x, height - 20);
             }
         });
     }
