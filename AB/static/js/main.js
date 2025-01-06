@@ -180,12 +180,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function resizeCanvases() {
         const width = document.querySelector('.waveform').offsetWidth;
+        const dpr = window.devicePixelRatio || 1;
         
-        // Resize all canvas layers
+        // Resize all canvas layers with device pixel ratio
         ['A', 'B'].forEach(track => {
             const container = document.getElementById(`waveform-${track.toLowerCase()}`);
             container.querySelectorAll('canvas').forEach(canvas => {
-                canvas.width = width;
+                // Set the canvas size in CSS pixels
+                canvas.style.width = width + 'px';
+                canvas.style.height = CANVAS_HEIGHT + 'px';
+                
+                // Scale the canvas internal dimensions by DPR
+                canvas.width = width * dpr;
+                canvas.height = CANVAS_HEIGHT * dpr;
+                
+                // Scale the context to match DPR
+                const ctx = canvas.getContext('2d');
+                ctx.scale(dpr, dpr);
             });
         });
         
@@ -193,12 +204,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (trackA?.buffer || trackB?.buffer) {
             drawWaveforms();
             drawSelection();
+            if (isPlaying || pauseTime > 0) {
+                drawPlayhead();
+            }
         }
     }
 
     function drawWaveform(audioBuffer, ctx, color) {
-        const width = ctx.canvas.width;
-        const height = ctx.canvas.height;
+        const dpr = window.devicePixelRatio || 1;
+        const width = ctx.canvas.width / dpr;
+        const height = ctx.canvas.height / dpr;
         
         const maxDuration = Math.max(
             trackA?.buffer?.duration || 0,
@@ -229,8 +244,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (datum > max) max = datum;
             }
 
-            ctx.moveTo(i, (1 + min) * amp);
-            ctx.lineTo(i, (1 + max) * amp);
+            // Center the waveform vertically
+            const y1 = (height / 2) + (min * amp);
+            const y2 = (height / 2) + (max * amp);
+            
+            ctx.moveTo(i, y1);
+            ctx.lineTo(i, y2);
         }
 
         ctx.stroke();
@@ -244,10 +263,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawSelection() {
+        const dpr = window.devicePixelRatio || 1;
+        
         ['A', 'B'].forEach(track => {
             const ctx = selectionContexts[track];
-            const width = ctx.canvas.width;
-            const height = ctx.canvas.height;
+            const width = ctx.canvas.width / dpr;
+            const height = ctx.canvas.height / dpr;
             const duration = trackA?.buffer?.duration || trackB?.buffer?.duration;
 
             // Clear selection layer
@@ -276,6 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function drawPlayhead() {
         if (!trackA || !trackB) return;
+        const dpr = window.devicePixelRatio || 1;
 
         let currentTime = isPlaying ? audioContext.currentTime - startTime : pauseTime;
         const duration = trackA.buffer.duration;
@@ -291,18 +313,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        const position = (currentTime / duration) * canvasA.width;
+        const position = (currentTime / duration) * (canvasA.width / dpr);
 
         // Draw playhead on both tracks
         ['A', 'B'].forEach(track => {
             const ctx = playheadContexts[track];
-            const width = ctx.canvas.width;
-            const height = ctx.canvas.height;
+            const width = ctx.canvas.width / dpr;
+            const height = ctx.canvas.height / dpr;
 
             // Clear playhead layer
             ctx.clearRect(0, 0, width, height);
 
-            // Draw playhead line
+            // Draw playhead line with anti-aliasing
             ctx.beginPath();
             ctx.strokeStyle = '#fff';
             ctx.lineWidth = 2;
