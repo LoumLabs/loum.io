@@ -75,14 +75,14 @@ function initializeVisualizations() {
 }
 
 // Running average buffers with longer periods for smoother display
-const avgBuffer = new Array(60).fill(-90);  // Doubled buffer size
-const peakBuffer = new Array(30).fill(-90);
-const currentBuffer = new Array(15).fill(-90);
+const avgBuffer = new Array(60).fill(-90);  // Keep long buffer for true average
+const peakBuffer = new Array(30).fill(-90);  // Keep moderate buffer for peak
+const currentBuffer = new Array(8).fill(-90);  // Reduced from 15 for faster response
 let avgIndex = 0;
 let peakIndex = 0;
 let currentIndex = 0;
 let lastDisplayUpdate = 0;
-const DISPLAY_UPDATE_INTERVAL = 150;  // Update display every 150ms
+const DISPLAY_UPDATE_INTERVAL = 100;  // Update display more frequently (was 150ms)
 
 function calculateRunningAverage(buffer, newValue, index) {
     buffer[index] = newValue;

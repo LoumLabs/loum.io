@@ -24,8 +24,8 @@ class VUMeter {
         this.MIC_GAIN = -45;         // Significantly increased attenuation
         this.SYSTEM_OFFSET = -25;    // Increased system-level adjustment
         
-        // Initialize averaging system with longer buffer for stability
-        this.averagingBuffer = new Float32Array(24);
+        // Initialize averaging system with shorter buffer for faster response
+        this.averagingBuffer = new Float32Array(12);
         this.averagingIndex = 0;
         
         // Peak tracking
@@ -82,8 +82,8 @@ class VUMeter {
             this.lastPeak = Math.max(avgSPL, this.lastPeak - 0.5);
         }
         
-        // Use peak-influenced value for smoother response
-        const smoothedSPL = (avgSPL * 0.7) + (this.lastPeak * 0.3);
+        // Use peak-influenced value with more emphasis on current value
+        const smoothedSPL = (avgSPL * 0.85) + (this.lastPeak * 0.15);
         
         // Ensure reasonable range and calibrate against reference levels
         const calibratedSPL = Math.min(
