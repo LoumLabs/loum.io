@@ -679,7 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add loudness matching functionality
     matchLoudnessButton.addEventListener('click', async () => {
-        if (!trackA?.loudness || !trackB?.loudness) return;
+        if (!trackA?.buffer || !trackB?.buffer) return;
 
         const wasPlaying = isPlaying;
         if (wasPlaying) {
@@ -687,40 +687,76 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const currentTime = audioContext.currentTime;
+        
+        // Step 1: Match LUFS-S Max
         const targetLoudness = Math.min(trackA.loudness, trackB.loudness);
-
+        
+        // Calculate initial gain adjustments to match LUFS
+        let gainAdjustA = 0;
+        let gainAdjustB = 0;
+        
         if (trackA.loudness > targetLoudness) {
-            const gainAdjust = targetLoudness - trackA.loudness;
-            trackA.gainAdjustment = gainAdjust;
-            const gainValue = Math.pow(10, gainAdjust / 20);
-            
-            trackA.gainNode.gain.cancelScheduledValues(currentTime);
-            trackA.gainNode.gain.setValueAtTime(trackA.gainNode.gain.value, currentTime);
-            trackA.gainNode.gain.linearRampToValueAtTime(gainValue, currentTime + 0.01);
-            
-            updateGainDisplay('A');
-            const loudnessDisplay = document.getElementById('track-a-loudness');
-            loudnessDisplay.textContent = targetLoudness.toFixed(1);
+            gainAdjustA = targetLoudness - trackA.loudness;
+        }
+        if (trackB.loudness > targetLoudness) {
+            gainAdjustB = targetLoudness - trackB.loudness;
         }
         
-        if (trackB.loudness > targetLoudness) {
-            const gainAdjust = targetLoudness - trackB.loudness;
-            trackB.gainAdjustment = gainAdjust;
-            const gainValue = Math.pow(10, gainAdjust / 20);
-            
-            trackB.gainNode.gain.cancelScheduledValues(currentTime);
-            trackB.gainNode.gain.setValueAtTime(trackB.gainNode.gain.value, currentTime);
-            trackB.gainNode.gain.linearRampToValueAtTime(gainValue, currentTime + 0.01);
-            
-            updateGainDisplay('B');
-            const loudnessDisplay = document.getElementById('track-b-loudness');
-            loudnessDisplay.textContent = targetLoudness.toFixed(1);
-        }
-
+        // Step 2: Find the highest peak after LUFS matching
+        const peakA = findPeak(trackA.buffer) * Math.pow(10, gainAdjustA / 20);
+        const peakB = findPeak(trackB.buffer) * Math.pow(10, gainAdjustB / 20);
+        const highestPeak = Math.max(peakA, peakB);
+        
+        // Step 3: Calculate additional gain needed to bring highest peak to -2dB
+        const TARGET_PEAK_DB = -2;
+        const additionalGain = TARGET_PEAK_DB - 20 * Math.log10(highestPeak);
+        
+        // Apply combined gain adjustments
+        trackA.gainAdjustment = gainAdjustA + additionalGain;
+        trackB.gainAdjustment = gainAdjustB + additionalGain;
+        
+        // Apply gains to audio nodes
+        const gainValueA = Math.pow(10, trackA.gainAdjustment / 20);
+        const gainValueB = Math.pow(10, trackB.gainAdjustment / 20);
+        
+        trackA.gainNode.gain.cancelScheduledValues(currentTime);
+        trackB.gainNode.gain.cancelScheduledValues(currentTime);
+        
+        trackA.gainNode.gain.setValueAtTime(trackA.gainNode.gain.value, currentTime);
+        trackB.gainNode.gain.setValueAtTime(trackB.gainNode.gain.value, currentTime);
+        
+        trackA.gainNode.gain.linearRampToValueAtTime(gainValueA, currentTime + 0.01);
+        trackB.gainNode.gain.linearRampToValueAtTime(gainValueB, currentTime + 0.01);
+        
+        // Update displays
+        updateGainDisplay('A');
+        updateGainDisplay('B');
+        
+        const newLoudnessA = trackA.loudness + trackA.gainAdjustment;
+        const newLoudnessB = trackB.loudness + trackB.gainAdjustment;
+        
+        document.getElementById('track-a-loudness').textContent = newLoudnessA.toFixed(1);
+        document.getElementById('track-b-loudness').textContent = newLoudnessB.toFixed(1);
+        
         if (wasPlaying) {
             startPlayback();
         }
     });
+
+    // Helper function to find peak sample value in an audio buffer
+    function findPeak(buffer) {
+        let peak = 0;
+        for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+            const data = buffer.getChannelData(channel);
+            for (let i = 0; i < data.length; i++) {
+                const abs = Math.abs(data[i]);
+                if (abs > peak) {
+                    peak = abs;
+                }
+            }
+        }
+        return peak;
+    }
 
     // Add gain adjustment functionality
     document.querySelectorAll('.gain-button').forEach(button => {
@@ -1089,4 +1125,37 @@ document.addEventListener('DOMContentLoaded', () => {
             autoAlignButton.disabled = false;
         }
     });
+
+    async function matchLoudness() {
+        if (!trackA?.buffer || !trackB?.buffer) return;
+        
+        // Get current loudness values
+        const loudnessA = await measureLoudness(trackA.buffer);
+        const loudnessB = await measureLoudness(trackB.buffer);
+        
+        // Target level is -2 dBFS
+        const targetLevel = -2;
+        
+        // Calculate gains needed to bring each track to target level
+        const gainToTargetA = targetLevel - loudnessA.shortTerm;
+        const gainToTargetB = targetLevel - loudnessB.shortTerm;
+        
+        // Apply gains to both tracks
+        trackA.setGain(gainToTargetA);
+        trackB.setGain(gainToTargetB);
+        
+        // Update displays
+        updateTrackInfo('A', gainToTargetA);
+        updateTrackInfo('B', gainToTargetB);
+    }
+
+    function updateTrackInfo(track, gainValue) {
+        const gainDisplay = document.querySelector(`#track${track}GainValue`);
+        if (gainDisplay) {
+            gainDisplay.textContent = gainValue.toFixed(1);
+        }
+        
+        // Update LUFS display after gain change
+        updateLoudnessDisplay();
+    }
 });
