@@ -49,6 +49,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const CLICK_THRESHOLD = 200; // ms
     const MOVE_THRESHOLD = 5; // pixels
 
+    // Add mouse handling variables
+    let mouseStartX = null;
+    let mouseStartTime = null;
+
     // Initialize canvases with multiple layers
     function initWaveforms() {
         const waveformA = document.getElementById('waveform-a');
@@ -64,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <canvas class="playhead-layer" id="waveform-${track.toLowerCase()}-playhead"></canvas>
             `;
 
-            // Add click handler to each canvas layer
+            // Style the canvas layers
             container.querySelectorAll('canvas').forEach(canvas => {
                 canvas.style.position = 'absolute';
                 canvas.style.left = '0';
@@ -72,42 +76,66 @@ document.addEventListener('DOMContentLoaded', () => {
                 canvas.style.width = '100%';
                 canvas.style.height = '100%';
                 canvas.height = CANVAS_HEIGHT;
-                
-                // Add click handler to each canvas
-                canvas.addEventListener('click', (e) => {
-                    if (!trackA?.buffer || !trackB?.buffer) return;
-                    e.stopPropagation(); // Stop event from bubbling to container
-                    
-                    // Only handle click if we're not selecting
-                    if (!isSelecting && !isDragging) {
-                        const rect = container.getBoundingClientRect();
-                        const x = e.clientX - rect.left;
-                        const clickTime = (x / container.offsetWidth) * trackA.buffer.duration;
-                        console.log('Seeking to:', clickTime);
-                        seek(clickTime);
-                    }
-                });
-                
-                // Prevent default touch behavior
-                canvas.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
-                canvas.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
             });
 
-            // Add mousedown handler for selection
+            // Add single mousedown handler to container
             container.addEventListener('mousedown', (e) => {
                 if (!trackA?.buffer || !trackB?.buffer) return;
                 e.preventDefault();
-                
-                mouseDownTime = Date.now();
-                mouseDownPos = { x: e.clientX, y: e.clientY };
-                isSelecting = true;
-                isDragging = false;
-                
+
                 const rect = container.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                selectionStart = (x / container.offsetWidth) * trackA.buffer.duration;
-                selectionEnd = selectionStart;
+                mouseStartX = e.clientX - rect.left;
+                const clickTime = (mouseStartX / container.offsetWidth) * trackA.buffer.duration;
+                mouseStartTime = clickTime;
+
+                // Immediately seek to clicked position
+                seek(clickTime);
+
+                // Start potential selection
+                isSelecting = true;
+                selectionStart = clickTime;
+                selectionEnd = clickTime;
             });
+
+            // Add mousemove handler to window
+            window.addEventListener('mousemove', (e) => {
+                if (!isSelecting || !mouseStartTime) return;
+                e.preventDefault();
+
+                const rect = container.getBoundingClientRect();
+                const currentX = e.clientX - rect.left;
+                
+                // Only start selection if mouse has moved enough
+                if (Math.abs(currentX - mouseStartX) > MOVE_THRESHOLD) {
+                    const currentTime = (currentX / container.offsetWidth) * trackA.buffer.duration;
+                    selectionEnd = currentTime;
+                    drawSelection();
+                }
+            });
+
+            // Add mouseup handler to window
+            window.addEventListener('mouseup', () => {
+                if (!isSelecting) return;
+
+                // If selection is too small, clear it
+                if (Math.abs(selectionEnd - selectionStart) < MIN_SELECTION_DURATION) {
+                    clearSelection();
+                } else if (selectionEnd !== selectionStart) {
+                    // Valid selection - ensure start is before end
+                    if (selectionEnd < selectionStart) {
+                        [selectionStart, selectionEnd] = [selectionEnd, selectionStart];
+                    }
+                    handleSelectionChange();
+                }
+
+                isSelecting = false;
+                mouseStartX = null;
+                mouseStartTime = null;
+            });
+
+            // Add touch handlers
+            container.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+            container.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
         });
 
         // Get canvas references
@@ -676,7 +704,20 @@ document.addEventListener('DOMContentLoaded', () => {
             pausePlayback();
         }
 
-        pauseTime = position * trackA.buffer.duration;
+        // Calculate the actual time position
+        const clickedTime = position * trackA.buffer.duration;
+
+        // If clicked outside current selection, clear it
+        if (selectionStart !== null && selectionEnd !== null) {
+            const loopStart = Math.min(selectionStart, selectionEnd);
+            const loopEnd = Math.max(selectionStart, selectionEnd);
+            if (clickedTime < loopStart || clickedTime > loopEnd) {
+                clearSelection();
+            }
+        }
+
+        // Always set pauseTime to clicked position
+        pauseTime = clickedTime;
         
         if (wasPlaying) {
             startPlayback();
