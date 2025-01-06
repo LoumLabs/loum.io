@@ -23,13 +23,14 @@ body {
 .upload-panel {
     background-color: #2b2b2b;
     padding: 20px;
+    margin-top: 30px;
     border-radius: 4px;
 }
 
 .upload-panel h1 {
     color: white;
     font-size: 20px;
-    margin: 0 0 15px 0;
+    margin: 0 0 20px 0;
     text-align: center;
 }
 
@@ -545,6 +546,11 @@ input[type="range"]::-webkit-slider-runnable-track {
         width: 24px;
         height: 24px;
         margin-right: 8px;
+    }
+
+    .upload-panel {
+        padding: 10px;
+        margin-top: 20px;
     }
 }
 

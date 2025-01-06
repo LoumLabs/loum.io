@@ -7,48 +7,51 @@
     <link rel="stylesheet" href="static/css/style.css">
 </head>
 <body>
-    <a href="/" class="home-link">loum.io</a>
-    <h1 class="page-title">Meter</h1>
-    
-    <div class="container">
-        <div class="meter-container">
-            <!-- Level Meter -->
-            <div class="level-meter">
-                <div class="meter-bar">
-                    <div class="meter-fill"></div>
-                </div>
-                <div class="digital-display">
-                    <div class="display-group">
-                        <div class="display-label">PEAK</div>
-                        <div class="display-value" id="peakValue">70</div>
-                        <div class="display-unit">SPL</div>
-                    </div>
-                    <div class="display-group main">
-                        <div class="display-value large" id="currentValue">65</div>
-                        <div class="display-unit">SPL</div>
-                    </div>
-                    <div class="display-group">
-                        <div class="display-label">AVG</div>
-                        <div class="display-value" id="avgValue">50</div>
-                        <div class="display-unit">SPL</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Controls -->
-            <div class="controls">
-                <button id="startButton">Start</button>
-                <button id="holdButton">Hold</button>
-                <div class="view-controls">
-                    <button id="spectrumButton" class="active">Spectrum</button>
-                    <button id="spectrogramButton">Spectrogram</button>
-                </div>
-            </div>
+    <div class="app-container">
+        <a href="/" class="home-link">loum.io</a>
+        <div class="meter-panel">
+            <h1>Meter</h1>
             
-            <!-- Visualization -->
-            <div class="visualization-container">
-                <canvas id="spectrum" class="active"></canvas>
-                <canvas id="spectrogram"></canvas>
+            <div class="meter-container">
+                <!-- Level Meter -->
+                <div class="level-meter">
+                    <div class="meter-bar">
+                        <div class="meter-fill"></div>
+                    </div>
+                    <div class="digital-display">
+                        <div class="display-group">
+                            <div class="display-label">PEAK</div>
+                            <div class="display-value" id="peakValue">70</div>
+                            <div class="display-unit">SPL</div>
+                        </div>
+                        <div class="display-group main">
+                            <div class="display-value large" id="currentValue">65</div>
+                            <div class="display-unit">SPL</div>
+                        </div>
+                        <div class="display-group">
+                            <div class="display-label">AVG</div>
+                            <div class="display-value" id="avgValue">50</div>
+                            <div class="display-unit">SPL</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="controls">
+                    <button id="startButton">Start</button>
+                    <button id="holdButton">Hold</button>
+                    <div class="view-controls">
+                        <button id="spectrumButton" class="active">Spectrum</button>
+                        <button id="spectrogramButton">Spectrogram</button>
+                    </div>
+                </div>
+                
+                <!-- Visualization -->
+                <div class="visualization-container">
+                    <canvas id="vuMeter" class="active"></canvas>
+                    <canvas id="spectrum"></canvas>
+                    <canvas id="spectrogram"></canvas>
+                </div>
             </div>
         </div>
     </div>

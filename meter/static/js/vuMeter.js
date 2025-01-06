@@ -1,213 +1,102 @@
 class VUMeter {
     constructor(canvas) {
         this.canvas = canvas;
-        this.ctx = canvas.getContext('2d');
-        this.width = 0;
-        this.height = 0;
-        this.currentLevel = -60;
-        this.peakLevel = -60;
-        this.lastPeakTime = 0;
-        this.peakHoldTime = 1000;
-        this.peakDecayRate = 20;
-        this.lastFrameTime = 0;
+        this.currentLevel = 30;  // Start at ambient room level
         
-        // Performance monitoring
-        this.frameCount = 0;
-        this.lastFPSUpdate = 0;
-        this.fps = 0;
-        this.timings = {
-            total: 0,
-            calculations: 0,
-            meterSegments: 0,
-            tickMarks: 0,
-            needle: 0,
-            display: 0
+        // Reference SPL levels for common sounds
+        this.REFERENCE_LEVELS = {
+            BREATHING: 10,         // 10 dB - Breathing
+            WHISPER: 30,          // 30 dB - Whisper
+            QUIET_ROOM: 40,       // 40 dB - Quiet room
+            NORMAL_SPEECH: 60,    // 60 dB - Normal conversation at 1m
+            LOUD_SPEECH: 70,      // 70 dB - Loud speech
+            SHOUT: 85,           // 85 dB - Shouting
+            THRESHOLD_OF_PAIN: 120 // 120 dB - Threshold of pain
         };
         
-        this.resizeObserver = new ResizeObserver(() => {
-            this.handleResize();
-        });
-        this.resizeObserver.observe(canvas);
-        this.handleResize();
-    }
-    
-    handleResize() {
-        const rect = this.canvas.getBoundingClientRect();
-        this.canvas.width = rect.width * window.devicePixelRatio;
-        this.canvas.height = rect.height * window.devicePixelRatio;
-        this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-        this.width = rect.width;
-        this.height = rect.height;
+        // Constants for SPL calculation
+        this.REF_PRESSURE = 2e-5;    // 20 µPa reference pressure for SPL
+        this.REF_DISTANCE = 1.0;     // Reference distance in meters
+        this.TYPICAL_DISTANCE = 0.5;  // Typical distance to mic (50cm)
+        
+        // Microphone calibration with much stronger attenuation
+        this.MIC_SENSITIVITY = -38;   // dBV/Pa at 1kHz (typical MEMS mic)
+        this.MIC_GAIN = -45;         // Significantly increased attenuation
+        this.SYSTEM_OFFSET = -25;    // Increased system-level adjustment
+        
+        // Initialize averaging system with longer buffer for stability
+        this.averagingBuffer = new Float32Array(24);
+        this.averagingIndex = 0;
+        
+        // Peak tracking
+        this.peakHoldTime = 1000;
+        this.lastPeak = 30;
+        this.lastPeakTime = 0;
+        
+        // Additional calibration factor
+        this.CALIBRATION_FACTOR = 0.6; // Reduce overall levels
     }
     
     draw(dataArray) {
-        const startTime = performance.now();
-        let timing = startTime;
-        
-        // Calculate levels
-        const rmsLevel = this.calculateRMSLevel(dataArray);
-        this.currentLevel = rmsLevel;
-        
-        // Update peak level
-        const now = performance.now();
-        const timeDelta = (now - this.lastFrameTime) / 1000;
-        this.lastFrameTime = now;
-        
-        if (rmsLevel > this.peakLevel) {
-            this.peakLevel = rmsLevel;
-            this.lastPeakTime = now;
-        } else if (now - this.lastPeakTime > this.peakHoldTime) {
-            this.peakLevel = Math.max(rmsLevel, this.peakLevel - this.peakDecayRate * timeDelta);
-        }
-        
-        this.timings.calculations = performance.now() - timing;
-        timing = performance.now();
-        
-        // Clear canvas
-        this.ctx.clearRect(0, 0, this.width, this.height);
-        
-        // Draw panel background (darker)
-        this.ctx.fillStyle = '#1e1e1e';
-        this.ctx.fillRect(0, 0, this.width, this.height);
-        
-        // Draw meter segments
-        this.drawMeterSegments();
-        this.timings.meterSegments = performance.now() - timing;
-        timing = performance.now();
-        
-        // Draw tick marks and labels
-        this.drawTickMarks();
-        this.timings.tickMarks = performance.now() - timing;
-        timing = performance.now();
-        
-        // Draw needle
-        this.drawNeedle();
-        this.timings.needle = performance.now() - timing;
-        timing = performance.now();
-        
-        // Update FPS counter
-        this.frameCount++;
-        if (now - this.lastFPSUpdate > 1000) {
-            this.fps = Math.round(this.frameCount * 1000 / (now - this.lastFPSUpdate));
-            this.frameCount = 0;
-            this.lastFPSUpdate = now;
-            
-            console.log(`Performance Report:
-- FPS: ${this.fps}
-- Slow frames: 0 (0.0%)
-- Average times (ms):
-  total: ${(this.timings.total / this.fps).toFixed(2)}
-  calculations: ${(this.timings.calculations / this.fps).toFixed(2)}
-  meterSegments: ${(this.timings.meterSegments / this.fps).toFixed(2)}
-  tickMarks: ${(this.timings.tickMarks / this.fps).toFixed(2)}
-  needle: ${(this.timings.needle / this.fps).toFixed(2)}
-  display: ${(this.timings.display / this.fps).toFixed(2)}`);
-            
-            Object.keys(this.timings).forEach(key => this.timings[key] = 0);
-        }
-        
-        this.timings.display = performance.now() - timing;
-        this.timings.total += performance.now() - startTime;
-    }
-    
-    calculateRMSLevel(dataArray) {
+        // Calculate RMS of the audio samples
         let rms = 0;
         for (let i = 0; i < dataArray.length; i++) {
             rms += dataArray[i] * dataArray[i];
         }
         rms = Math.sqrt(rms / dataArray.length);
-        return 20 * Math.log10(Math.max(rms, 1e-6));
-    }
-    
-    drawMeterSegments() {
-        const centerX = this.width / 2;
-        const centerY = this.height * 0.65;
-        const radius = Math.min(this.width * 0.4, this.height * 0.55);
-        const startAngle = Math.PI * 0.75;
-        const endAngle = Math.PI * 0.25;
         
-        // Draw meter background
-        this.ctx.beginPath();
-        this.ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-        this.ctx.lineWidth = radius * 0.15;
-        this.ctx.strokeStyle = '#2b2b2b';
-        this.ctx.stroke();
-    }
-    
-    drawTickMarks() {
-        const centerX = this.width / 2;
-        const centerY = this.height * 0.65;
-        const radius = Math.min(this.width * 0.4, this.height * 0.55);
-        const innerRadius = radius * 0.94;
-        const outerRadius = radius * 1.0;
-        const textRadius = radius * 1.15;
-        const startAngle = Math.PI * 0.75;
-        const endAngle = Math.PI * 0.25;
-        const totalAngle = startAngle - endAngle;
+        // Convert normalized audio samples to voltage (dBV)
+        const dBV = 20 * Math.log10(Math.max(rms, 1e-9));
         
-        // Draw tick marks
-        this.ctx.strokeStyle = '#808080';
-        this.ctx.fillStyle = '#808080';
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'middle';
-        this.ctx.font = `${radius * 0.08}px monospace`;
+        // Convert to Pascal using mic sensitivity and gain
+        const micVoltagePerPascal = Math.pow(10, (this.MIC_SENSITIVITY + this.MIC_GAIN) / 20);
+        const pascals = Math.pow(10, dBV / 20) / micVoltagePerPascal;
         
-        const dbLabels = [-60, -50, -40, -30, -20, -10, 0];
-        dbLabels.forEach(db => {
-            const normalizedValue = 1 - ((db + 60) / 60);
-            const angle = startAngle - normalizedValue * totalAngle;
-            const sinAngle = Math.sin(angle);
-            const cosAngle = Math.cos(angle);
-            
-            // Draw tick mark
-            this.ctx.beginPath();
-            this.ctx.moveTo(
-                centerX + innerRadius * sinAngle,
-                centerY - innerRadius * cosAngle
-            );
-            this.ctx.lineTo(
-                centerX + outerRadius * sinAngle,
-                centerY - outerRadius * cosAngle
-            );
-            this.ctx.lineWidth = 2;
-            this.ctx.stroke();
-            
-            // Draw label
-            const labelX = centerX + textRadius * sinAngle;
-            const labelY = centerY - textRadius * cosAngle;
-            this.ctx.fillText(`${db}dB`, labelX, labelY);
-        });
-    }
-    
-    drawNeedle() {
-        const centerX = this.width / 2;
-        const centerY = this.height * 0.65;
-        const radius = Math.min(this.width * 0.4, this.height * 0.55);
-        const needleLength = radius * 0.95;
-        const startAngle = Math.PI * 0.75;
-        const endAngle = Math.PI * 0.25;
-        const totalAngle = startAngle - endAngle;
+        // Apply distance compensation (inverse square law)
+        const distanceCompensation = 20 * Math.log10(this.TYPICAL_DISTANCE / this.REF_DISTANCE);
         
-        // Calculate needle angle based on current level (flipped)
-        const normalizedValue = 1 - Math.min(1, Math.max(0, (this.currentLevel + 60) / 60));
-        const angle = startAngle - normalizedValue * totalAngle;
+        // Calculate SPL with additional attenuation
+        let spl = 20 * Math.log10(Math.max(pascals, this.REF_PRESSURE) / this.REF_PRESSURE);
+        spl = (spl + distanceCompensation + this.SYSTEM_OFFSET) * this.CALIBRATION_FACTOR;
         
-        // Draw needle
-        this.ctx.beginPath();
-        this.ctx.moveTo(centerX, centerY);
-        this.ctx.lineTo(
-            centerX + needleLength * Math.sin(angle),
-            centerY - needleLength * Math.cos(angle)
+        // Apply averaging for stability
+        this.averagingBuffer[this.averagingIndex] = spl;
+        this.averagingIndex = (this.averagingIndex + 1) % this.averagingBuffer.length;
+        
+        // Calculate weighted average (more weight to recent samples)
+        let avgSPL = 0;
+        let totalWeight = 0;
+        for (let i = 0; i < this.averagingBuffer.length; i++) {
+            const weight = 1 + (i / this.averagingBuffer.length);
+            avgSPL += (this.averagingBuffer[i] || spl) * weight;
+            totalWeight += weight;
+        }
+        avgSPL /= totalWeight;
+        
+        // Update peak tracking
+        const now = performance.now();
+        if (avgSPL > this.lastPeak) {
+            this.lastPeak = avgSPL;
+            this.lastPeakTime = now;
+        } else if (now - this.lastPeakTime > this.peakHoldTime) {
+            this.lastPeak = Math.max(avgSPL, this.lastPeak - 0.5);
+        }
+        
+        // Use peak-influenced value for smoother response
+        const smoothedSPL = (avgSPL * 0.7) + (this.lastPeak * 0.3);
+        
+        // Ensure reasonable range and calibrate against reference levels
+        const calibratedSPL = Math.min(
+            this.REFERENCE_LEVELS.THRESHOLD_OF_PAIN,
+            Math.max(this.REFERENCE_LEVELS.BREATHING, smoothedSPL)
         );
-        this.ctx.lineWidth = 3;
-        this.ctx.strokeStyle = '#fff';
-        this.ctx.stroke();
         
-        // Draw needle pivot
-        this.ctx.beginPath();
-        this.ctx.arc(centerX, centerY, 5, 0, Math.PI * 2);
-        this.ctx.fillStyle = '#fff';
-        this.ctx.fill();
+        this.currentLevel = calibratedSPL;
+        return this.currentLevel;
+    }
+    
+    getReferenceLevel(soundType) {
+        return this.REFERENCE_LEVELS[soundType];
     }
 }
 

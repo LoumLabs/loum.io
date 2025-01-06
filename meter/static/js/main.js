@@ -4,6 +4,9 @@ let isInitialized = false;
 let lastFrameTime = 0;
 let isHolding = false;
 let allTimePeakSPL = 0;  // Track all-time peak
+let spectrumAnalyzer = null;
+let spectrogram = null;
+let vuMeter = null;
 let heldValues = {
     current: 0,
     peak: 0,
@@ -30,26 +33,31 @@ const FRAME_INTERVAL = 1000 / TARGET_FRAME_RATE;
 function initializeVisualizations() {
     const spectrumCanvas = document.getElementById('spectrum');
     const spectrogramCanvas = document.getElementById('spectrogram');
+    const vuMeterCanvas = document.getElementById('vuMeter');
     
-    if (!spectrumCanvas || !spectrogramCanvas) {
+    if (!spectrumCanvas || !spectrogramCanvas || !vuMeterCanvas) {
         console.error('Required canvas elements not found');
         return;
     }
     
     // Initialize analyzers
     spectrumAnalyzer = new SpectrumAnalyzer(spectrumCanvas);
-    spectrogram = new Spectrogram(spectrogramCanvas);
+    spectrogram = new Spectrogram('spectrogram');
+    vuMeter = new VUMeter(vuMeterCanvas);
     
     // Show initial view
     updateView(currentView);
     
     // Draw initial state
     requestAnimationFrame(() => {
+        // Create initial data array
+        const initialData = new Float32Array(1024).fill(-90);
+        
         // Draw spectrum analyzer with minimum values
-        spectrumAnalyzer.draw(new Float32Array(1024).fill(-200));  // Use -200 to hide initial display
+        spectrumAnalyzer.draw(initialData);
         
         // Draw spectrogram with minimum values
-        spectrogram.draw(new Float32Array(1024).fill(-200));  // Use -200 to hide initial display
+        spectrogram.draw(initialData);
         
         // Set initial display values to 0
         document.getElementById('currentValue').textContent = '0';
@@ -87,8 +95,11 @@ function updateMeterDisplay(current, peak, avg) {
     // Update meter bar every frame for smooth movement
     const meterFill = document.querySelector('.meter-fill');
     if (meterFill) {
-        const width = Math.min(100, Math.max(0, (current + 60) / 60 * 100));
-        meterFill.style.width = `${width}%`;
+        // Map SPL range (30-120 dB) to percentage
+        const minSPL = 30;  // Quiet room
+        const maxSPL = 120; // Loud sound
+        const percentage = Math.min(100, Math.max(0, ((current - minSPL) / (maxSPL - minSPL)) * 100));
+        meterFill.style.width = `${percentage}%`;
     }
     
     // If holding, use held values for display
@@ -119,17 +130,18 @@ function updateMeterDisplay(current, peak, avg) {
         peakIndex = (peakIndex + 1) % peakBuffer.length;
         avgIndex = (avgIndex + 1) % avgBuffer.length;
         
-        // Convert to SPL and round to whole numbers
-        const currentSPL = Math.max(0, Math.round(smoothedCurrent + 90));
-        const avgSPL = Math.max(0, Math.round(smoothedAvg + 90));
+        // Round SPL values to whole numbers and ensure they're not negative
+        const currentSPL = Math.max(0, Math.round(smoothedCurrent));
+        const peakSPL = Math.max(0, Math.round(smoothedPeak));
+        const avgSPL = Math.max(0, Math.round(smoothedAvg));
         
-        // Update all-time peak using current SPL value
+        // Update all-time peak
         allTimePeakSPL = Math.max(allTimePeakSPL, currentSPL);
         
         // Update display
-        document.getElementById('currentValue').textContent = currentSPL;
-        document.getElementById('peakValue').textContent = allTimePeakSPL;
-        document.getElementById('avgValue').textContent = avgSPL;
+        document.getElementById('currentValue').textContent = currentSPL.toString();
+        document.getElementById('peakValue').textContent = allTimePeakSPL.toString();
+        document.getElementById('avgValue').textContent = avgSPL.toString();
         
         lastDisplayUpdate = now;
     }
@@ -173,6 +185,9 @@ async function initializeAudio() {
         audioProcessor = new AudioProcessor();
         await audioProcessor.initialize();
         
+        // Resume audio context (this is needed for audio to flow)
+        await audioProcessor.audioContext.resume();
+        
         // Start animation loop
         animate();
         
@@ -197,18 +212,25 @@ function animate(timestamp) {
     if (elapsed >= FRAME_INTERVAL) {
         // Get data from either live input or held values
         let timeDomainData, frequencyData;
+        let currentLevel = 30; // Default to quiet room level
         
         if (isHolding && heldValues.frequencyData) {
             timeDomainData = heldValues.timeDomainData;
             frequencyData = heldValues.frequencyData;
+            currentLevel = parseFloat(heldValues.current);
         } else {
             timeDomainData = audioProcessor.getTimeDomainData();
             frequencyData = audioProcessor.getFrequencyData();
             
+            // Get SPL from VU meter
+            if (timeDomainData) {
+                currentLevel = vuMeter.draw(timeDomainData);
+            }
+            
             // Store current frame in circular buffer
             if (timeDomainData && frequencyData) {
                 recentFrames[frameBufferIndex] = {
-                    current: document.getElementById('currentValue').textContent,
+                    current: currentLevel.toString(),
                     peak: document.getElementById('peakValue').textContent,
                     avg: document.getElementById('avgValue').textContent,
                     frequencyData: new Float32Array(frequencyData),
@@ -218,27 +240,14 @@ function animate(timestamp) {
             }
         }
         
-        if (timeDomainData && frequencyData) {
-            // Calculate RMS level
-            let rms = 0;
-            for (let i = 0; i < timeDomainData.length; i++) {
-                rms += timeDomainData[i] * timeDomainData[i];
-            }
-            rms = Math.sqrt(rms / timeDomainData.length);
-            const dbFS = 20 * Math.log10(Math.max(rms, 1e-6));
-            
-            // Calculate peak level (with some smoothing)
-            const peak = Math.max(...frequencyData);
-            
-            // Update meter display
-            updateMeterDisplay(dbFS, peak, dbFS);
-            
-            // Update visualizations with actual sample rate
-            if (currentView === 'spectrum' && spectrumAnalyzer) {
-                spectrumAnalyzer.draw(frequencyData, audioProcessor.sampleRate);
-            } else if (spectrogram) {
-                spectrogram.draw(frequencyData);
-            }
+        // Update meter display with the SPL values
+        updateMeterDisplay(currentLevel, currentLevel, currentLevel);
+        
+        // Update visualizations with actual sample rate
+        if (currentView === 'spectrum' && spectrumAnalyzer) {
+            spectrumAnalyzer.draw(frequencyData, audioProcessor.sampleRate);
+        } else if (spectrogram) {
+            spectrogram.draw(frequencyData);
         }
         
         lastFrameTime = timestamp - (elapsed % FRAME_INTERVAL);
@@ -287,27 +296,36 @@ function toggleAudio() {
 let currentView = 'spectrum';
 
 function updateView(view) {
-    currentView = view;
-    
-    // Update canvas visibility
     const spectrumCanvas = document.getElementById('spectrum');
     const spectrogramCanvas = document.getElementById('spectrogram');
+    const vuMeterCanvas = document.getElementById('vuMeter');
     const spectrumButton = document.getElementById('spectrumButton');
     const spectrogramButton = document.getElementById('spectrogramButton');
     
-    if (!spectrumCanvas || !spectrogramCanvas || !spectrumButton || !spectrogramButton) return;
+    // Remove active class from all canvases and buttons
+    [spectrumCanvas, spectrogramCanvas, vuMeterCanvas].forEach(canvas => {
+        if (canvas) canvas.classList.remove('active');
+    });
+    [spectrumButton, spectrogramButton].forEach(button => {
+        if (button) button.classList.remove('active');
+    });
     
-    if (view === 'spectrum') {
-        spectrumCanvas.classList.add('active');
-        spectrogramCanvas.classList.remove('active');
-        spectrumButton.classList.add('active');
-        spectrogramButton.classList.remove('active');
-    } else {
-        spectrumCanvas.classList.remove('active');
-        spectrogramCanvas.classList.add('active');
-        spectrumButton.classList.remove('active');
-        spectrogramButton.classList.add('active');
+    // Show selected view
+    switch(view) {
+        case 'spectrum':
+            if (spectrumCanvas) spectrumCanvas.classList.add('active');
+            if (spectrumButton) spectrumButton.classList.add('active');
+            break;
+        case 'spectrogram':
+            if (spectrogramCanvas) spectrogramCanvas.classList.add('active');
+            if (spectrogramButton) spectrogramButton.classList.add('active');
+            break;
+        case 'vuMeter':
+            if (vuMeterCanvas) vuMeterCanvas.classList.add('active');
+            break;
     }
+    
+    currentView = view;
 }
 
 // Initialize when DOM is ready
