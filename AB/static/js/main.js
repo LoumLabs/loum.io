@@ -509,16 +509,6 @@ document.addEventListener('DOMContentLoaded', () => {
         cleanupAudioNodes();
         
         let offset = pauseTime;
-        
-        // If there's a selection and we're outside its bounds, start from selection start
-        if (selectionStart !== null && selectionEnd !== null) {
-            const loopStart = Math.min(selectionStart, selectionEnd);
-            const loopEnd = Math.max(selectionStart, selectionEnd);
-            if (offset < loopStart || offset > loopEnd) {
-                offset = loopStart;
-            }
-        }
-        
         startTime = audioContext.currentTime - offset;
 
         sourceA = audioContext.createBufferSource();
@@ -535,9 +525,6 @@ document.addEventListener('DOMContentLoaded', () => {
             sourceA.loopEnd = Math.max(selectionStart, selectionEnd);
             sourceB.loopStart = Math.min(selectionStart, selectionEnd);
             sourceB.loopEnd = Math.max(selectionStart, selectionEnd);
-            
-            // Ensure selection is visible
-            drawWaveforms();
         } else {
             sourceA.loop = false;
             sourceB.loop = false;
@@ -588,10 +575,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function stopPlayback() {
+        // Get current time position before pausing
+        const currentPosition = isPlaying ? 
+            audioContext.currentTime - startTime : 
+            pauseTime;
+        
+        // Store if we're at loop start
+        const wasAtLoopStart = selectionStart !== null && 
+            Math.abs(currentPosition - Math.min(selectionStart, selectionEnd)) < 0.01;
+        
         pausePlayback();
         
-        // If there's a selection and this is the first stop press
-        if (selectionStart !== null && selectionEnd !== null && pauseTime !== 0) {
+        // If there's a selection and we're not already at loop start
+        if (selectionStart !== null && selectionEnd !== null && !wasAtLoopStart) {
             // Move playhead to start of loop
             pauseTime = Math.min(selectionStart, selectionEnd);
         } else {
@@ -1654,15 +1650,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add selection state change handler
     function handleSelectionChange() {
-        // If currently playing and selection exists, restart from selection start
-        if (isPlaying && selectionStart !== null && selectionEnd !== null) {
-            const wasPlaying = isPlaying;
-            pausePlayback();
-            pauseTime = Math.min(selectionStart, selectionEnd);
-            if (wasPlaying) {
+        if (selectionStart !== null && selectionEnd !== null) {
+            // Ensure start is before end
+            if (selectionEnd < selectionStart) {
+                [selectionStart, selectionEnd] = [selectionEnd, selectionStart];
+            }
+            
+            // If we're playing, restart playback from current position to enable looping
+            if (isPlaying) {
+                const currentPosition = audioContext.currentTime - startTime;
+                pauseTime = currentPosition;
                 startPlayback();
             }
+            
+            drawSelection();
         }
-        drawSelection();
     }
 });
