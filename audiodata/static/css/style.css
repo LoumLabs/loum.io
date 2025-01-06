@@ -11,9 +11,9 @@ body {
 .app-container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 10px;
     background-color: #2b2b2b;
-    height: calc(100vh - 40px);
+    height: calc(100vh - 20px);
     display: flex;
     flex-direction: column;
     overflow: hidden;
