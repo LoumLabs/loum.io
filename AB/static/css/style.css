@@ -22,7 +22,7 @@ body {
 /* Upload Panel */
 .upload-panel {
     background-color: #2b2b2b;
-    padding: 20px;
+    padding: 10px 20px 20px;
     margin-top: 20px;
     border-radius: 4px;
 }
