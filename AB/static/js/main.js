@@ -20,6 +20,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const WAVE_BG = '#1e1e1e';
     let canvasA, canvasB, ctxA, ctxB;
 
+    // Add selection state variables
+    let selectionStart = null;
+    let selectionEnd = null;
+    let isSelecting = false;
+    const MIN_SELECTION_DURATION = 0.5; // Minimum selection duration in seconds
+
     // DOM Elements
     const uploadZoneA = document.getElementById('upload-zone-a');
     const uploadZoneB = document.getElementById('upload-zone-b');
@@ -36,22 +42,94 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentTimeDisplay = document.getElementById('current-time');
     const totalTimeDisplay = document.getElementById('total-time');
 
-    // Initialize canvases
+    // Add variables to track mouse movement
+    let mouseDownTime = 0;
+    let mouseDownPos = null;
+    let isDragging = false;
+    const CLICK_THRESHOLD = 200; // ms
+    const MOVE_THRESHOLD = 5; // pixels
+
+    // Initialize canvases with multiple layers
     function initWaveforms() {
         const waveformA = document.getElementById('waveform-a');
         const waveformB = document.getElementById('waveform-b');
 
-        // Create and setup canvas A
-        canvasA = document.createElement('canvas');
-        canvasA.height = CANVAS_HEIGHT;
-        waveformA.appendChild(canvasA);
-        ctxA = canvasA.getContext('2d');
+        // Create container divs with relative positioning
+        ['A', 'B'].forEach(track => {
+            const container = document.getElementById(`waveform-${track.toLowerCase()}`);
+            container.style.position = 'relative';
+            container.innerHTML = `
+                <canvas class="waveform-layer" id="waveform-${track.toLowerCase()}-wave"></canvas>
+                <canvas class="selection-layer" id="waveform-${track.toLowerCase()}-selection"></canvas>
+                <canvas class="playhead-layer" id="waveform-${track.toLowerCase()}-playhead"></canvas>
+            `;
 
-        // Create and setup canvas B
-        canvasB = document.createElement('canvas');
-        canvasB.height = CANVAS_HEIGHT;
-        waveformB.appendChild(canvasB);
+            // Add click handler to each canvas layer
+            container.querySelectorAll('canvas').forEach(canvas => {
+                canvas.style.position = 'absolute';
+                canvas.style.left = '0';
+                canvas.style.top = '0';
+                canvas.style.width = '100%';
+                canvas.style.height = '100%';
+                canvas.height = CANVAS_HEIGHT;
+                
+                // Add click handler to each canvas
+                canvas.addEventListener('click', (e) => {
+                    if (!trackA?.buffer || !trackB?.buffer) return;
+                    e.stopPropagation(); // Stop event from bubbling to container
+                    
+                    // Only handle click if we're not selecting
+                    if (!isSelecting && !isDragging) {
+                        const rect = container.getBoundingClientRect();
+                        const x = e.clientX - rect.left;
+                        const clickTime = (x / container.offsetWidth) * trackA.buffer.duration;
+                        console.log('Seeking to:', clickTime);
+                        seek(clickTime);
+                    }
+                });
+                
+                // Prevent default touch behavior
+                canvas.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+                canvas.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+            });
+
+            // Add mousedown handler for selection
+            container.addEventListener('mousedown', (e) => {
+                if (!trackA?.buffer || !trackB?.buffer) return;
+                e.preventDefault();
+                
+                mouseDownTime = Date.now();
+                mouseDownPos = { x: e.clientX, y: e.clientY };
+                isSelecting = true;
+                isDragging = false;
+                
+                const rect = container.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                selectionStart = (x / container.offsetWidth) * trackA.buffer.duration;
+                selectionEnd = selectionStart;
+            });
+        });
+
+        // Get canvas references
+        canvasA = document.getElementById('waveform-a-wave');
+        canvasB = document.getElementById('waveform-b-wave');
+        const selectionCanvasA = document.getElementById('waveform-a-selection');
+        const selectionCanvasB = document.getElementById('waveform-b-selection');
+        const playheadCanvasA = document.getElementById('waveform-a-playhead');
+        const playheadCanvasB = document.getElementById('waveform-b-playhead');
+
+        // Get contexts
+        ctxA = canvasA.getContext('2d');
         ctxB = canvasB.getContext('2d');
+        const selectionCtxA = selectionCanvasA.getContext('2d');
+        const selectionCtxB = selectionCanvasB.getContext('2d');
+        const playheadCtxA = playheadCanvasA.getContext('2d');
+        const playheadCtxB = playheadCanvasB.getContext('2d');
+
+        // Store contexts for each layer
+        waveformContexts = { A: ctxA, B: ctxB };
+        selectionContexts = { A: selectionCtxA, B: selectionCtxB };
+        playheadContexts = { A: playheadCtxA, B: playheadCtxB };
 
         // Set initial canvas sizes
         resizeCanvases();
@@ -59,28 +137,34 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add resize listener
         window.addEventListener('resize', resizeCanvases);
 
-        // Add click/touch handlers for seeking
-        [canvasA, canvasB].forEach(canvas => {
-            canvas.addEventListener('click', handleWaveformClick);
-            canvas.addEventListener('touchstart', handleWaveformTouch);
+        // Add mouse selection event listeners to the containers
+        [waveformA, waveformB].forEach(container => {
+            window.addEventListener('mousemove', handleSelectionMove);
+            window.addEventListener('mouseup', handleSelectionEnd);
+            
+            container.addEventListener('touchstart', handleTouchStart, { passive: false });
+            window.addEventListener('touchmove', handleTouchMove, { passive: false });
+            window.addEventListener('touchend', handleTouchEnd, { passive: true });
         });
 
-        // Update styles after canvas creation
         updateWaveformStyles();
     }
 
     function resizeCanvases() {
-        if (canvasA && canvasB) {
-            const width = document.querySelector('.waveform').offsetWidth;
-            canvasA.width = width;
-            canvasB.width = width;
-            
-            // Only redraw if we have buffers
-            if (trackA?.buffer || trackB?.buffer) {
-                // Draw waveforms with time alignment
-                if (trackA?.buffer) drawWaveform(trackA.buffer, ctxA, WAVE_COLOR_A);
-                if (trackB?.buffer) drawWaveform(trackB.buffer, ctxB, WAVE_COLOR_B);
-            }
+        const width = document.querySelector('.waveform').offsetWidth;
+        
+        // Resize all canvas layers
+        ['A', 'B'].forEach(track => {
+            const container = document.getElementById(`waveform-${track.toLowerCase()}`);
+            container.querySelectorAll('canvas').forEach(canvas => {
+                canvas.width = width;
+            });
+        });
+        
+        // Redraw content if we have buffers
+        if (trackA?.buffer || trackB?.buffer) {
+            drawWaveforms();
+            drawSelection();
         }
     }
 
@@ -88,19 +172,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const width = ctx.canvas.width;
         const height = ctx.canvas.height;
         
-        // Find the longest duration between tracks
         const maxDuration = Math.max(
             trackA?.buffer?.duration || 0,
             trackB?.buffer?.duration || 0
         );
         
-        // Calculate pixels per second based on longest duration
         const pixelsPerSecond = width / maxDuration;
-        
-        // Calculate the width needed for this buffer
         const bufferWidth = Math.floor(audioBuffer.duration * pixelsPerSecond);
         
-        const data = audioBuffer.getChannelData(0); // Use first channel
+        const data = audioBuffer.getChannelData(0);
         const step = Math.ceil(data.length / bufferWidth);
         const amp = height / 2;
 
@@ -115,14 +195,12 @@ document.addEventListener('DOMContentLoaded', () => {
             let min = 1.0;
             let max = -1.0;
             
-            // Find min/max values in the current step
             for (let j = 0; j < step; j++) {
                 const datum = data[(i * step) + j];
                 if (datum < min) min = datum;
                 if (datum > max) max = datum;
             }
 
-            // Draw vertical line from min to max
             ctx.moveTo(i, (1 + min) * amp);
             ctx.lineTo(i, (1 + max) * amp);
         }
@@ -137,40 +215,168 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.stroke();
     }
 
-    // Add playhead to waveform
+    function drawSelection() {
+        ['A', 'B'].forEach(track => {
+            const ctx = selectionContexts[track];
+            const width = ctx.canvas.width;
+            const height = ctx.canvas.height;
+            const duration = trackA?.buffer?.duration || trackB?.buffer?.duration;
+
+            // Clear selection layer
+            ctx.clearRect(0, 0, width, height);
+
+            if (selectionStart !== null && selectionEnd !== null && duration) {
+                const selStartX = (Math.min(selectionStart, selectionEnd) / duration) * width;
+                const selEndX = (Math.max(selectionStart, selectionEnd) / duration) * width;
+                
+                // Draw selection background
+                ctx.fillStyle = 'rgba(74, 158, 255, 0.2)';
+                ctx.fillRect(selStartX, 0, selEndX - selStartX, height);
+                
+                // Draw selection borders
+                ctx.beginPath();
+                ctx.strokeStyle = 'rgba(74, 158, 255, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.moveTo(selStartX, 0);
+                ctx.lineTo(selStartX, height);
+                ctx.moveTo(selEndX, 0);
+                ctx.lineTo(selEndX, height);
+                ctx.stroke();
+            }
+        });
+    }
+
     function drawPlayhead() {
         if (!trackA || !trackB) return;
 
-        const currentTime = isPlaying ? audioContext.currentTime - startTime : pauseTime;
+        let currentTime = isPlaying ? audioContext.currentTime - startTime : pauseTime;
         const duration = trackA.buffer.duration;
+
+        // Handle looping visualization
+        if (selectionStart !== null && selectionEnd !== null) {
+            const loopStart = Math.min(selectionStart, selectionEnd);
+            const loopEnd = Math.max(selectionStart, selectionEnd);
+            
+            if (currentTime > loopEnd) {
+                const loopDuration = loopEnd - loopStart;
+                currentTime = loopStart + ((currentTime - loopStart) % loopDuration);
+            }
+        }
+
         const position = (currentTime / duration) * canvasA.width;
 
-        // Redraw waveforms
-        if (trackA?.buffer) drawWaveform(trackA.buffer, ctxA, WAVE_COLOR_A);
-        if (trackB?.buffer) drawWaveform(trackB.buffer, ctxB, WAVE_COLOR_B);
+        // Draw playhead on both tracks
+        ['A', 'B'].forEach(track => {
+            const ctx = playheadContexts[track];
+            const width = ctx.canvas.width;
+            const height = ctx.canvas.height;
 
-        // Draw playhead lines
-        drawPlayheadLine(ctxA, position);
-        drawPlayheadLine(ctxB, position);
+            // Clear playhead layer
+            ctx.clearRect(0, 0, width, height);
+
+            // Draw playhead line
+            ctx.beginPath();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.moveTo(position, 0);
+            ctx.lineTo(position, height);
+            ctx.stroke();
+        });
 
         if (isPlaying) {
-            requestAnimationFrame(drawPlayhead);
+            // Use requestAnimationFrame with throttling
+            const now = performance.now();
+            if (!this.lastDrawTime || now - this.lastDrawTime >= 33) { // ~30fps
+                this.lastDrawTime = now;
+                requestAnimationFrame(drawPlayhead);
+            } else {
+                setTimeout(() => requestAnimationFrame(drawPlayhead), 33 - (now - this.lastDrawTime));
+            }
         }
     }
 
-    function clearPlayhead(ctx) {
-        ctx.fillStyle = WAVE_BG;
-        ctx.fillRect(0, 0, 2, ctx.canvas.height); // Clear left edge
-        ctx.fillRect(ctx.canvas.width - 2, 0, 2, ctx.canvas.height); // Clear right edge
+    // Update selection handlers to work with container coordinates
+    function handleSelectionStart(e) {
+        if (!trackA?.buffer || !trackB?.buffer) return;
+        e.preventDefault();
+        
+        const container = e.target.closest('.waveform');
+        if (!container) return;
+        
+        mouseDownTime = Date.now();
+        mouseDownPos = { x: e.clientX, y: e.clientY };
+        
+        const rect = container.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const duration = trackA.buffer.duration;
+        
+        isSelecting = true;
+        isDragging = false;
+        selectionStart = (x / container.offsetWidth) * duration;
+        selectionEnd = selectionStart;
     }
 
-    function drawPlayheadLine(ctx, position) {
-        ctx.beginPath();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
-        ctx.moveTo(position, 0);
-        ctx.lineTo(position, ctx.canvas.height);
-        ctx.stroke();
+    function handleSelectionMove(e) {
+        if (!isSelecting || !trackA?.buffer || !trackB?.buffer || !mouseDownPos) return;
+        e.preventDefault();
+        
+        const moveDistance = Math.sqrt(
+            Math.pow(e.clientX - mouseDownPos.x, 2) + 
+            Math.pow(e.clientY - mouseDownPos.y, 2)
+        );
+        
+        // Only start selection if dragged enough
+        if (moveDistance > MOVE_THRESHOLD) {
+            isDragging = true;
+            const container = e.target.closest('.waveform');
+            if (!container) return;
+            
+            const rect = container.getBoundingClientRect();
+            const x = Math.max(0, Math.min(container.offsetWidth, e.clientX - rect.left));
+            const duration = trackA.buffer.duration;
+            
+            selectionEnd = (x / container.offsetWidth) * duration;
+            drawSelection();
+        }
+    }
+
+    function handleSelectionEnd(e) {
+        if (!isSelecting || !trackA?.buffer || !trackB?.buffer) return;
+        e.preventDefault();
+        
+        // Only handle selection if we actually dragged
+        if (isDragging && Math.abs(selectionEnd - selectionStart) >= MIN_SELECTION_DURATION) {
+            if (selectionEnd < selectionStart) {
+                [selectionStart, selectionEnd] = [selectionEnd, selectionStart];
+            }
+            handleSelectionChange();
+        } else {
+            clearSelection();
+        }
+        
+        isSelecting = false;
+        isDragging = false;
+        mouseDownPos = null;
+    }
+
+    function clearSelection() {
+        selectionStart = null;
+        selectionEnd = null;
+        isSelecting = false;
+        ['A', 'B'].forEach(track => {
+            const ctx = selectionContexts[track];
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        });
+    }
+
+    // Update drawWaveforms to only draw waveforms
+    function drawWaveforms() {
+        if (trackA?.buffer) {
+            drawWaveform(trackA.buffer, waveformContexts.A, WAVE_COLOR_A);
+        }
+        if (trackB?.buffer) {
+            drawWaveform(trackB.buffer, waveformContexts.B, WAVE_COLOR_B);
+        }
     }
 
     // Initialize Audio Context on user interaction
@@ -244,13 +450,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Modify startPlayback to include proper cleanup
+    // Update startPlayback to preserve selection
     function startPlayback() {
         if (!trackA || !trackB) return;
         
         cleanupAudioNodes();
         
-        const offset = pauseTime;
+        let offset = pauseTime;
+        
+        // If there's a selection and we're outside its bounds, start from selection start
+        if (selectionStart !== null && selectionEnd !== null) {
+            const loopStart = Math.min(selectionStart, selectionEnd);
+            const loopEnd = Math.max(selectionStart, selectionEnd);
+            if (offset < loopStart || offset > loopEnd) {
+                offset = loopStart;
+            }
+        }
+        
         startTime = audioContext.currentTime - offset;
 
         sourceA = audioContext.createBufferSource();
@@ -258,6 +474,22 @@ document.addEventListener('DOMContentLoaded', () => {
         
         sourceA.buffer = trackA.buffer;
         sourceB.buffer = trackB.buffer;
+
+        // Set up looping if selection exists
+        if (selectionStart !== null && selectionEnd !== null) {
+            sourceA.loop = true;
+            sourceB.loop = true;
+            sourceA.loopStart = Math.min(selectionStart, selectionEnd);
+            sourceA.loopEnd = Math.max(selectionStart, selectionEnd);
+            sourceB.loopStart = Math.min(selectionStart, selectionEnd);
+            sourceB.loopEnd = Math.max(selectionStart, selectionEnd);
+            
+            // Ensure selection is visible
+            drawWaveforms();
+        } else {
+            sourceA.loop = false;
+            sourceB.loop = false;
+        }
 
         // Connect nodes in series
         sourceA.connect(trackA.delayNode);
@@ -287,8 +519,11 @@ document.addEventListener('DOMContentLoaded', () => {
         isPlaying = true;
         playPauseButton.textContent = 'Pause';
 
-        requestAnimationFrame(updateProgress);
-        requestAnimationFrame(drawPlayhead);
+        // Start animation with rate limiting
+        setTimeout(() => {
+            requestAnimationFrame(updateProgress);
+            requestAnimationFrame(drawPlayhead);
+        }, 32);
     }
 
     function pausePlayback() {
@@ -308,6 +543,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function switchTrack() {
         if (!trackA || !trackB) return;
+
+        // Store selection state
+        const savedSelectionStart = selectionStart;
+        const savedSelectionEnd = selectionEnd;
 
         const nextTrack = currentTrack === 'A' ? 'B' : 'A';
         const trackDisplay = document.getElementById('current-track-display');
@@ -335,7 +574,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             trackDisplay.textContent = blindTestMode ? '-' : nextTrack;
             
-            // Quick crossfade between tracks using switch nodes, maintaining gain adjustments
+            // Quick crossfade between tracks using switch nodes
             if (nextTrack === 'B') {
                 trackA.switchNode.gain.setValueAtTime(trackA.switchNode.gain.value, currentTime);
                 trackB.switchNode.gain.setValueAtTime(trackB.switchNode.gain.value, currentTime);
@@ -372,14 +611,30 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             trackDisplay.textContent = blindTestMode ? '-' : nextTrack;
         }
+
+        // Restore selection state and redraw selection
+        selectionStart = savedSelectionStart;
+        selectionEnd = savedSelectionEnd;
+        drawSelection();
     }
 
-    // Progress and Time Display
+    // Update updateProgress to be more efficient
     function updateProgress() {
         if (!trackA || !trackB) return;
 
-        const currentTime = isPlaying ? audioContext.currentTime - startTime : pauseTime;
+        let currentTime = isPlaying ? audioContext.currentTime - startTime : pauseTime;
         const duration = trackA.buffer.duration;
+        
+        // Handle looping visualization in progress bar
+        if (selectionStart !== null && selectionEnd !== null) {
+            const loopStart = Math.min(selectionStart, selectionEnd);
+            const loopEnd = Math.max(selectionStart, selectionEnd);
+            
+            if (currentTime > loopEnd) {
+                const loopDuration = loopEnd - loopStart;
+                currentTime = loopStart + ((currentTime - loopStart) % loopDuration);
+            }
+        }
         
         // Update progress bar
         const progress = (currentTime / duration) * 100;
@@ -389,7 +644,8 @@ document.addEventListener('DOMContentLoaded', () => {
         currentTimeDisplay.textContent = formatTime(currentTime);
         
         if (isPlaying) {
-            requestAnimationFrame(updateProgress);
+            // Use setTimeout to limit frame rate to ~30fps
+            setTimeout(() => requestAnimationFrame(updateProgress), 32);
         }
     }
 
@@ -406,6 +662,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function seek(position) {
         if (!trackA?.buffer || !trackB?.buffer) return;
+        
+        // If position is a time value, convert it to a ratio
+        if (position > 1) {
+            position = position / trackA.buffer.duration;
+        }
         
         // Ensure position is between 0 and 1
         position = Math.max(0, Math.min(1, position));
@@ -655,10 +916,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize loudness analyzer
     const loudnessAnalyzer = new LoudnessAnalyzer();
 
-    // Update analyzeLoudness function to use the new analyzer
+    // Modify analyzeLoudness to handle selection
     async function analyzeLoudness(track, isTrackA) {
         try {
-            const lufs = await loudnessAnalyzer.analyzeLoudness(track.buffer);
+            let lufs;
+            if (selectionStart !== null && selectionEnd !== null) {
+                // Analyze only the selected portion for LUFS
+                const selectionBuffer = extractBufferRegion(track.buffer, selectionStart, selectionEnd);
+                lufs = await loudnessAnalyzer.analyzeLoudness(selectionBuffer);
+            } else {
+                // Analyze full track if no selection
+                lufs = await loudnessAnalyzer.analyzeLoudness(track.buffer);
+            }
+            
             const trackLetter = isTrackA ? 'a' : 'b';
             const loudnessDisplay = document.getElementById(`track-${trackLetter}-loudness`);
             loudnessDisplay.textContent = lufs.toFixed(1);
@@ -677,7 +947,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Add loudness matching functionality
+    // Helper function to extract a portion of an audio buffer
+    function extractBufferRegion(buffer, start, end) {
+        const startSample = Math.floor(start * buffer.sampleRate);
+        const endSample = Math.floor(end * buffer.sampleRate);
+        const length = endSample - startSample;
+        
+        const newBuffer = new AudioBuffer({
+            numberOfChannels: buffer.numberOfChannels,
+            length: length,
+            sampleRate: buffer.sampleRate
+        });
+        
+        for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+            const channelData = buffer.getChannelData(channel);
+            const newChannelData = new Float32Array(length);
+            for (let i = 0; i < length; i++) {
+                newChannelData[i] = channelData[i + startSample];
+            }
+            newBuffer.copyToChannel(newChannelData, channel);
+        }
+        
+        return newBuffer;
+    }
+
+    // Modify matchLoudness to preserve selection
     matchLoudnessButton.addEventListener('click', async () => {
         if (!trackA?.buffer || !trackB?.buffer) return;
 
@@ -686,20 +980,47 @@ document.addEventListener('DOMContentLoaded', () => {
             pausePlayback();
         }
 
+        // Store selection state
+        const savedSelectionStart = selectionStart;
+        const savedSelectionEnd = selectionEnd;
+
         const currentTime = audioContext.currentTime;
         
-        // Step 1: Match LUFS-S Max
-        const targetLoudness = Math.min(trackA.loudness, trackB.loudness);
+        // Step 1: Match LUFS-S Max based on selection or full track
+        let targetLoudness;
+        let loudnessA, loudnessB;
+        
+        if (savedSelectionStart !== null && savedSelectionEnd !== null) {
+            // Analyze selected portions for LUFS matching
+            const selectionBufferA = extractBufferRegion(
+                trackA.buffer, 
+                Math.min(savedSelectionStart, savedSelectionEnd),
+                Math.max(savedSelectionStart, savedSelectionEnd)
+            );
+            const selectionBufferB = extractBufferRegion(
+                trackB.buffer,
+                Math.min(savedSelectionStart, savedSelectionEnd),
+                Math.max(savedSelectionStart, savedSelectionEnd)
+            );
+            loudnessA = await loudnessAnalyzer.analyzeLoudness(selectionBufferA);
+            loudnessB = await loudnessAnalyzer.analyzeLoudness(selectionBufferB);
+        } else {
+            // Use full track loudness values
+            loudnessA = trackA.loudness;
+            loudnessB = trackB.loudness;
+        }
+        
+        targetLoudness = Math.min(loudnessA, loudnessB);
         
         // Calculate initial gain adjustments to match LUFS
         let gainAdjustA = 0;
         let gainAdjustB = 0;
         
-        if (trackA.loudness > targetLoudness) {
-            gainAdjustA = targetLoudness - trackA.loudness;
+        if (loudnessA > targetLoudness) {
+            gainAdjustA = targetLoudness - loudnessA;
         }
-        if (trackB.loudness > targetLoudness) {
-            gainAdjustB = targetLoudness - trackB.loudness;
+        if (loudnessB > targetLoudness) {
+            gainAdjustB = targetLoudness - loudnessB;
         }
         
         // Step 2: Find the highest peak after LUFS matching
@@ -732,11 +1053,16 @@ document.addEventListener('DOMContentLoaded', () => {
         updateGainDisplay('A');
         updateGainDisplay('B');
         
-        const newLoudnessA = trackA.loudness + trackA.gainAdjustment;
-        const newLoudnessB = trackB.loudness + trackB.gainAdjustment;
+        const newLoudnessA = loudnessA + trackA.gainAdjustment;
+        const newLoudnessB = loudnessB + trackB.gainAdjustment;
         
         document.getElementById('track-a-loudness').textContent = newLoudnessA.toFixed(1);
         document.getElementById('track-b-loudness').textContent = newLoudnessB.toFixed(1);
+
+        // Restore selection state and redraw selection
+        selectionStart = savedSelectionStart;
+        selectionEnd = savedSelectionEnd;
+        drawSelection();
         
         if (wasPlaying) {
             startPlayback();
@@ -1092,6 +1418,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (wasPlaying) {
             pausePlayback();
         }
+
+        // Store selection state
+        const savedSelectionStart = selectionStart;
+        const savedSelectionEnd = selectionEnd;
         
         try {
             // Show loading state
@@ -1115,6 +1445,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Restore button state
             autoAlignButton.textContent = 'Auto Align';
             autoAlignButton.disabled = false;
+
+            // Restore selection state and redraw selection
+            selectionStart = savedSelectionStart;
+            selectionEnd = savedSelectionEnd;
+            drawSelection();
             
             if (wasPlaying) {
                 startPlayback();
@@ -1123,6 +1458,11 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error in auto alignment:', error);
             autoAlignButton.textContent = 'Auto Align';
             autoAlignButton.disabled = false;
+
+            // Restore selection state and redraw selection even if there's an error
+            selectionStart = savedSelectionStart;
+            selectionEnd = savedSelectionEnd;
+            drawSelection();
         }
     });
 
@@ -1157,5 +1497,94 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Update LUFS display after gain change
         updateLoudnessDisplay();
+    }
+
+    // Add helper function to redraw both waveforms
+    function drawWaveforms() {
+        if (trackA?.buffer) {
+            drawWaveform(trackA.buffer, waveformContexts.A, WAVE_COLOR_A);
+        }
+        if (trackB?.buffer) {
+            drawWaveform(trackB.buffer, waveformContexts.B, WAVE_COLOR_B);
+        }
+    }
+
+    // Update touch handlers to work with container coordinates
+    function handleTouchStart(e) {
+        if (!trackA?.buffer || !trackB?.buffer) return;
+        e.preventDefault();
+        
+        const container = e.target.closest('.waveform');
+        if (!container) return;
+        
+        const rect = container.getBoundingClientRect();
+        const touch = e.touches[0];
+        const x = touch.clientX - rect.left;
+        const duration = trackA.buffer.duration;
+        
+        isSelecting = true;
+        selectionStart = (x / container.offsetWidth) * duration;
+        selectionEnd = selectionStart;
+        
+        drawSelection();
+    }
+
+    function handleTouchMove(e) {
+        if (!isSelecting || !trackA?.buffer || !trackB?.buffer) return;
+        e.preventDefault();
+        
+        const container = e.target.closest('.waveform');
+        if (!container) return;
+        
+        const rect = container.getBoundingClientRect();
+        const touch = e.touches[0];
+        const x = Math.max(0, Math.min(container.offsetWidth, touch.clientX - rect.left));
+        const duration = trackA.buffer.duration;
+        
+        selectionEnd = (x / container.offsetWidth) * duration;
+        drawSelection();
+    }
+
+    function handleTouchEnd(e) {
+        if (!isSelecting) return;
+        
+        isSelecting = false;
+        
+        // Ensure minimum selection duration
+        if (Math.abs(selectionEnd - selectionStart) < MIN_SELECTION_DURATION) {
+            clearSelection();
+            return;
+        }
+        
+        // Ensure start is before end
+        if (selectionEnd < selectionStart) {
+            [selectionStart, selectionEnd] = [selectionEnd, selectionStart];
+        }
+        
+        handleSelectionChange();
+    }
+
+    function clearSelection() {
+        selectionStart = null;
+        selectionEnd = null;
+        isSelecting = false;
+        ['A', 'B'].forEach(track => {
+            const ctx = selectionContexts[track];
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        });
+    }
+
+    // Add selection state change handler
+    function handleSelectionChange() {
+        // If currently playing and selection exists, restart from selection start
+        if (isPlaying && selectionStart !== null && selectionEnd !== null) {
+            const wasPlaying = isPlaying;
+            pausePlayback();
+            pauseTime = Math.min(selectionStart, selectionEnd);
+            if (wasPlaying) {
+                startPlayback();
+            }
+        }
+        drawSelection();
     }
 });
