@@ -415,7 +415,9 @@ document.addEventListener('DOMContentLoaded', () => {
         isSelecting = false;
         ['A', 'B'].forEach(track => {
             const ctx = selectionContexts[track];
-            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            if (ctx) {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            }
         });
     }
 
@@ -587,8 +589,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function stopPlayback() {
         pausePlayback();
-        pauseTime = 0;
+        
+        // If there's a selection and this is the first stop press
+        if (selectionStart !== null && selectionEnd !== null && pauseTime !== 0) {
+            // Move playhead to start of loop
+            pauseTime = Math.min(selectionStart, selectionEnd);
+        } else {
+            // On second stop press or if no selection, clear selection and go to start
+            clearSelection();
+            pauseTime = 0;
+        }
+        
         updateProgress();
+        drawPlayhead();
     }
 
     function switchTrack() {
@@ -1633,7 +1646,9 @@ document.addEventListener('DOMContentLoaded', () => {
         isSelecting = false;
         ['A', 'B'].forEach(track => {
             const ctx = selectionContexts[track];
-            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            if (ctx) {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            }
         });
     }
 
