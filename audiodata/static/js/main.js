@@ -439,20 +439,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateFileList() {
-        fileList.innerHTML = '';
+        // Clear the file list
+        while (fileList.firstChild) {
+            fileList.removeChild(fileList.firstChild);
+        }
+
+        // Update file list display
         fileListData.forEach((fileData, index) => {
-            const item = document.createElement('div');
-            item.className = 'file-list-item';
-            item.dataset.index = index;
-            item.textContent = fileData.name;
-            if (selectedFiles.has(index)) {
-                item.classList.add('selected');
-            }
-            fileList.appendChild(item);
+            const row = document.createElement('div');
+            row.className = 'file-row';
+            row.dataset.fileId = index;
+            row.textContent = fileData.name;
+
+            row.addEventListener('click', () => {
+                row.classList.toggle('selected');
+                if (row.classList.contains('selected')) {
+                    selectedFiles.add(index);
+                } else {
+                    selectedFiles.delete(index);
+                }
+                updateButtonStates();
+            });
+
+            fileList.appendChild(row);
         });
-        
-        // Also update A/B table
-        updateAbTable();
+
+        // Update button states
+        updateButtonStates();
     }
 
     function updateFileInfoTable(results) {
@@ -1090,93 +1103,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return fileInfo;
     }
 
-    // A/B comparison functionality
-    const abFilesTable = document.getElementById('ab-files-table');
-    const openInAbButton = document.getElementById('open-in-ab');
-    let selectedForAb = new Set();
-
-    function updateAbTable() {
-        const tbody = abFilesTable.querySelector('tbody');
-        tbody.innerHTML = '';
-
-        fileListData.forEach((fileData, index) => {
-            const row = tbody.insertRow();
-            
-            // Checkbox cell
-            const checkboxCell = row.insertCell();
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.className = 'ab-checkbox';
-            checkbox.dataset.index = index;
-            checkbox.checked = selectedForAb.has(index);
-            checkbox.disabled = !selectedForAb.has(index) && selectedForAb.size >= 2;
-            checkboxCell.appendChild(checkbox);
-
-            // File info cells
-            const nameCell = row.insertCell();
-            nameCell.textContent = fileData.name;
-
-            const durationCell = row.insertCell();
-            const sampleRateCell = row.insertCell();
-
-            // Get file info if available
-            const fileInfoRow = document.querySelector(`#file-info-table tbody tr:nth-child(${index + 1})`);
-            if (fileInfoRow) {
-                durationCell.textContent = fileInfoRow.cells[4].textContent;
-                sampleRateCell.textContent = fileInfoRow.cells[2].textContent;
-            } else {
-                durationCell.textContent = '--';
-                sampleRateCell.textContent = '--';
-            }
-        });
-
-        // Update button state
-        openInAbButton.disabled = selectedForAb.size !== 2;
+    function updateButtonStates() {
+        const hasSelection = selectedFiles.size > 0;
+        removeSelectedBtn.disabled = !hasSelection;
+        clearFilesBtn.disabled = fileListData.length === 0;
     }
-
-    // Handle checkbox changes
-    abFilesTable.addEventListener('change', (e) => {
-        if (e.target.matches('.ab-checkbox')) {
-            const index = parseInt(e.target.dataset.index);
-            
-            if (e.target.checked) {
-                if (selectedForAb.size < 2) {
-                    selectedForAb.add(index);
-                } else {
-                    e.target.checked = false;
-                    return;
-                }
-            } else {
-                selectedForAb.delete(index);
-            }
-            
-            updateAbTable();
-        }
-    });
-
-    // Handle opening in A/B app
-    openInAbButton.addEventListener('click', () => {
-        if (selectedForAb.size !== 2) return;
-
-        const selectedFiles = Array.from(selectedForAb)
-            .map(index => fileListData[index]);
-
-        console.log('Selected files for A/B:', selectedFiles);
-
-        // Store the files in window for the A/B app
-        window.abCompareFiles = selectedFiles.map(fileData => fileData.file);
-        console.log('Stored files in window.abCompareFiles:', window.abCompareFiles);
-
-        // Store minimal file info in sessionStorage
-        const fileInfo = selectedFiles.map(fileData => ({
-            name: fileData.name,
-            type: fileData.file.type,
-            lastModified: fileData.file.lastModified
-        }));
-        sessionStorage.setItem('abCompareFiles', JSON.stringify(fileInfo));
-        console.log('Stored file info in sessionStorage:', fileInfo);
-
-        // Open A/B in new tab
-        window.open('/AB', '_blank');
-    });
 }); 
