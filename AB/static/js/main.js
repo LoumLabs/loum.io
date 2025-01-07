@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function resizeCanvases() {
-        const width = document.querySelector('.waveform').offsetWidth;
+            const width = document.querySelector('.waveform').offsetWidth;
         const dpr = window.devicePixelRatio || 1;
         
         // Resize all canvas layers with device pixel ratio
@@ -201,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         // Redraw content if we have buffers
-        if (trackA?.buffer || trackB?.buffer) {
+            if (trackA?.buffer || trackB?.buffer) {
             drawWaveforms();
             drawSelection();
             if (isPlaying || pauseTime > 0) {
@@ -337,12 +337,12 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.clearRect(0, 0, width, height);
 
             // Draw playhead line with anti-aliasing
-            ctx.beginPath();
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 2;
-            ctx.moveTo(position, 0);
+        ctx.beginPath();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.moveTo(position, 0);
             ctx.lineTo(position, height);
-            ctx.stroke();
+        ctx.stroke();
         });
 
         if (isPlaying) {
@@ -572,8 +572,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Start animation with rate limiting
         setTimeout(() => {
-            requestAnimationFrame(updateProgress);
-            requestAnimationFrame(drawPlayhead);
+        requestAnimationFrame(updateProgress);
+        requestAnimationFrame(drawPlayhead);
         }, 32);
     }
 
@@ -605,7 +605,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             // On second stop press or if no selection, clear selection and go to start
             clearSelection();
-            pauseTime = 0;
+        pauseTime = 0;
         }
         
         updateProgress();
@@ -1125,17 +1125,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const gainValueB = Math.pow(10, trackB.gainAdjustment / 20);
         
         trackA.gainNode.gain.cancelScheduledValues(currentTime);
-        trackB.gainNode.gain.cancelScheduledValues(currentTime);
+            trackB.gainNode.gain.cancelScheduledValues(currentTime);
         
         trackA.gainNode.gain.setValueAtTime(trackA.gainNode.gain.value, currentTime);
-        trackB.gainNode.gain.setValueAtTime(trackB.gainNode.gain.value, currentTime);
-        
+            trackB.gainNode.gain.setValueAtTime(trackB.gainNode.gain.value, currentTime);
+            
         trackA.gainNode.gain.linearRampToValueAtTime(gainValueA, currentTime + 0.01);
         trackB.gainNode.gain.linearRampToValueAtTime(gainValueB, currentTime + 0.01);
         
         // Update displays
         updateGainDisplay('A');
-        updateGainDisplay('B');
+            updateGainDisplay('B');
         
         const newLoudnessA = loudnessA + trackA.gainAdjustment;
         const newLoudnessB = loudnessB + trackB.gainAdjustment;
@@ -1147,7 +1147,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selectionStart = savedSelectionStart;
         selectionEnd = savedSelectionEnd;
         drawSelection();
-        
+
         if (wasPlaying) {
             startPlayback();
         }

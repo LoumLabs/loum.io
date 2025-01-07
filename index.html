@@ -6,67 +6,88 @@
     <title>loum.io</title>
     <style>
         body {
-            background-color: #1a1a1a;
-            color: #e0e0e0;
-            font-family: monospace;
-            line-height: 1.6;
             margin: 0;
-            padding: 2rem;
-            height: 100%;
-            overflow-y: auto;
+            padding: 0;
+            background-color: #1e1e1e;
+            font-family: monospace;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;         
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
+
+        .site-title {
+            color: #e0e0e0;
+            font-size: 24px;
+            margin-bottom: 20px;
         }
-        h1 {
-            font-size: 2rem;
-            margin-bottom: 2rem;
-            border-bottom: 1px solid #333;
-            padding-bottom: 0.5rem;
+
+        .app-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            padding: 20px;
+            padding-bottom: 50px;
+            width: 100%;
+            box-sizing: border-box;
         }
-        .directory {
-            margin-left: 1rem;
-        }
-        a {
-            color: #4a9eff;
+
+        .app-link {
+            display: block;
+            padding: 20px;
+            background-color: #2b2b2b;
+            color: #e0e0e0;
             text-decoration: none;
-            transition: color 0.2s;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            text-align: center;
         }
-        a:hover {
-            color: #66b3ff;
-            text-decoration: underline;
+
+        .app-link:hover {
+            background-color: #3c3f41;
+            transform: translateY(-2px);
         }
-        .tree-structure {
-            font-size: 1.1rem;
-            margin-top: 2rem;
+
+        .app-name {
+            font-size: 18px;
+            margin-bottom: 10px;
         }
-        .tree-item {
-            margin: 0.5rem 0;
+
+        .app-description {
+            font-size: 14px;
+            color: #808080;
+            margin: 0;
         }
-        .tree-item::before {
-            content: "├── ";
-            color: #666;
-        }
-        .tree-item:last-child::before {
-            content: "└── ";
+
+        @media (max-width: 768px) {
+            .app-grid {
+                grid-template-columns: 1fr;
+                padding: 10px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>loum.io</h1>
-        <div class="tree-structure">
-            <div class="tree-item">
-                <a href="/audiodata">/audiodata</a>
-            </div>
-            <div class="tree-item">
-                <a href="/AB">/AB</a>
-            </div>
-            <div class="tree-item">
-                <a href="/meter">/meter</a>
-            </div>
-        </div>
+    <h1 class="site-title">loum.io</h1>
+    <div class="app-grid">
+        <a href="/audiodata" class="app-link">
+            <div class="app-name">Audiodata</div>
+            <p class="app-description">Analyze audio file loudness and metadata</p>
+        </a>
+        <a href="/AB" class="app-link">
+            <div class="app-name">A/B</div>
+            <p class="app-description">Compare audio files with loudness matching</p>
+        </a>
+        <a href="/meter" class="app-link">
+            <div class="app-name">Meter</div>
+            <p class="app-description">Real-time SPL meter with spectrum analyzer</p>
+        </a>
+        <a href="/tuner" class="app-link">
+            <div class="app-name">Tuner</div>
+            <p class="app-description">Real-time pitch detection and frequency analyzer</p>
+        </a>
     </div>
 </body>
 </html> 
