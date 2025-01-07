@@ -224,7 +224,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const bufferWidth = Math.floor(audioBuffer.duration * pixelsPerSecond);
         
         const data = audioBuffer.getChannelData(0);
-        const step = Math.ceil(data.length / bufferWidth);
+        // Use a smaller step size for more detail
+        const step = Math.max(1, Math.floor(data.length / (bufferWidth * 2)));
         const amp = height / 2;
 
         ctx.fillStyle = WAVE_BG;
@@ -234,22 +235,33 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.strokeStyle = color;
         ctx.lineWidth = 1;
 
-        for (let i = 0; i < bufferWidth; i++) {
+        let x = 0;
+        let lastY = height / 2;
+
+        for (let i = 0; i < data.length; i += step) {
+            const segmentLength = Math.min(step, data.length - i);
             let min = 1.0;
             let max = -1.0;
             
-            for (let j = 0; j < step; j++) {
-                const datum = data[(i * step) + j];
+            // Find min/max in this segment
+            for (let j = 0; j < segmentLength; j++) {
+                const datum = data[i + j];
                 if (datum < min) min = datum;
                 if (datum > max) max = datum;
             }
 
-            // Center the waveform vertically
+            // Calculate x position with higher precision
+            x = (i / data.length) * width;
+            
+            // Draw only if there's a significant change
             const y1 = (height / 2) + (min * amp);
             const y2 = (height / 2) + (max * amp);
             
-            ctx.moveTo(i, y1);
-            ctx.lineTo(i, y2);
+            if (Math.abs(y1 - lastY) > 0.5 || Math.abs(y2 - lastY) > 0.5) {
+                ctx.moveTo(x, y1);
+                ctx.lineTo(x, y2);
+                lastY = (y1 + y2) / 2;
+            }
         }
 
         ctx.stroke();
@@ -278,13 +290,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const selStartX = (Math.min(selectionStart, selectionEnd) / duration) * width;
                 const selEndX = (Math.max(selectionStart, selectionEnd) / duration) * width;
                 
-                // Draw selection background
-                ctx.fillStyle = 'rgba(74, 158, 255, 0.2)';
+                // Draw selection background with more subtle white
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
                 ctx.fillRect(selStartX, 0, selEndX - selStartX, height);
                 
-                // Draw selection borders
+                // Draw selection borders with less opacity than playhead
                 ctx.beginPath();
-                ctx.strokeStyle = 'rgba(74, 158, 255, 0.5)';
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
                 ctx.lineWidth = 2;
                 ctx.moveTo(selStartX, 0);
                 ctx.lineTo(selStartX, height);
