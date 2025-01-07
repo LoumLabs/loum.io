@@ -5,16 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>loum.io</title>
     <style>
+        /* v1.01 */
         body {
             margin: 0;
             padding: 0;
             background-color: #1e1e1e;
             font-family: monospace;
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            align-items: center;         
+            align-items: center;
+            overflow: hidden;
+            transform: translateY(-7vh);
         }
 
         .site-title {
@@ -26,10 +29,9 @@
         .app-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
+            gap: 15px;
             max-width: 1200px;
-            padding: 20px;
-            padding-bottom: 50px;
+            padding: 30px;
             width: 100%;
             box-sizing: border-box;
         }
@@ -62,9 +64,20 @@
         }
 
         @media (max-width: 768px) {
+            body {
+                padding: 20px;
+                transform: translateY(-5vh);
+            }
+            
             .app-grid {
                 grid-template-columns: 1fr;
-                padding: 10px;
+                gap: 15px;
+                padding: 0;
+            }
+            
+            .site-title {
+                font-size: 20px;
+                margin-bottom: 40px;
             }
         }
     </style>
@@ -74,19 +87,19 @@
     <div class="app-grid">
         <a href="/audiodata" class="app-link">
             <div class="app-name">Audiodata</div>
-            <p class="app-description">Analyze audio file loudness and metadata</p>
+            <p class="app-description">Analyze audio file loudness and&nbsp;metadata</p>
         </a>
         <a href="/AB" class="app-link">
             <div class="app-name">A/B</div>
-            <p class="app-description">Compare audio files with loudness matching</p>
+            <p class="app-description">Compare audio files with loudness&nbsp;matching</p>
         </a>
         <a href="/meter" class="app-link">
             <div class="app-name">Meter</div>
-            <p class="app-description">Real-time SPL meter with spectrum analyzer</p>
+            <p class="app-description">Real-time SPL meter with spectrum&nbsp;analyzer</p>
         </a>
         <a href="/tuner" class="app-link">
             <div class="app-name">Tuner</div>
-            <p class="app-description">Real-time pitch detection and frequency analyzer</p>
+            <p class="app-description">Real-time pitch detection and frequency&nbsp;analyzer</p>
         </a>
     </div>
 </body>

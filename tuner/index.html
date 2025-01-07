@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tuner - loum.io</title>
     <link rel="stylesheet" href="static/css/style.css">
+    <style>
+        /* v1.01 */
+    </style>
 </head>
 <body>
     <a href="/" class="home-link">loum.io</a>
@@ -68,22 +71,38 @@
                 </div>
 
                 <!-- Controls -->
-                <div class="controls">
-                    <button id="startButton">Start</button>
-                    <button id="calibrateButton">A₄ = 440 Hz</button>
+                <div class="controls-row">
+                    <div class="controls main-controls-container">
+                        <div class="main-controls">
+                            <button id="startButton">Start</button>
+                            <button id="holdButton">Hold</button>
+                            <button id="calibrateButton">A₄ = 440 Hz</button>
+                        </div>
+                    </div>
 
-                    <!-- Filter Mode Controls -->
-                    <div class="control-group">
-                        <button class="filter-button active" data-mode="normal">All</button>
-                        <button class="filter-button" data-mode="voice">Voice</button>
-                        <button class="filter-button" data-mode="guitar">Guitar</button>
-                        <button class="filter-button" data-mode="bass">Bass</button>
+                    <div class="controls filter-controls-container">
+                        <div class="control-group">
+                            <button class="filter-button active" data-mode="normal">All</button>
+                            <button class="filter-button" data-mode="voice">Voice</button>
+                            <button class="filter-button" data-mode="guitar">Guitar</button>
+                            <button class="filter-button" data-mode="bass">Bass</button>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Spectrum Analyzer -->
                 <div class="visualization-container">
                     <canvas id="spectrum"></canvas>
+                </div>
+
+                <!-- Peak Label Controls -->
+                <div class="controls">
+                    <div class="control-group">
+                        <button class="peak-label-button active" data-labels="0">No Labels</button>
+                        <button class="peak-label-button" data-labels="1">Fund.</button>
+                        <button class="peak-label-button" data-labels="2">+1 Harm.</button>
+                        <button class="peak-label-button" data-labels="4">All Harm.</button>
+                    </div>
                 </div>
             </div>
         </div>

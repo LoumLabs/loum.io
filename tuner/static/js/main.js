@@ -6,6 +6,7 @@ let isInitialized = false;
 let lastFrameTime = 0;
 let lastValidPitchData = null;
 let lastValidPitchTime = 0;
+let isHolding = false;
 const DISPLAY_HOLD_TIME = 3000;  // Hold for 3 seconds
 
 const TARGET_FRAME_RATE = 60;
@@ -60,13 +61,16 @@ function initializeVisualizations() {
         spectrumAnalyzer.draw(initialData);
         resetDisplays();
         
-        // Set initial active state on the 'All' button
+        // Set initial states
         const filterButtons = document.querySelectorAll('.filter-button');
         filterButtons.forEach(button => {
             if (button.dataset.mode === initialMode) {
                 button.classList.add('active');
             }
         });
+
+        // Initialize spectrum analyzer with no labels
+        spectrumAnalyzer.setLabelCount(0);
     });
     
     isInitialized = true;
@@ -123,7 +127,7 @@ function animate(timestamp) {
     
     const elapsed = timestamp - lastFrameTime;
     
-    if (elapsed >= FRAME_INTERVAL) {
+    if (elapsed >= FRAME_INTERVAL && !isHolding) {  // Only update if not holding
         const timeDomainData = audioProcessor.getTimeDomainData();
         const frequencyData = audioProcessor.getFrequencyData();
         
@@ -312,6 +316,12 @@ function updateFilterMode(mode) {
     }
 }
 
+function toggleHold() {
+    isHolding = !isHolding;
+    const holdButton = document.getElementById('holdButton');
+    holdButton.classList.toggle('active', isHolding);
+}
+
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeVisualizations);
@@ -323,7 +333,9 @@ if (document.readyState === 'loading') {
 function initializeEventListeners() {
     const startButton = document.getElementById('startButton');
     const calibrateButton = document.getElementById('calibrateButton');
+    const holdButton = document.getElementById('holdButton');
     const filterButtons = document.querySelectorAll('.filter-button');
+    const peakLabelButtons = document.querySelectorAll('.peak-label-button');
     
     if (startButton) {
         startButton.addEventListener('click', toggleAudio);
@@ -331,12 +343,24 @@ function initializeEventListeners() {
     if (calibrateButton) {
         calibrateButton.addEventListener('click', showCalibrationDialog);
     }
+    if (holdButton) {
+        holdButton.addEventListener('click', toggleHold);
+    }
     
     filterButtons.forEach(button => {
         button.addEventListener('click', () => {
             const mode = button.dataset.mode;
             updateFilterMode(mode);
             filterButtons.forEach(b => b.classList.remove('active'));
+            button.classList.add('active');
+        });
+    });
+
+    peakLabelButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const labelCount = parseInt(button.dataset.labels);
+            spectrumAnalyzer.setLabelCount(labelCount);
+            peakLabelButtons.forEach(b => b.classList.remove('active'));
             button.classList.add('active');
         });
     });

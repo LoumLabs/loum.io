@@ -16,7 +16,8 @@ class SpectrumAnalyzer {
         // Peak detection parameters
         this.peakThreshold = -75;  // Lower threshold to catch more peaks
         this.minPeakDistance = 5;  // Reduced to allow closer peaks
-        this.maxHarmonics = 4;     // Increased number of harmonics to show
+        this.maxHarmonics = 4;     // Default number of harmonics to show
+        this.showLabels = 0;       // Start with no labels
         this.peakHoldTime = 500;   // Hold peaks for 500ms
         this.lastPeakTime = 0;
         this.lastPeaks = [];
@@ -191,21 +192,25 @@ class SpectrumAnalyzer {
         return peaks;
     }
 
+    // Update label settings
+    setLabelCount(count) {
+        this.showLabels = parseInt(count);
+        // Keep maxHarmonics at least as large as showLabels for peak detection
+        this.maxHarmonics = Math.max(this.showLabels, 4);
+    }
+
     drawPeakLabels(peaks) {
-        if (!peaks.length) return;
+        if (!peaks || peaks.length === 0 || this.showLabels === 0) return;
 
         this.ctx.save();
         
-        // Draw peak markers and labels
-        this.ctx.font = 'bold 13px monospace';
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'bottom';
-        
-        // Calculate label positions to avoid overlap
-        const labelSpacing = 30;  // Vertical spacing between labels
+        // Only show the requested number of peaks
+        const visiblePeaks = peaks.slice(0, this.showLabels);
+        const labelSpacing = 30;
         const labelPositions = [];
         
-        peaks.forEach((peak, index) => {
+        // Draw dots and labels for visible peaks only
+        visiblePeaks.forEach((peak, index) => {
             const x = this.freqToX(peak.frequency);
             const y = this.dbToY(peak.amplitude);
             
@@ -277,6 +282,9 @@ class SpectrumAnalyzer {
             this.ctx.strokeRect(boxX, labelY - 15, labelWidth, 25);
             
             // Draw note name
+            this.ctx.font = 'bold 13px monospace';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'bottom';
             this.ctx.fillStyle = index === 0 ? '#4CAF50' : '#FFC107';
             this.ctx.fillText(label, x, labelY - 2);
             
