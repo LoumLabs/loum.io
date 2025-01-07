@@ -447,23 +447,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update file list display
         fileListData.forEach((fileData, index) => {
             const row = document.createElement('div');
-            row.className = 'file-row';
+            row.className = 'file-list-item';
             if (selectedFiles.has(index)) {
                 row.classList.add('selected');
             }
-            row.dataset.fileId = index;
+            row.dataset.index = index;
             row.textContent = fileData.name;
-
-            row.addEventListener('click', () => {
-                row.classList.toggle('selected');
-                if (row.classList.contains('selected')) {
-                    selectedFiles.add(index);
-                } else {
-                    selectedFiles.delete(index);
-                }
-                updateButtonStates();
-            });
-
             fileList.appendChild(row);
         });
 
@@ -659,6 +648,11 @@ document.addEventListener('DOMContentLoaded', () => {
     removeSelectedBtn.addEventListener('click', () => {
         const selectedIndexes = Array.from(selectedFiles).sort((a, b) => b - a);
         selectedIndexes.forEach(index => {
+            const fileToRemove = fileListData[index];
+            // Remove from tables
+            ['#file-info tbody', '#loudness-results tbody', '#multiband-rms tbody'].forEach(selector => {
+                removeFromTable(selector, fileToRemove.name);
+            });
             fileListData.splice(index, 1);
         });
         selectedFiles.clear();
@@ -695,16 +689,10 @@ document.addEventListener('DOMContentLoaded', () => {
             selectedFiles.add(index);
             item.classList.add('selected');
         }
+        updateButtonStates();
 
-        // Update current file index and immediately update file name display
+        // Update current file index and metadata view
         currentFileIndex = index;
-        const currentFile = fileListData[currentFileIndex];
-        const fileNameDisplay = document.querySelector('.current-file-name');
-        if (fileNameDisplay && currentFile) {
-            fileNameDisplay.textContent = currentFile.name;
-        }
-
-        // Update metadata view
         updateMetadataView();
     });
 
