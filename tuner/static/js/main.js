@@ -69,8 +69,18 @@ function initializeVisualizations() {
             }
         });
 
-        // Initialize spectrum analyzer with no labels
-        spectrumAnalyzer.setLabelCount(0);
+        // Initialize spectrum analyzer with fundamental frequency label
+        spectrumAnalyzer.setLabelCount(1);
+        
+        // Update button state to match
+        const labelButtons = document.querySelectorAll('.peak-label-button');
+        labelButtons.forEach(button => {
+            if (button.dataset.labels === '1') {
+                button.classList.add('active');
+            } else {
+                button.classList.remove('active');
+            }
+        });
     });
     
     isInitialized = true;
