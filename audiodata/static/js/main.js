@@ -448,6 +448,9 @@ document.addEventListener('DOMContentLoaded', () => {
         fileListData.forEach((fileData, index) => {
             const row = document.createElement('div');
             row.className = 'file-row';
+            if (selectedFiles.has(index)) {
+                row.classList.add('selected');
+            }
             row.dataset.fileId = index;
             row.textContent = fileData.name;
 
@@ -464,7 +467,6 @@ document.addEventListener('DOMContentLoaded', () => {
             fileList.appendChild(row);
         });
 
-        // Update button states
         updateButtonStates();
     }
 
@@ -655,15 +657,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Event listeners for file removal
     removeSelectedBtn.addEventListener('click', () => {
-        if (!isProcessing && selectedFiles.size > 0) {
-            removeFiles(Array.from(selectedFiles));
-        }
+        const selectedIndexes = Array.from(selectedFiles).sort((a, b) => b - a);
+        selectedIndexes.forEach(index => {
+            fileListData.splice(index, 1);
+        });
+        selectedFiles.clear();
+        updateFileList();
+        updateButtonStates();
     });
 
+    // Add event listener for clear files button
     clearFilesBtn.addEventListener('click', () => {
-        if (!isProcessing) {
-            removeFiles(Array.from(fileListData.keys()));
-        }
+        fileListData = [];
+        selectedFiles.clear();
+        updateFileList();
+        updateButtonStates();
+        
+        // Clear all tables
+        ['#file-info tbody', '#loudness-results tbody', '#multiband-rms tbody'].forEach(selector => {
+            const tbody = document.querySelector(selector);
+            if (tbody) tbody.innerHTML = '';
+        });
     });
 
     // File selection handling
