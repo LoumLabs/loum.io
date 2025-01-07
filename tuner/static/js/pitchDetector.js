@@ -20,12 +20,8 @@ class PitchDetector {
         // Initialize Hanning window
         this.window = new Float32Array(2048);
         for (let i = 0; i < 2048; i++) {
-            this.window[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (2048 - 1)));
+            this.window[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (2047)));
         }
-
-        // Previous valid readings for smoothing
-        this.previousReadings = [];
-        this.MAX_READINGS = 3;
     }
 
     detectPitch(buffer, sampleRate) {
@@ -37,60 +33,30 @@ class PitchDetector {
             windowedBuffer[i] = buffer[i] * this.window[i];
         }
 
-        // Use normalized square difference function for better pitch detection
-        const nsdf = new Float32Array(buffer.length);
-        let sum = 0;
-        
-        // Calculate normalized square difference
-        for (let lag = 0; lag < buffer.length; lag++) {
-            let correlation = 0;
-            let norm = 0;
-            for (let i = 0; i < buffer.length - lag; i++) {
-                correlation += windowedBuffer[i] * windowedBuffer[i + lag];
-                norm += windowedBuffer[i] * windowedBuffer[i] + windowedBuffer[i + lag] * windowedBuffer[i + lag];
-            }
-            nsdf[lag] = 2 * correlation / (norm + Number.EPSILON);
-        }
+        // Step 1: Calculate difference function
+        const yinBuffer = new Float32Array(buffer.length / 2);
+        this.difference(windowedBuffer, yinBuffer);
 
-        // Find peaks in NSDF
-        const peaks = this.findPeaks(nsdf);
-        if (peaks.length === 0) return null;
+        // Step 2: Cumulative mean normalized difference
+        this.cumulativeMeanNormalizedDifference(yinBuffer);
 
-        // Find the highest peak in the valid frequency range
-        const minPeriod = Math.floor(sampleRate / this.MAX_FREQ);
-        const maxPeriod = Math.floor(sampleRate / this.MIN_FREQ);
-        
-        let bestPeak = null;
-        let bestScore = -1;
+        // Step 3: Absolute threshold
+        const tau = this.absoluteThreshold(yinBuffer, sampleRate);
+        if (tau === -1) return null;
 
-        for (const peak of peaks) {
-            if (peak.lag >= minPeriod && peak.lag <= maxPeriod) {
-                const score = peak.value * (1 - 0.001 * peak.lag); // Slight bias towards lower lags
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestPeak = peak;
-                }
-            }
-        }
+        // Calculate frequency from tau
+        const frequency = sampleRate / tau;
+        if (frequency < this.MIN_FREQ || frequency > this.MAX_FREQ) return null;
 
-        if (!bestPeak || bestPeak.value < this.settings.clarityThreshold) {
-            return null;
-        }
-
-        // Calculate frequency from lag
-        const frequency = sampleRate / bestPeak.lag;
-        
-        // Apply temporal smoothing
-        const smoothedFreq = this.smoothFrequency(frequency);
-        
-        // Calculate note information
-        const noteInfo = this.getNoteInfo(smoothedFreq);
-        
         // Calculate clarity/confidence
-        const clarity = bestPeak.value;
+        const clarity = 1 - yinBuffer[tau];
+        if (clarity < this.settings.clarityThreshold) return null;
+
+        // Calculate note information
+        const noteInfo = this.getNoteInfo(frequency);
 
         return {
-            frequency: smoothedFreq,
+            frequency: frequency,
             note: noteInfo.note,
             octave: noteInfo.octave,
             cents: noteInfo.cents,
@@ -98,50 +64,48 @@ class PitchDetector {
         };
     }
 
-    findPeaks(array) {
-        const peaks = [];
-        const PEAK_THRESHOLD = 0.3;
-        let positiveZeroCrossing = -1;
-
-        for (let i = 1; i < array.length - 1; i++) {
-            // Find positive zero crossing
-            if (array[i - 1] <= 0 && array[i] > 0) {
-                positiveZeroCrossing = i;
-            }
-
-            // Find peaks after positive zero crossing
-            if (positiveZeroCrossing !== -1 && 
-                array[i] > PEAK_THRESHOLD &&
-                array[i] > array[i - 1] && 
-                array[i] >= array[i + 1]) {
-                peaks.push({
-                    lag: i,
-                    value: array[i]
-                });
+    difference(buffer, yinBuffer) {
+        const halfLength = yinBuffer.length;
+        
+        for (let tau = 0; tau < halfLength; tau++) {
+            yinBuffer[tau] = 0;
+            
+            for (let i = 0; i < halfLength; i++) {
+                const delta = buffer[i] - buffer[i + tau];
+                yinBuffer[tau] += delta * delta;
             }
         }
-
-        return peaks;
     }
 
-    smoothFrequency(frequency) {
-        this.previousReadings.push(frequency);
-        if (this.previousReadings.length > this.MAX_READINGS) {
-            this.previousReadings.shift();
+    cumulativeMeanNormalizedDifference(yinBuffer) {
+        let runningSum = 0;
+        yinBuffer[0] = 1;
+        
+        for (let tau = 1; tau < yinBuffer.length; tau++) {
+            runningSum += yinBuffer[tau];
+            yinBuffer[tau] *= tau / runningSum;
         }
+    }
 
-        // Calculate weighted average, giving more weight to recent readings
-        let weightedSum = 0;
-        let weightSum = 0;
-        const weights = [0.5, 0.3, 0.2]; // Most recent reading has highest weight
-
-        for (let i = 0; i < this.previousReadings.length; i++) {
-            const weight = weights[this.previousReadings.length - 1 - i];
-            weightedSum += this.previousReadings[i] * weight;
-            weightSum += weight;
+    absoluteThreshold(yinBuffer, sampleRate) {
+        const threshold = this.settings.clarityThreshold;
+        let minTau = -1;
+        let minVal = Infinity;
+        
+        // Find the smallest value in the buffer after the first zero crossing
+        let startIndex = Math.floor(sampleRate / this.MAX_FREQ);
+        let endIndex = Math.ceil(sampleRate / this.MIN_FREQ);
+        
+        for (let tau = startIndex; tau < Math.min(endIndex, yinBuffer.length); tau++) {
+            if (yinBuffer[tau] < threshold) {
+                if (yinBuffer[tau] < minVal) {
+                    minVal = yinBuffer[tau];
+                    minTau = tau;
+                }
+            }
         }
-
-        return weightedSum / weightSum;
+        
+        return minTau;
     }
 
     getNoteInfo(frequency) {
@@ -162,11 +126,6 @@ class PitchDetector {
             octave: octave,
             cents: cents
         };
-    }
-
-    isPeak(array, index) {
-        if (index <= 0 || index >= array.length - 1) return false;
-        return array[index] > array[index - 1] && array[index] > array[index + 1];
     }
 
     setA4(frequency) {

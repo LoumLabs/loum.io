@@ -6,6 +6,7 @@ let isInitialized = false;
 let lastFrameTime = 0;
 let lastValidPitchData = null;
 let lastValidPitchTime = 0;
+const DISPLAY_HOLD_TIME = 3000;  // Hold for 3 seconds
 
 const TARGET_FRAME_RATE = 60;
 const FRAME_INTERVAL = 1000 / TARGET_FRAME_RATE;
@@ -22,10 +23,9 @@ const SETTINGS = {
 // Filter ranges for different instruments
 const FILTER_RANGES = {
     normal: { min: 20, max: 4000, clarityThreshold: 0.8 },
-    voice: { min: 60, max: 1000, clarityThreshold: 0.85, temporalWindow: 3 },
-    guitar: { min: 60, max: 1500, clarityThreshold: 0.8 },
-    bass: { min: 30, max: 500, clarityThreshold: 0.8 },
-    violin: { min: 160, max: 4000, clarityThreshold: 0.8 }
+    voice: { min: 60, max: 1000, clarityThreshold: 0.85, temporalWindow: 3 },  // Optimized for vocal range with higher stability
+    guitar: { min: 60, max: 1200, clarityThreshold: 0.8, temporalWindow: 2 },  // Standard guitar range (E2 to E6)
+    bass: { min: 30, max: 400, clarityThreshold: 0.8, temporalWindow: 2 }      // Bass guitar range (B0 to G4)
 };
 
 function initializeVisualizations() {
@@ -76,8 +76,20 @@ function resetDisplays() {
     document.querySelector('.note-name').textContent = '--';
     document.querySelector('.frequency-value').textContent = '0';
     document.querySelector('.cents-display').textContent = '0¢';
-    document.querySelector('.meter-needle').style.transform = 'translateX(-50%)';
-    lastValidPitchData = null;
+    
+    // Reset semitone meter needle
+    const meterScale = document.querySelector('.meter-scale');
+    const centerPosition = meterScale.offsetWidth / 2;
+    document.querySelector('.meter-needle').style.left = `${centerPosition}px`;
+    
+    // Reset pitch indicator to center
+    const pitchIndicator = document.querySelector('.pitch-indicator');
+    if (pitchIndicator) {
+        pitchIndicator.style.transition = 'left 0.3s ease-out';
+        pitchIndicator.style.left = '50%';
+        // Reset color
+        pitchIndicator.style.backgroundColor = '#808080';
+    }
 }
 
 async function initializeAudio() {
@@ -127,21 +139,22 @@ function animate(timestamp) {
             const rms = Math.sqrt(sumSquares / timeDomainData.length);
             const db = 20 * Math.log10(rms);
             
+            const now = Date.now();
+            
             // Use both RMS and peak for better silence detection
             if (db > SILENCE_THRESHOLD && peak > 0.01) {
                 const pitchData = pitchDetector.detectPitch(timeDomainData, audioProcessor.getSampleRate());
                 if (pitchData && pitchData.clarity > 0.8) {
                     lastValidPitchData = pitchData;
-                    updateDisplays(lastValidPitchData);
-                } else if (lastValidPitchData && Date.now() - lastValidPitchTime < 100) {
-                    // Keep displaying last valid pitch for a short time to reduce flicker
-                    updateDisplays(lastValidPitchData);
-                } else {
-                    resetDisplays();
+                    lastValidPitchTime = now;
+                    updateDisplays(pitchData);
                 }
-                lastValidPitchTime = Date.now();
+            } else if (lastValidPitchData && (now - lastValidPitchTime) < DISPLAY_HOLD_TIME) {
+                // Keep showing last valid pitch for the hold time
+                updateDisplays(lastValidPitchData);
             } else {
                 resetDisplays();
+                lastValidPitchData = null;
             }
             
             // Update spectrum analyzer with smoother transitions
@@ -161,58 +174,87 @@ function updateDisplays(pitchData) {
     const freqDisplay = document.querySelector('.frequency-value');
     const centsDisplay = document.querySelector('.cents-display');
     const meterNeedle = document.querySelector('.meter-needle');
+    const meterScale = document.querySelector('.meter-scale');
     
-    if (pitchData && pitchData.clarity > 0.8) {
-        // Update note name with octave
-        noteDisplay.textContent = `${pitchData.note}${pitchData.octave}`;
+    // Update displays with data
+    updateDisplayWithData(pitchData, noteDisplay, freqDisplay, centsDisplay, meterNeedle, meterScale);
+}
+
+function updateDisplayWithData(data, noteDisplay, freqDisplay, centsDisplay, meterNeedle, meterScale) {
+    // Update note name with octave
+    noteDisplay.textContent = `${data.note}${data.octave}`;
+    
+    // Update frequency with higher precision
+    freqDisplay.textContent = data.frequency.toFixed(1);
+    
+    // Update cents
+    const cents = data.cents;
+    centsDisplay.textContent = `${cents >= 0 ? '+' : ''}${cents}¢`;
+    
+    // Calculate needle position for cents meter
+    const meterWidth = meterScale.offsetWidth;
+    const pixelsPerCent = meterWidth / 100;  // 100 cents total range (-50 to +50)
+    const centerOffset = cents * pixelsPerCent;
+    const centerPosition = meterWidth / 2;
+    const needlePosition = centerPosition + centerOffset;
+    
+    // Update needle position using left
+    meterNeedle.style.left = `${needlePosition}px`;
+    
+    // Update pitch position indicator
+    const pitchIndicator = document.querySelector('.pitch-indicator');
+    const pitchScale = document.querySelector('.pitch-scale');
+    if (pitchIndicator && pitchScale) {
+        // Calculate MIDI note number directly from frequency for smooth movement
+        const midiNote = 12 * Math.log2(data.frequency / 440) + 69;  // A4 (440Hz) is MIDI note 69
         
-        // Update frequency with higher precision
-        freqDisplay.textContent = pitchData.frequency.toFixed(1);
+        // Map MIDI note range (24-84, C1-C6) to position
+        const minNote = 24;  // C1
+        const maxNote = 84;  // C6
+        const noteRange = maxNote - minNote;
         
-        // Update cents
-        const cents = pitchData.cents;
-        centsDisplay.textContent = `${cents >= 0 ? '+' : ''}${cents}¢`;
+        // Calculate position (0-100%)
+        const position = ((midiNote - minNote) / noteRange) * 100;
+        pitchIndicator.style.transform = 'translateX(-50%)';  // Keep centered on the line
+        pitchIndicator.style.left = `${Math.max(0, Math.min(100, position))}%`;
         
-        // Calculate needle position
-        // Map cents (-50 to +50) to percentage offset from center (-50% to +50%)
-        const needleOffset = cents;
-        meterNeedle.style.transform = `translateX(calc(-50% + ${needleOffset}%))`;
-        meterNeedle.style.transition = 'transform 0.1s cubic-bezier(0.4, 0, 0.2, 1)';
-        
-        // Update colors based on tuning accuracy with smooth transitions
-        const accuracy = Math.abs(cents);
-        let color, shadowOpacity;
-        
-        if (accuracy <= 5) {
-            // Green zone (±5 cents)
-            color = '#4CAF50';
-            shadowOpacity = Math.min(1, (5 - accuracy) / 5 + 0.3);
-        } else if (accuracy <= 15) {
-            // Amber zone (±15 cents)
-            color = '#FFC107';
-            shadowOpacity = Math.min(1, (15 - accuracy) / 10 + 0.3);
-        } else {
-            // Blue zone (>15 cents)
-            color = '#4a9eff';
-            shadowOpacity = Math.max(0.3, Math.min(1, 1 - (accuracy - 15) / 35));
-        }
-        
-        // Apply smooth color transitions
-        noteDisplay.style.transition = 'color 0.2s ease, text-shadow 0.2s ease';
-        centsDisplay.style.transition = 'color 0.2s ease';
-        
-        noteDisplay.style.color = color;
-        noteDisplay.style.textShadow = `0 0 10px ${color}${Math.round(shadowOpacity * 255).toString(16).padStart(2, '0')}`;
-        centsDisplay.style.color = color;
-        
-        // Add visual feedback for perfect tune
-        if (accuracy <= 2) {
-            noteDisplay.classList.add('perfect-tune');
-        } else {
-            noteDisplay.classList.remove('perfect-tune');
-        }
+        // Update color based on clarity
+        const hue = Math.min(120, data.clarity * 120);  // 0-120 for red to green
+        pitchIndicator.style.backgroundColor = `hsl(${hue}, 50%, 50%)`;
+        pitchIndicator.style.boxShadow = `0 0 10px ${pitchIndicator.style.backgroundColor}`;
+    }
+    
+    // Update colors based on tuning accuracy with smooth transitions
+    const accuracy = Math.abs(cents);
+    let color, shadowOpacity;
+    
+    if (accuracy <= 5) {
+        // Green zone (±5 cents)
+        color = '#4CAF50';
+        shadowOpacity = Math.min(1, (5 - accuracy) / 5 + 0.3);
+    } else if (accuracy <= 15) {
+        // Amber zone (±15 cents)
+        color = '#FFC107';
+        shadowOpacity = Math.min(1, (15 - accuracy) / 10 + 0.3);
     } else {
-        resetDisplays();
+        // Blue zone (>15 cents)
+        color = '#4a9eff';
+        shadowOpacity = Math.max(0.3, Math.min(1, 1 - (accuracy - 15) / 35));
+    }
+    
+    // Apply smooth color transitions
+    noteDisplay.style.transition = 'color 0.2s ease, text-shadow 0.2s ease';
+    centsDisplay.style.transition = 'color 0.2s ease';
+    
+    noteDisplay.style.color = color;
+    noteDisplay.style.textShadow = `0 0 10px ${color}${Math.round(shadowOpacity * 255).toString(16).padStart(2, '0')}`;
+    centsDisplay.style.color = color;
+    
+    // Add visual feedback for perfect tune
+    if (accuracy <= 2) {
+        noteDisplay.classList.add('perfect-tune');
+    } else {
+        noteDisplay.classList.remove('perfect-tune');
     }
 }
 

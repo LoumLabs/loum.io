@@ -154,6 +154,7 @@ body {
     position: relative;
     margin: 20px 0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    overflow: visible;
 }
 
 /* Update tick marks positioning */
@@ -188,15 +189,16 @@ body {
 
 .meter-needle {
     position: absolute;
-    left: 50%;
-    top: 0;
-    bottom: 0;
     width: 3px;
+    height: 50px;
     background-color: white;
+    top: -5px;
+    left: 50%;
     transform: translateX(-50%);
-    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
     z-index: 1;
+    will-change: left;
+    transition: left 0.1s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .meter-needle::after {
@@ -341,4 +343,103 @@ button.active {
         padding: 6px 12px;
         min-width: 50px;
     }
+} 
+
+/* Pitch Position Indicator */
+.pitch-position {
+    background-color: #1e1e1e;
+    border-radius: 4px;
+    padding: 15px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.pitch-scale {
+    width: 100%;
+    height: 30px;
+    background-color: #2b2b2b;
+    border-radius: 4px;
+    position: relative;
+    margin: 5px 0 20px 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Add subtle grid lines for semitones */
+.pitch-scale::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        /* Semitones */
+        repeating-linear-gradient(
+            90deg,
+            transparent,
+            transparent calc(100% / 60 - 1px),
+            rgba(255, 255, 255, 0.1) calc(100% / 60),
+            transparent calc(100% / 60 + 1px)
+        );
+    pointer-events: none;
+}
+
+.note-marks {
+    position: absolute;
+    bottom: -20px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 10px;
+    font-size: 10px;
+}
+
+.note-mark {
+    color: #808080;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+
+/* Show fewer marks on mobile */
+@media (max-width: 768px) {
+    .note-mark:nth-child(2n) {
+        display: none;
+    }
+    
+    .note-marks {
+        font-size: 9px;
+    }
+}
+
+.pitch-indicator {
+    position: absolute;
+    width: 3px;
+    height: 100%;
+    background-color: #808080;
+    box-shadow: 0 0 10px rgba(128, 128, 128, 0.5);
+    transition: left 0.05s linear, background-color 0.2s ease;
+    will-change: left;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* Add subtle grid lines */
+.pitch-scale::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent calc(100% / 24 - 1px),
+        rgba(255, 255, 255, 0.1) calc(100% / 24),
+        transparent calc(100% / 24 + 1px)
+    );
+    pointer-events: none;
 } 
