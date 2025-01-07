@@ -1,3 +1,12 @@
+// Audio Track class
+class AudioTrack {
+    constructor(buffer) {
+        this.buffer = buffer;
+        this.gain = 1.0;
+        this.delay = 0;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log('AB app initializing...');
     
@@ -29,15 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectionEnd = null;
     let isSelecting = false;
     const MIN_SELECTION_DURATION = 0.5; // Minimum selection duration in seconds
-
-    // Audio Track class
-    class AudioTrack {
-        constructor(buffer) {
-            this.buffer = buffer;
-            this.gain = 1.0;
-            this.delay = 0;
-        }
-    }
 
     // UI Elements
     let uploadZoneA, uploadZoneB, fileInputA, fileInputB, uploadButtons;
@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (index === 0) {
                         trackA = new AudioTrack(buffer);
                         fileNameA = file.name;
-                    } else {
+            } else {
                         trackB = new AudioTrack(buffer);
                         fileNameB = file.name;
                     }
@@ -163,11 +163,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             fileInputB.addEventListener('change', function(e) {
                 const files = e.target.files;
-                if (files.length > 0) {
+        if (files.length > 0) {
                     loadFile(files[0], 1);
                 }
             });
-        } else {
+            } else {
             console.error('File input elements not found');
         }
 
@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ctxA = canvasElementA.getContext('2d');
             ctxB = canvasElementB.getContext('2d');
             console.log('Canvas elements initialized');
-        } else {
+            } else {
             console.error('Waveform containers not found');
         }
     }
