@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tuner - loum.io</title>
+    <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+    <a href="/" class="home-link">loum.io</a>
+    <div class="app-container">
+        <div class="tuner-panel">
+            <h1>Tuner</h1>
+            <div class="tuner-container">
+                <!-- Note Display -->
+                <div class="note-display">
+                    <div class="note-name">--</div>
+                    <div class="frequency-display">
+                        <span class="frequency-value">0</span>
+                        <span class="frequency-unit">Hz</span>
+                    </div>
+                </div>
+
+                <!-- Tuning Display -->
+                <div class="tuning-meter">
+                    <div class="meter-scale">
+                        <div class="tick-marks">
+                            <div class="tick-mark" data-cents="-50"></div>
+                            <div class="tick-mark" data-cents="-40"></div>
+                            <div class="tick-mark" data-cents="-30"></div>
+                            <div class="tick-mark" data-cents="-20"></div>
+                            <div class="tick-mark" data-cents="-10"></div>
+                            <div class="tick-mark" data-cents="0"></div>
+                            <div class="tick-mark" data-cents="+10"></div>
+                            <div class="tick-mark" data-cents="+20"></div>
+                            <div class="tick-mark" data-cents="+30"></div>
+                            <div class="tick-mark" data-cents="+40"></div>
+                            <div class="tick-mark" data-cents="+50"></div>
+                        </div>
+                        <div class="meter-needle"></div>
+                    </div>
+                    <div class="cents-display">0¢</div>
+                </div>
+
+                <!-- Controls -->
+                <div class="controls">
+                    <button id="startButton">Start</button>
+                    <button id="calibrateButton">A₄ = 440 Hz</button>
+
+                    <!-- Filter Mode Controls -->
+                    <div class="control-group">
+                        <button class="filter-button active" data-mode="normal">All</button>
+                        <button class="filter-button" data-mode="voice">Voice</button>
+                        <button class="filter-button" data-mode="guitar">Guitar</button>
+                        <button class="filter-button" data-mode="bass">Bass</button>
+                        <button class="filter-button" data-mode="violin">Violin</button>
+                    </div>
+                </div>
+
+                <!-- Spectrum Analyzer -->
+                <div class="visualization-container">
+                    <canvas id="spectrum"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="static/js/audioProcessor.js"></script>
+    <script src="static/js/pitchDetector.js"></script>
+    <script src="static/js/spectrum.js"></script>
+    <script src="static/js/main.js"></script>
+</body>
+</html> 

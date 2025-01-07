@@ -1,0 +1,344 @@
+/* Base Styles */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: monospace;
+    background-color: #2b2b2b;
+    color: #e0e0e0;
+    height: 100vh;
+}
+
+.app-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 10px;
+    min-height: calc(100vh - 20px);
+    display: flex;
+    flex-direction: column;
+}
+
+.home-link {
+    position: absolute;
+    top: 0;
+    left: 0;
+    font-family: monospace;
+    font-size: 13px;
+    color: #a0a0a0;
+    text-decoration: none;
+    background-color: #1e1e1e;
+    padding: 8px 12px;
+    z-index: 1;
+    transition: color 0.2s ease;
+    border-bottom-right-radius: 4px;
+}
+
+.home-link:hover {
+    color: #fff;
+}
+
+/* Tuner Panel */
+.tuner-panel {
+    padding: 10px 20px 20px;
+    margin-top: 20px;
+}
+
+.tuner-panel h1 {
+    color: white;
+    font-size: 20px;
+    margin: 0 0 20px 0;
+    text-align: center;
+}
+
+.tuner-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    padding: 0;
+}
+
+/* Note Display */
+.note-display {
+    background-color: #1e1e1e;
+    border-radius: 4px;
+    padding: 20px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+}
+
+.note-name {
+    font-size: 72px;
+    font-weight: bold;
+    color: #4a9eff;
+    text-shadow: 0 0 10px rgba(74, 158, 255, 0.3);
+    min-height: 86px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease, text-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.note-name.perfect-tune {
+    animation: perfect-tune 0.5s ease-in-out;
+}
+
+@keyframes perfect-tune {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+.frequency-display {
+    font-size: 24px;
+    color: #808080;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.frequency-value {
+    font-weight: bold;
+    margin-right: 5px;
+    min-width: 60px;
+    text-align: right;
+}
+
+.frequency-unit {
+    font-size: 18px;
+    opacity: 0.7;
+}
+
+/* Tuning Displays */
+#tuning-displays {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Tuning Meter */
+.tuning-meter {
+    background-color: #1e1e1e;
+    border-radius: 4px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Needle Display */
+.meter-scale {
+    width: 100%;
+    height: 40px;
+    background: linear-gradient(
+        to right,
+        #4a9eff 0%,
+        #4a9eff 35%,
+        #FFC107 35%,
+        #FFC107 45%,
+        #4CAF50 45%,
+        #4CAF50 55%,
+        #FFC107 55%,
+        #FFC107 65%,
+        #4a9eff 65%,
+        #4a9eff 100%
+    );
+    border-radius: 4px;
+    position: relative;
+    margin: 20px 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Update tick marks positioning */
+.tick-marks {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0;
+}
+
+.tick-mark {
+    width: 1px;
+    height: 10px;
+    background-color: rgba(255, 255, 255, 0.3);
+    position: relative;
+    flex: 1;
+}
+
+.tick-mark::after {
+    content: attr(data-cents);
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.meter-needle {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background-color: white;
+    transform: translateX(-50%);
+    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+    z-index: 1;
+}
+
+.meter-needle::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 5px solid white;
+}
+
+.cents-display {
+    text-align: center;
+    font-size: 24px;
+    color: #888;
+    margin-top: 10px;
+    font-family: monospace;
+    transition: color 0.2s ease;
+    min-width: 60px;
+}
+
+/* Strobe Display */
+#strobe-display canvas {
+    width: 100%;
+    height: 100%;
+    border-radius: 4px;
+}
+
+/* Controls */
+.controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+    background-color: #1e1e1e;
+    border-radius: 4px;
+    flex-wrap: wrap;
+}
+
+.control-group {
+    display: flex;
+    gap: 5px;
+    padding: 0 10px;
+    border-left: 1px solid #3c3f41;
+}
+
+.control-group:first-child {
+    border-left: none;
+}
+
+button {
+    background-color: #3c3f41;
+    border: none;
+    color: #a0a0a0;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+    font-family: monospace;
+    min-width: 60px;
+}
+
+button:hover {
+    background-color: #4c4f51;
+    color: #fff;
+}
+
+button.active {
+    background-color: #4a9eff;
+    color: #fff;
+}
+
+/* Visualization */
+.visualization-container {
+    background-color: #1e1e1e;
+    border-radius: 4px;
+    overflow: hidden;
+    height: 200px;
+    position: relative;
+    width: 100%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+#spectrum {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .app-container {
+        padding: 10px;
+    }
+    
+    .tuner-panel {
+        padding: 10px 10px 0;
+        margin-top: 20px;
+    }
+    
+    .tuner-container {
+        padding: 0;
+    }
+    
+    .note-name {
+        font-size: 56px;
+        min-height: 68px;
+    }
+    
+    .frequency-display {
+        font-size: 20px;
+    }
+    
+    .visualization-container {
+        height: 150px;
+    }
+    
+    .controls {
+        padding: 10px;
+        gap: 8px;
+    }
+    
+    .control-group {
+        flex-wrap: wrap;
+        justify-content: center;
+        padding: 5px 0;
+        border-left: none;
+        border-top: 1px solid #3c3f41;
+        width: 100%;
+    }
+    
+    .control-group:first-child {
+        border-top: none;
+    }
+    
+    button {
+        font-size: 13px;
+        padding: 6px 12px;
+        min-width: 50px;
+    }
+} 
