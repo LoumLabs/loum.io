@@ -6,7 +6,7 @@
     <title>Audiodata - loum.io</title>
     <link rel="stylesheet" href="static/css/style.css">
     <style>
-        /* v1.01 */
+        /* v1.02 */
     </style>
 </head>
 <body>
@@ -43,6 +43,7 @@
                 <button class="tab-button" data-tab="loudness">Loudness</button>
                 <button class="tab-button" data-tab="multiband">Multiband RMS</button>
                 <button class="tab-button" data-tab="metadata">Metadata</button>
+                <button class="tab-button" data-tab="ab-compare">A/B</button>
             </div>
 
             <!-- Tab Content -->
@@ -65,6 +66,30 @@
                                 <!-- File info will be inserted here -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- A/B Compare Tab -->
+                <div id="ab-compare" class="tab-pane">
+                    <div class="ab-file-list">
+                        <div class="table-container">
+                            <table id="ab-files-table">
+                                <thead>
+                                    <tr>
+                                        <th>Select</th>
+                                        <th>File Name</th>
+                                        <th>Duration</th>
+                                        <th>Sample Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Files will be listed here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="ab-controls">
+                            <button id="open-in-ab" class="control-button" disabled>Open in A/B</button>
+                        </div>
                     </div>
                 </div>
 
