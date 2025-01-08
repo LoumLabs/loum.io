@@ -804,14 +804,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     axis: 'xy'
                 },
                 onHover: (event, elements) => {
-                    const rect = canvas.getBoundingClientRect();
-                    const dpr = window.devicePixelRatio || 1;
-                    const x = (event.native.clientX - rect.left) * dpr;
-                    const y = (event.native.clientY - rect.top) * dpr;
-                    const position = {
-                        x: x * (canvas.width / (rect.width * dpr)),
-                        y: y * (canvas.height / (rect.height * dpr))
-                    };
+                    const position = Chart.helpers.getRelativePosition(event.native, window.multibandChart);
                     const chartArea = window.multibandChart.chartArea;
                     
                     if (position.y >= chartArea.top && position.y <= chartArea.bottom) {
@@ -1021,14 +1014,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Add mouse event listeners for selection box
         canvas.addEventListener('mousedown', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const dpr = window.devicePixelRatio || 1;
-            const x = (e.clientX - rect.left) * dpr;
-            const y = (e.clientY - rect.top) * dpr;
-            const position = {
-                x: x * (canvas.width / (rect.width * dpr)),
-                y: y * (canvas.height / (rect.height * dpr))
-            };
+            const position = Chart.helpers.getRelativePosition(e, window.multibandChart);
             const chartArea = window.multibandChart.chartArea;
             
             // Only start selection if within chart area
@@ -1041,14 +1027,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         canvas.addEventListener('mousemove', (e) => {
             if (window.chartSelection.isSelecting) {
-                const rect = canvas.getBoundingClientRect();
-                const dpr = window.devicePixelRatio || 1;
-                const x = (e.clientX - rect.left) * dpr;
-                const y = (e.clientY - rect.top) * dpr;
-                const position = {
-                    x: x * (canvas.width / (rect.width * dpr)),
-                    y: y * (canvas.height / (rect.height * dpr))
-                };
+                const position = Chart.helpers.getRelativePosition(e, window.multibandChart);
                 window.chartSelection.selectionBox.end = position.y;
                 window.multibandChart.draw();
             }
