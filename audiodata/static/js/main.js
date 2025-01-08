@@ -474,8 +474,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const rowContent = `
                     <td>${result.filename}</td>
                     <td>WAV</td>
-                    <td>${info.sample_rate.toLocaleString()} Hz</td>
-                    <td>${info.bit_depth}-bit</td>
+                    <td>${info.sample_rate}</td>
+                    <td>${info.bit_depth}</td>
                     <td>${info.duration}</td>
                     <td>${info.file_size}</td>
                 `;
