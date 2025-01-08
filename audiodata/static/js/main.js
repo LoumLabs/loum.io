@@ -993,18 +993,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
                         ctx.lineWidth = 1;
                         
-                        // Convert selection coordinates to pixels using Chart.js scaling
-                        const startPixel = yAxis.getPixelForValue(window.chartSelection.selectionBox.start);
-                        const endPixel = yAxis.getPixelForValue(window.chartSelection.selectionBox.end);
-                        
-                        const boxTop = Math.min(startPixel, endPixel);
-                        const boxHeight = Math.abs(endPixel - startPixel);
+                        const boxTop = Math.min(window.chartSelection.selectionBox.start, window.chartSelection.selectionBox.end);
+                        const boxHeight = Math.abs(window.chartSelection.selectionBox.end - window.chartSelection.selectionBox.start);
                         
                         ctx.fillRect(chartArea.left, boxTop, chartArea.right - chartArea.left, boxHeight);
                         ctx.strokeRect(chartArea.left, boxTop, chartArea.right - chartArea.left, boxHeight);
 
                         // Draw dB range label
-                        const dbRange = Math.abs(window.chartSelection.selectionBox.start - window.chartSelection.selectionBox.end).toFixed(1);
+                        const startDb = yAxis.getValueForPixel(window.chartSelection.selectionBox.start);
+                        const endDb = yAxis.getValueForPixel(window.chartSelection.selectionBox.end);
+                        const dbRange = Math.abs(startDb - endDb).toFixed(1);
                         
                         ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
                         ctx.font = '12px monospace';
@@ -1032,8 +1030,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Only start selection if within chart area
             if (y >= chartArea.top && y <= chartArea.bottom) {
                 window.chartSelection.isSelecting = true;
-                const value = yAxis.getValueForPixel(y);
-                window.chartSelection.selectionBox = { start: value, end: value };
+                window.chartSelection.selectionBox = { start: y, end: y };
                 window.multibandChart.draw();
             }
         });
@@ -1045,10 +1042,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const scaleY = canvas.height / rect.height;
                 const x = (e.clientX - rect.left) * scaleX;
                 const y = (e.clientY - rect.top) * scaleY;
-                
-                const yAxis = window.multibandChart.scales.y;
-                const value = yAxis.getValueForPixel(y);
-                window.chartSelection.selectionBox.end = value;
+                window.chartSelection.selectionBox.end = y;
                 window.multibandChart.draw();
             }
         });
