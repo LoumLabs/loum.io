@@ -979,13 +979,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add mouse event listeners for selection box
         canvas.addEventListener('mousedown', (e) => {
             const rect = canvas.getBoundingClientRect();
-            const y = e.clientY - rect.top;
+            const point = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+            const position = Chart.helpers.getRelativePosition(point, window.multibandChart);
             const chartArea = window.multibandChart.chartArea;
             
             // Only start selection if within chart area
-            if (y >= chartArea.top && y <= chartArea.bottom) {
+            if (position.y >= chartArea.top && position.y <= chartArea.bottom) {
                 isSelecting = true;
-                startY = Math.max(chartArea.top, Math.min(chartArea.bottom, y));
+                startY = position.y;
                 currentY = startY;
                 selectionBox = { start: startY, end: startY };
                 window.multibandChart.draw();
@@ -993,10 +997,23 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const point = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+            const position = Chart.helpers.getRelativePosition(point, window.multibandChart);
+            const chartArea = window.multibandChart.chartArea;
+
+            // Update cursor style based on chart area
+            if (position.y >= chartArea.top && position.y <= chartArea.bottom) {
+                canvas.style.cursor = 'crosshair';
+            } else {
+                canvas.style.cursor = 'default';
+            }
+            
             if (isSelecting) {
-                const rect = canvas.getBoundingClientRect();
-                const chartArea = window.multibandChart.chartArea;
-                currentY = Math.max(chartArea.top, Math.min(chartArea.bottom, e.clientY - rect.top));
+                currentY = Math.max(chartArea.top, Math.min(chartArea.bottom, position.y));
                 selectionBox.end = currentY;
                 window.multibandChart.draw();
             }
@@ -1007,19 +1024,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 isSelecting = false;
                 selectionBox = null;
                 window.multibandChart.draw();
-            }
-        });
-
-        // Update cursor style based on chart area
-        canvas.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const y = e.clientY - rect.top;
-            const chartArea = window.multibandChart.chartArea;
-            
-            if (y >= chartArea.top && y <= chartArea.bottom) {
-                canvas.style.cursor = 'crosshair';
-            } else {
-                canvas.style.cursor = 'default';
             }
         });
     }
