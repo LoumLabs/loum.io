@@ -61,7 +61,7 @@ class AudioProcessor {
             
             return {
                 format: 'WAV',
-                sample_rate: `${sampleRate || audioBuffer.sampleRate} Hz`,
+                sample_rate: `${(sampleRate || audioBuffer.sampleRate).toLocaleString()} Hz`,
                 bit_depth: bitDepth || '16-bit', // Fallback if header read fails
                 duration: duration,
                 file_size: this.formatFileSize(file.size)
