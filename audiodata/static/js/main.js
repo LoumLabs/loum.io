@@ -989,16 +989,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
                         ctx.lineWidth = 1;
                         
-                        const boxTop = Math.min(window.chartSelection.selectionBox.start, window.chartSelection.selectionBox.end);
-                        const boxHeight = Math.abs(window.chartSelection.selectionBox.end - window.chartSelection.selectionBox.start);
+                        // Convert selection coordinates to pixels using Chart.js scaling
+                        const startPixel = yAxis.getPixelForValue(window.chartSelection.selectionBox.start);
+                        const endPixel = yAxis.getPixelForValue(window.chartSelection.selectionBox.end);
+                        
+                        const boxTop = Math.min(startPixel, endPixel);
+                        const boxHeight = Math.abs(endPixel - startPixel);
                         
                         ctx.fillRect(chartArea.left, boxTop, chartArea.right - chartArea.left, boxHeight);
                         ctx.strokeRect(chartArea.left, boxTop, chartArea.right - chartArea.left, boxHeight);
 
                         // Draw dB range label
-                        const startDb = yAxis.getValueForPixel(window.chartSelection.selectionBox.start);
-                        const endDb = yAxis.getValueForPixel(window.chartSelection.selectionBox.end);
-                        const dbRange = Math.abs(startDb - endDb).toFixed(1);
+                        const dbRange = Math.abs(window.chartSelection.selectionBox.start - window.chartSelection.selectionBox.end).toFixed(1);
                         
                         ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
                         ctx.font = '12px monospace';
@@ -1016,11 +1018,14 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.addEventListener('mousedown', (e) => {
             const position = Chart.helpers.getRelativePosition(e, window.multibandChart);
             const chartArea = window.multibandChart.chartArea;
+            const yAxis = window.multibandChart.scales.y;
             
             // Only start selection if within chart area
             if (position.y >= chartArea.top && position.y <= chartArea.bottom) {
                 window.chartSelection.isSelecting = true;
-                window.chartSelection.selectionBox = { start: position.y, end: position.y };
+                // Convert pixel position to value using Chart.js scaling
+                const value = yAxis.getValueForPixel(position.y);
+                window.chartSelection.selectionBox = { start: value, end: value };
                 window.multibandChart.draw();
             }
         });
@@ -1028,7 +1033,10 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.addEventListener('mousemove', (e) => {
             if (window.chartSelection.isSelecting) {
                 const position = Chart.helpers.getRelativePosition(e, window.multibandChart);
-                window.chartSelection.selectionBox.end = position.y;
+                const yAxis = window.multibandChart.scales.y;
+                // Convert pixel position to value using Chart.js scaling
+                const value = yAxis.getValueForPixel(position.y);
+                window.chartSelection.selectionBox.end = value;
                 window.multibandChart.draw();
             }
         });
