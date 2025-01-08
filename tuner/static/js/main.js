@@ -163,12 +163,17 @@ function animate(timestamp) {
                     db: db.toFixed(2),
                     peak: peak.toFixed(6),
                     threshold: SETTINGS.silenceThreshold,
-                    peakThreshold: SETTINGS.peakThreshold.toFixed(6)
+                    peakThreshold: SETTINGS.peakThreshold.toFixed(6),
+                    detection: db > SETTINGS.silenceThreshold ? 'DB_YES' : 'DB_NO',
+                    peakDetection: peak > SETTINGS.peakThreshold ? 'PEAK_YES' : 'PEAK_NO'
                 });
             }
             
-            // Use both RMS and peak for better silence detection with adjustable thresholds
-            if (db > SETTINGS.silenceThreshold || peak > SETTINGS.peakThreshold) {  // Changed AND to OR for more lenient detection
+            // More aggressive detection logic
+            const dbDetection = db > SETTINGS.silenceThreshold;
+            const peakDetection = peak > SETTINGS.peakThreshold;
+            
+            if (dbDetection || peakDetection) {
                 const pitchData = pitchDetector.detectPitch(timeDomainData, audioProcessor.getSampleRate());
                 if (pitchData && pitchData.clarity > 0.8) {
                     lastValidPitchData = pitchData;
@@ -376,10 +381,10 @@ function initializeEventListeners() {
             SETTINGS.silenceThreshold = value;
             SILENCE_THRESHOLD = value;
             
-            // Adjust peak threshold with a gentler curve
-            // Map -90 to -40 dB to a range of 0.0001 to 0.01
+            // Adjust peak threshold with a more aggressive curve
+            // Map -90 to -40 dB to a range of 0.0001 to 0.05
             const normalizedValue = (value + 90) / 50;  // 0 to 1
-            SETTINGS.peakThreshold = 0.0001 + (normalizedValue * 0.0099);
+            SETTINGS.peakThreshold = 0.0001 * Math.pow(500, normalizedValue);  // Exponential curve
             
             // Update display
             sensitivityValue.textContent = `${value} dB`;
