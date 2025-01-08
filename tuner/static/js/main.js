@@ -19,8 +19,8 @@ const SETTINGS = {
     temperament: 'equal',
     transposition: 0,
     filterMode: 'normal',
-    silenceThreshold: -70,  // Add to settings
-    peakThreshold: 0.005     // Lower default for better sensitivity
+    silenceThreshold: -70,
+    peakThreshold: 0.001  // Much lower default for better range
 };
 
 // Filter ranges for different instruments
@@ -153,7 +153,7 @@ function animate(timestamp) {
                 peak = Math.max(peak, Math.abs(value));
             }
             const rms = Math.sqrt(sumSquares / timeDomainData.length);
-            const db = 20 * Math.log10(rms);
+            const db = 20 * Math.log10(Math.max(rms, 1e-10));  // Prevent -Infinity
             
             const now = Date.now();
             
@@ -161,14 +161,14 @@ function animate(timestamp) {
             if (now % 1000 < 16) {  // Log roughly every second
                 console.log('Audio levels:', {
                     db: db.toFixed(2),
-                    peak: peak.toFixed(4),
+                    peak: peak.toFixed(6),
                     threshold: SETTINGS.silenceThreshold,
-                    peakThreshold: SETTINGS.peakThreshold
+                    peakThreshold: SETTINGS.peakThreshold.toFixed(6)
                 });
             }
             
             // Use both RMS and peak for better silence detection with adjustable thresholds
-            if (db > SETTINGS.silenceThreshold && peak > SETTINGS.peakThreshold) {
+            if (db > SETTINGS.silenceThreshold || peak > SETTINGS.peakThreshold) {  // Changed AND to OR for more lenient detection
                 const pitchData = pitchDetector.detectPitch(timeDomainData, audioProcessor.getSampleRate());
                 if (pitchData && pitchData.clarity > 0.8) {
                     lastValidPitchData = pitchData;
@@ -375,17 +375,19 @@ function initializeEventListeners() {
             const value = parseInt(e.target.value);
             SETTINGS.silenceThreshold = value;
             SILENCE_THRESHOLD = value;
-            // Adjust peak threshold exponentially - more dramatic curve
-            SETTINGS.peakThreshold = Math.pow(10, (value + 100) / 400);  // Adjusted curve
-            sensitivityValue.textContent = `${value} dB`;
             
-            // Update display immediately
-            document.getElementById('sensitivityValue').textContent = `${value} dB`;
+            // Adjust peak threshold with a gentler curve
+            // Map -90 to -40 dB to a range of 0.0001 to 0.01
+            const normalizedValue = (value + 90) / 50;  // 0 to 1
+            SETTINGS.peakThreshold = 0.0001 + (normalizedValue * 0.0099);
+            
+            // Update display
+            sensitivityValue.textContent = `${value} dB`;
             
             // Log values for debugging
             console.log('New sensitivity settings:', {
                 silenceThreshold: value,
-                peakThreshold: SETTINGS.peakThreshold
+                peakThreshold: SETTINGS.peakThreshold.toFixed(6)
             });
         });
         
