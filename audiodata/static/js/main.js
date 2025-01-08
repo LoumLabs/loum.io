@@ -798,6 +798,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         left: 80
                     }
                 },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: true
+                },
                 onHover: (event, elements) => {
                     const chartArea = window.multibandChart.chartArea;
                     const position = Chart.helpers.getRelativePosition(event.native, window.multibandChart);
@@ -806,6 +811,56 @@ document.addEventListener('DOMContentLoaded', () => {
                         canvas.style.cursor = 'crosshair';
                     } else {
                         canvas.style.cursor = 'default';
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        enabled: true,
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleFont: {
+                            family: 'monospace',
+                            size: 12
+                        },
+                        bodyFont: {
+                            family: 'monospace',
+                            size: 12
+                        },
+                        padding: 10,
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: ${context.parsed.y.toFixed(1)} dB`;
+                            }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Multiband RMS Analysis',
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        font: {
+                            size: 16,
+                            weight: 'normal',
+                            family: 'monospace'
+                        },
+                        padding: {
+                            top: 20,
+                            bottom: 25
+                        }
+                    },
+                    legend: {
+                        position: 'top',
+                        align: 'start',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            padding: 20,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            font: {
+                                size: 12,
+                                family: 'monospace'
+                            },
+                            boxWidth: 8,
+                            boxHeight: 8
+                        }
                     }
                 },
                 scales: {
@@ -901,38 +956,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 top: 15,
                                 bottom: 10
                             }
-                        }
-                    }
-                },
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Multiband RMS Analysis',
-                        color: 'rgba(255, 255, 255, 0.9)',
-                        font: {
-                            size: 16,
-                            weight: 'normal',
-                            family: 'monospace'
-                        },
-                        padding: {
-                            top: 20,
-                            bottom: 25
-                        }
-                    },
-                    legend: {
-                        position: 'top',
-                        align: 'start',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            padding: 20,
-                            usePointStyle: true,
-                            pointStyle: 'circle',
-                            font: {
-                                size: 12,
-                                family: 'monospace'
-                            },
-                            boxWidth: 8,
-                            boxHeight: 8
                         }
                     }
                 }
