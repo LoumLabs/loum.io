@@ -993,9 +993,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
                         ctx.lineWidth = 1;
                         
+                        // Get the actual chart area coordinates
                         const boxTop = Math.min(window.chartSelection.selectionBox.start, window.chartSelection.selectionBox.end);
                         const boxHeight = Math.abs(window.chartSelection.selectionBox.end - window.chartSelection.selectionBox.start);
                         
+                        // Draw selection box aligned with chart area
                         ctx.fillRect(chartArea.left, boxTop, chartArea.right - chartArea.left, boxHeight);
                         ctx.strokeRect(chartArea.left, boxTop, chartArea.right - chartArea.left, boxHeight);
 
@@ -1030,7 +1032,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Only start selection if within chart area
             if (y >= chartArea.top && y <= chartArea.bottom) {
                 window.chartSelection.isSelecting = true;
-                window.chartSelection.selectionBox = { start: y, end: y };
+                // Store the scaled Y position
+                window.chartSelection.selectionBox = { 
+                    start: y,
+                    end: y
+                };
                 window.multibandChart.draw();
             }
         });
@@ -1042,6 +1048,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const scaleY = canvas.height / rect.height;
                 const x = (e.clientX - rect.left) * scaleX;
                 const y = (e.clientY - rect.top) * scaleY;
+                
+                // Update the scaled Y position
                 window.chartSelection.selectionBox.end = y;
                 window.multibandChart.draw();
             }
