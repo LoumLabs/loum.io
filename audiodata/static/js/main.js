@@ -787,6 +787,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 datasets: datasets
             },
             options: {
+                interaction: {
+                    mode: 'point',
+                    intersect: true,
+                    axis: 'xy'
+                },
+                onHover: (event, elements) => {
+                    if (!event?.native) return;
+                    
+                    const position = Chart.helpers.getRelativePosition(event.native, window.multibandChart);
+                    const chartArea = window.multibandChart.chartArea;
+                    
+                    // Set cursor style based on position within chart area
+                    if (position.y >= chartArea.top && position.y <= chartArea.bottom) {
+                        canvas.style.cursor = elements.length ? 'pointer' : 'crosshair';
+                    } else {
+                        canvas.style.cursor = 'default';
+                    }
+                },
                 responsive: true,
                 maintainAspectRatio: false,
                 aspectRatio: 0.01,
@@ -796,25 +814,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         right: 60,
                         bottom: 10,
                         left: 80
-                    }
-                },
-                interaction: {
-                    mode: 'point',
-                    intersect: true,
-                    axis: 'xy'
-                },
-                onHover: (event, elements) => {
-                    const rect = canvas.getBoundingClientRect();
-                    const scaleX = canvas.width / rect.width;
-                    const scaleY = canvas.height / rect.height;
-                    const x = (event.native.clientX - rect.left) * scaleX;
-                    const y = (event.native.clientY - rect.top) * scaleY;
-                    const chartArea = window.multibandChart.chartArea;
-                    
-                    if (y >= chartArea.top && y <= chartArea.bottom) {
-                        canvas.style.cursor = elements.length ? 'pointer' : 'crosshair';
-                    } else {
-                        canvas.style.cursor = 'default';
                     }
                 },
                 plugins: {
@@ -993,7 +992,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
                         ctx.lineWidth = 1;
                         
-                        // Get the actual chart area coordinates
                         const boxTop = Math.min(window.chartSelection.selectionBox.start, window.chartSelection.selectionBox.end);
                         const boxHeight = Math.abs(window.chartSelection.selectionBox.end - window.chartSelection.selectionBox.start);
                         
@@ -1002,8 +1000,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         ctx.strokeRect(chartArea.left, boxTop, chartArea.right - chartArea.left, boxHeight);
 
                         // Draw dB range label
-                        const startDb = yAxis.getValueForPixel(window.chartSelection.selectionBox.start);
-                        const endDb = yAxis.getValueForPixel(window.chartSelection.selectionBox.end);
+                        const startDb = yAxis.getValueForPixel(boxTop);
+                        const endDb = yAxis.getValueForPixel(boxTop + boxHeight);
                         const dbRange = Math.abs(startDb - endDb).toFixed(1);
                         
                         ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
@@ -1020,37 +1018,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Add mouse event listeners for selection box
         canvas.addEventListener('mousedown', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
-            
             const chartArea = window.multibandChart.chartArea;
-            const yAxis = window.multibandChart.scales.y;
+            const position = Chart.helpers.getRelativePosition(e, window.multibandChart);
             
             // Only start selection if within chart area
-            if (y >= chartArea.top && y <= chartArea.bottom) {
+            if (position.y >= chartArea.top && position.y <= chartArea.bottom) {
                 window.chartSelection.isSelecting = true;
-                // Store the scaled Y position
                 window.chartSelection.selectionBox = { 
-                    start: y,
-                    end: y
+                    start: position.y,
+                    end: position.y
                 };
                 window.multibandChart.draw();
             }
         });
 
         canvas.addEventListener('mousemove', (e) => {
+            // Always update cursor style based on position
+            const position = Chart.helpers.getRelativePosition(e, window.multibandChart);
+            const chartArea = window.multibandChart.chartArea;
+            
+            if (position.y >= chartArea.top && position.y <= chartArea.bottom) {
+                canvas.style.cursor = 'crosshair';
+            } else {
+                canvas.style.cursor = 'default';
+            }
+            
+            // Handle selection if active
             if (window.chartSelection.isSelecting) {
-                const rect = canvas.getBoundingClientRect();
-                const scaleX = canvas.width / rect.width;
-                const scaleY = canvas.height / rect.height;
-                const x = (e.clientX - rect.left) * scaleX;
-                const y = (e.clientY - rect.top) * scaleY;
-                
-                // Update the scaled Y position
-                window.chartSelection.selectionBox.end = y;
+                window.chartSelection.selectionBox.end = position.y;
                 window.multibandChart.draw();
             }
         });
