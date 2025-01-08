@@ -754,8 +754,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Variables for selection box
         let isSelecting = false;
-        let startY = 0;
-        let currentY = 0;
         let selectionBox = null;
 
         // Create frequency bands array
@@ -799,7 +797,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 },
                 onHover: (event, elements) => {
-                    event.native.target.style.cursor = 'crosshair';
+                    const chartArea = window.multibandChart.chartArea;
+                    const rect = canvas.getBoundingClientRect();
+                    const y = event.native.clientY - rect.top;
+                    const position = Chart.helpers.getRelativePosition(event.native, window.multibandChart);
+                    
+                    if (position.y >= chartArea.top && position.y <= chartArea.bottom) {
+                        event.native.target.style.cursor = 'crosshair';
+                    } else {
+                        event.native.target.style.cursor = 'default';
+                    }
                 },
                 scales: {
                     y: {
@@ -989,8 +996,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Only start selection if within chart area
             if (position.y >= chartArea.top && position.y <= chartArea.bottom) {
                 isSelecting = true;
-                startY = position.y;
-                currentY = startY;
                 selectionBox = { start: position.y, end: position.y };
                 window.multibandChart.draw();
             }
@@ -1004,16 +1009,8 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             const position = Chart.helpers.getRelativePosition(point, window.multibandChart);
             const chartArea = window.multibandChart.chartArea;
-
-            // Update cursor style based on chart area
-            if (position.y >= chartArea.top && position.y <= chartArea.bottom) {
-                canvas.style.cursor = 'crosshair';
-            } else {
-                canvas.style.cursor = 'default';
-            }
             
             if (isSelecting) {
-                currentY = Math.max(chartArea.top, Math.min(chartArea.bottom, position.y));
                 selectionBox.end = position.y;
                 window.multibandChart.draw();
             }
