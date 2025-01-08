@@ -799,8 +799,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 },
                 interaction: {
-                    mode: 'index',
-                    intersect: false,
+                    mode: 'point',
+                    intersect: true,
                     axis: 'xy'
                 },
                 onHover: (event, elements) => {
@@ -816,8 +816,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 plugins: {
                     tooltip: {
                         enabled: true,
-                        mode: 'index',
-                        intersect: false,
+                        mode: 'point',
+                        intersect: true,
                         position: 'nearest',
                         backgroundColor: 'rgba(0, 0, 0, 0.8)',
                         titleFont: {
