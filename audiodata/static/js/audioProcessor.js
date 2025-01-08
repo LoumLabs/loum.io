@@ -48,9 +48,9 @@ class AudioProcessor {
                     sampleRate = view.getUint32(offset + 12, true);
                     bitDepth = view.getUint16(offset + 22, true);
                     if (audioFormat === 3) { // IEEE float
-                        bitDepth = bitDepth + '-bit float';
+                        bitDepth = `${bitDepth}-bit float`;
                     } else {
-                        bitDepth = bitDepth + '-bit';
+                        bitDepth = `${bitDepth}-bit`;
                     }
                     break;
                 }
