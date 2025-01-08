@@ -799,16 +799,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 },
                 interaction: {
-                    mode: 'nearest',
-                    axis: 'x',
-                    intersect: true
+                    mode: 'index',
+                    intersect: false,
+                    axis: 'xy'
                 },
                 onHover: (event, elements) => {
                     const chartArea = window.multibandChart.chartArea;
                     const position = Chart.helpers.getRelativePosition(event.native, window.multibandChart);
                     
                     if (position.y >= chartArea.top && position.y <= chartArea.bottom) {
-                        canvas.style.cursor = 'crosshair';
+                        canvas.style.cursor = elements.length ? 'pointer' : 'crosshair';
                     } else {
                         canvas.style.cursor = 'default';
                     }
@@ -816,6 +816,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 plugins: {
                     tooltip: {
                         enabled: true,
+                        mode: 'index',
+                        intersect: false,
+                        position: 'nearest',
                         backgroundColor: 'rgba(0, 0, 0, 0.8)',
                         titleFont: {
                             family: 'monospace',
@@ -827,6 +830,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         },
                         padding: 10,
                         callbacks: {
+                            title: function(context) {
+                                return context[0].label;  // Show frequency band
+                            },
                             label: function(context) {
                                 return `${context.dataset.label}: ${context.parsed.y.toFixed(1)} dB`;
                             }
