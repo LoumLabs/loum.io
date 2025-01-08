@@ -46,11 +46,11 @@ class AudioProcessor {
                 if (chunkId === 'fmt ') {
                     const audioFormat = view.getUint16(offset + 8, true);
                     sampleRate = view.getUint32(offset + 12, true);
-                    bitDepth = view.getUint16(offset + 22, true);
+                    const bitsPerSample = view.getUint16(offset + 22, true);
                     if (audioFormat === 3) { // IEEE float
-                        bitDepth = `${bitDepth}-bit float`;
+                        bitDepth = `${bitsPerSample}-bit float`;
                     } else {
-                        bitDepth = `${bitDepth}-bit`;
+                        bitDepth = `${bitsPerSample}-bit`;
                     }
                     break;
                 }
