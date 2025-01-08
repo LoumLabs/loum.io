@@ -47,11 +47,7 @@ class AudioProcessor {
                     const audioFormat = view.getUint16(offset + 8, true);
                     sampleRate = view.getUint32(offset + 12, true);
                     const bitsPerSample = view.getUint16(offset + 22, true);
-                    if (audioFormat === 3) { // IEEE float
-                        bitDepth = `${bitsPerSample}-bit float`;
-                    } else {
-                        bitDepth = `${bitsPerSample}-bit`;
-                    }
+                    bitDepth = audioFormat === 3 ? `${bitsPerSample}-bit float` : `${bitsPerSample}-bit`;
                     break;
                 }
                 
@@ -65,7 +61,7 @@ class AudioProcessor {
             
             return {
                 format: 'WAV',
-                sample_rate: sampleRate || audioBuffer.sampleRate, // Fallback if header read fails
+                sample_rate: `${sampleRate || audioBuffer.sampleRate} Hz`,
                 bit_depth: bitDepth || '16-bit', // Fallback if header read fails
                 duration: duration,
                 file_size: this.formatFileSize(file.size)
