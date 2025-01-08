@@ -805,8 +805,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 onHover: (event, elements) => {
                     const rect = canvas.getBoundingClientRect();
-                    const x = event.native.clientX - rect.left;
-                    const y = event.native.clientY - rect.top;
+                    const scaleX = canvas.width / rect.width;
+                    const scaleY = canvas.height / rect.height;
+                    const x = (event.native.clientX - rect.left) * scaleX;
+                    const y = (event.native.clientY - rect.top) * scaleY;
                     const chartArea = window.multibandChart.chartArea;
                     
                     if (y >= chartArea.top && y <= chartArea.bottom) {
@@ -1019,18 +1021,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add mouse event listeners for selection box
         canvas.addEventListener('mousedown', (e) => {
             const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            
             const chartArea = window.multibandChart.chartArea;
             const yAxis = window.multibandChart.scales.y;
             
             // Only start selection if within chart area
             if (y >= chartArea.top && y <= chartArea.bottom) {
                 window.chartSelection.isSelecting = true;
-                // Calculate value directly from position relative to chart area
-                const valueRange = yAxis.max - yAxis.min;
-                const pixelRange = chartArea.bottom - chartArea.top;
-                const value = yAxis.max - ((y - chartArea.top) / pixelRange) * valueRange;
+                const value = yAxis.getValueForPixel(y);
                 window.chartSelection.selectionBox = { start: value, end: value };
                 window.multibandChart.draw();
             }
@@ -1039,15 +1041,13 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.addEventListener('mousemove', (e) => {
             if (window.chartSelection.isSelecting) {
                 const rect = canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                const chartArea = window.multibandChart.chartArea;
-                const yAxis = window.multibandChart.scales.y;
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
                 
-                // Calculate value directly from position relative to chart area
-                const valueRange = yAxis.max - yAxis.min;
-                const pixelRange = chartArea.bottom - chartArea.top;
-                const value = yAxis.max - ((y - chartArea.top) / pixelRange) * valueRange;
+                const yAxis = window.multibandChart.scales.y;
+                const value = yAxis.getValueForPixel(y);
                 window.chartSelection.selectionBox.end = value;
                 window.multibandChart.draw();
             }
