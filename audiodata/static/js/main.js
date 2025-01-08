@@ -752,9 +752,11 @@ document.addEventListener('DOMContentLoaded', () => {
             window.multibandChart.destroy();
         }
 
-        // Variables for selection box
-        let isSelecting = false;
-        let selectionBox = null;
+        // Variables for selection box - move to window scope to persist between redraws
+        window.chartSelection = {
+            isSelecting: false,
+            selectionBox: null
+        };
 
         // Create frequency bands array
         const frequencyBands = ['Low', 'Mid', 'High'];
@@ -798,14 +800,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 onHover: (event, elements) => {
                     const chartArea = window.multibandChart.chartArea;
-                    const rect = canvas.getBoundingClientRect();
-                    const y = event.native.clientY - rect.top;
                     const position = Chart.helpers.getRelativePosition(event.native, window.multibandChart);
                     
                     if (position.y >= chartArea.top && position.y <= chartArea.bottom) {
-                        event.native.target.style.cursor = 'crosshair';
+                        canvas.style.cursor = 'crosshair';
                     } else {
-                        event.native.target.style.cursor = 'default';
+                        canvas.style.cursor = 'default';
                     }
                 },
                 scales: {
@@ -949,7 +949,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }, {
                 id: 'selectionBox',
                 afterDraw: (chart) => {
-                    if (isSelecting && selectionBox) {
+                    if (window.chartSelection.isSelecting && window.chartSelection.selectionBox) {
                         const ctx = chart.ctx;
                         const yAxis = chart.scales.y;
                         const chartArea = chart.chartArea;
@@ -960,15 +960,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
                         ctx.lineWidth = 1;
                         
-                        const boxTop = Math.min(selectionBox.start, selectionBox.end);
-                        const boxHeight = Math.abs(selectionBox.end - selectionBox.start);
+                        const boxTop = Math.min(window.chartSelection.selectionBox.start, window.chartSelection.selectionBox.end);
+                        const boxHeight = Math.abs(window.chartSelection.selectionBox.end - window.chartSelection.selectionBox.start);
                         
                         ctx.fillRect(chartArea.left, boxTop, chartArea.right - chartArea.left, boxHeight);
                         ctx.strokeRect(chartArea.left, boxTop, chartArea.right - chartArea.left, boxHeight);
 
                         // Draw dB range label
-                        const startDb = yAxis.getValueForPixel(selectionBox.start);
-                        const endDb = yAxis.getValueForPixel(selectionBox.end);
+                        const startDb = yAxis.getValueForPixel(window.chartSelection.selectionBox.start);
+                        const endDb = yAxis.getValueForPixel(window.chartSelection.selectionBox.end);
                         const dbRange = Math.abs(startDb - endDb).toFixed(1);
                         
                         ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
@@ -985,41 +985,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Add mouse event listeners for selection box
         canvas.addEventListener('mousedown', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const point = {
-                x: e.clientX - rect.left,
-                y: e.clientY - rect.top
-            };
-            const position = Chart.helpers.getRelativePosition(point, window.multibandChart);
+            const position = Chart.helpers.getRelativePosition(e, window.multibandChart);
             const chartArea = window.multibandChart.chartArea;
             
             // Only start selection if within chart area
             if (position.y >= chartArea.top && position.y <= chartArea.bottom) {
-                isSelecting = true;
-                selectionBox = { start: position.y, end: position.y };
+                window.chartSelection.isSelecting = true;
+                window.chartSelection.selectionBox = { start: position.y, end: position.y };
                 window.multibandChart.draw();
             }
         });
 
         canvas.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const point = {
-                x: e.clientX - rect.left,
-                y: e.clientY - rect.top
-            };
-            const position = Chart.helpers.getRelativePosition(point, window.multibandChart);
-            const chartArea = window.multibandChart.chartArea;
-            
-            if (isSelecting) {
-                selectionBox.end = position.y;
+            if (window.chartSelection.isSelecting) {
+                const position = Chart.helpers.getRelativePosition(e, window.multibandChart);
+                window.chartSelection.selectionBox.end = position.y;
                 window.multibandChart.draw();
             }
         });
 
-        window.addEventListener('mouseup', () => {
-            if (isSelecting) {
-                isSelecting = false;
-                selectionBox = null;
+        canvas.addEventListener('mouseup', () => {
+            if (window.chartSelection.isSelecting) {
+                window.chartSelection.isSelecting = false;
+                window.chartSelection.selectionBox = null;
+                window.multibandChart.draw();
+            }
+        });
+
+        // Add mouseout handler to cancel selection if mouse leaves canvas
+        canvas.addEventListener('mouseout', () => {
+            if (window.chartSelection.isSelecting) {
+                window.chartSelection.isSelecting = false;
+                window.chartSelection.selectionBox = null;
                 window.multibandChart.draw();
             }
         });
