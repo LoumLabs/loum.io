@@ -495,3 +495,66 @@ button.active {
     );
     pointer-events: none;
 } 
+
+/* Add styles for sensitivity control */
+.sensitivity-control {
+    margin-top: 10px;
+    padding: 10px !important;
+}
+
+.sensitivity-control .control-group {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.sensitivity-control label {
+    color: #808080;
+    font-size: 14px;
+    min-width: 120px;
+}
+
+.sensitivity-control input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    background: #2b2b2b;
+    height: 6px;
+    border-radius: 3px;
+    outline: none;
+}
+
+.sensitivity-control input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #4a9eff;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.sensitivity-control input[type="range"]::-webkit-slider-thumb:hover {
+    background: #5ba9ff;
+}
+
+.sensitivity-control #sensitivityValue {
+    color: #808080;
+    font-size: 14px;
+    min-width: 60px;
+}
+
+@media (max-width: 768px) {
+    .sensitivity-control .control-group {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .sensitivity-control label {
+        min-width: auto;
+    }
+
+    .sensitivity-control #sensitivityValue {
+        text-align: center;
+    }
+} 

@@ -11,14 +11,16 @@ const DISPLAY_HOLD_TIME = 3000;  // Hold for 3 seconds
 
 const TARGET_FRAME_RATE = 60;
 const FRAME_INTERVAL = 1000 / TARGET_FRAME_RATE;
-const SILENCE_THRESHOLD = -70;
+let SILENCE_THRESHOLD = -70;  // Now variable to be controlled by slider
 
 // Tuner settings
 const SETTINGS = {
     referencePitch: 440,
     temperament: 'equal',
     transposition: 0,
-    filterMode: 'normal'
+    filterMode: 'normal',
+    silenceThreshold: -70,  // Add to settings
+    peakThreshold: 0.01     // Add to settings
 };
 
 // Filter ranges for different instruments
@@ -155,8 +157,8 @@ function animate(timestamp) {
             
             const now = Date.now();
             
-            // Use both RMS and peak for better silence detection
-            if (db > SILENCE_THRESHOLD && peak > 0.01) {
+            // Use both RMS and peak for better silence detection with adjustable thresholds
+            if (db > SETTINGS.silenceThreshold && peak > SETTINGS.peakThreshold) {
                 const pitchData = pitchDetector.detectPitch(timeDomainData, audioProcessor.getSampleRate());
                 if (pitchData && pitchData.clarity > 0.8) {
                     lastValidPitchData = pitchData;
@@ -346,6 +348,8 @@ function initializeEventListeners() {
     const holdButton = document.getElementById('holdButton');
     const filterButtons = document.querySelectorAll('.filter-button');
     const peakLabelButtons = document.querySelectorAll('.peak-label-button');
+    const sensitivitySlider = document.getElementById('sensitivity');
+    const sensitivityValue = document.getElementById('sensitivityValue');
     
     if (startButton) {
         startButton.addEventListener('click', toggleAudio);
@@ -355,6 +359,18 @@ function initializeEventListeners() {
     }
     if (holdButton) {
         holdButton.addEventListener('click', toggleHold);
+    }
+    
+    // Add sensitivity slider handler
+    if (sensitivitySlider && sensitivityValue) {
+        sensitivitySlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            SETTINGS.silenceThreshold = value;
+            SILENCE_THRESHOLD = value;
+            // Adjust peak threshold proportionally
+            SETTINGS.peakThreshold = Math.pow(10, (value + 90) / 200);  // Exponential scaling
+            sensitivityValue.textContent = `${value} dB`;
+        });
     }
     
     filterButtons.forEach(button => {
