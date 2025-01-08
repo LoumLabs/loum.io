@@ -953,16 +953,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
                         ctx.lineWidth = 1;
                         
-                        const boxTop = Math.min(startY, currentY);
-                        const boxHeight = Math.abs(currentY - startY);
+                        const boxTop = Math.min(selectionBox.start, selectionBox.end);
+                        const boxHeight = Math.abs(selectionBox.end - selectionBox.start);
                         
                         ctx.fillRect(chartArea.left, boxTop, chartArea.right - chartArea.left, boxHeight);
                         ctx.strokeRect(chartArea.left, boxTop, chartArea.right - chartArea.left, boxHeight);
 
                         // Draw dB range label
-                        const startDb = yAxis.getValueForPixel(startY);
-                        const currentDb = yAxis.getValueForPixel(currentY);
-                        const dbRange = Math.abs(startDb - currentDb).toFixed(1);
+                        const startDb = yAxis.getValueForPixel(selectionBox.start);
+                        const endDb = yAxis.getValueForPixel(selectionBox.end);
+                        const dbRange = Math.abs(startDb - endDb).toFixed(1);
                         
                         ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
                         ctx.font = '12px monospace';
@@ -991,7 +991,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 isSelecting = true;
                 startY = position.y;
                 currentY = startY;
-                selectionBox = { start: startY, end: startY };
+                selectionBox = { start: position.y, end: position.y };
                 window.multibandChart.draw();
             }
         });
@@ -1014,7 +1014,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (isSelecting) {
                 currentY = Math.max(chartArea.top, Math.min(chartArea.bottom, position.y));
-                selectionBox.end = currentY;
+                selectionBox.end = position.y;
                 window.multibandChart.draw();
             }
         });
