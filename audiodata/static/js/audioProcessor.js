@@ -30,7 +30,22 @@ class AudioProcessor {
             const audioBuffer = await this.loadAudioFile(file);
             const duration = this.formatDuration(audioBuffer.duration);
             const sampleRate = audioBuffer.sampleRate;
-            const bitDepth = 16; // WAV files are typically 16-bit
+            
+            // Detect bit depth from the audio buffer
+            let bitDepth;
+            if (audioBuffer.length > 0) {
+                const sample = audioBuffer.getChannelData(0)[0];
+                // Check if the buffer is 32-bit float
+                if (Number.isInteger(sample * (2 ** 24))) {
+                    bitDepth = '24-bit';
+                } else if (Number.isInteger(sample * (2 ** 16))) {
+                    bitDepth = '16-bit';
+                } else {
+                    bitDepth = '32-bit float';
+                }
+            } else {
+                bitDepth = '16-bit'; // fallback
+            }
             
             return {
                 format: 'WAV',
