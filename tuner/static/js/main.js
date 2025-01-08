@@ -20,7 +20,7 @@ const SETTINGS = {
     transposition: 0,
     filterMode: 'normal',
     silenceThreshold: -70,  // Add to settings
-    peakThreshold: 0.01     // Add to settings
+    peakThreshold: 0.005     // Lower default for better sensitivity
 };
 
 // Filter ranges for different instruments
@@ -139,7 +139,7 @@ function animate(timestamp) {
     
     const elapsed = timestamp - lastFrameTime;
     
-    if (elapsed >= FRAME_INTERVAL && !isHolding) {  // Only update if not holding
+    if (elapsed >= FRAME_INTERVAL && !isHolding) {
         const timeDomainData = audioProcessor.getTimeDomainData();
         const frequencyData = audioProcessor.getFrequencyData();
         
@@ -157,6 +157,16 @@ function animate(timestamp) {
             
             const now = Date.now();
             
+            // Log values for debugging
+            if (now % 1000 < 16) {  // Log roughly every second
+                console.log('Audio levels:', {
+                    db: db.toFixed(2),
+                    peak: peak.toFixed(4),
+                    threshold: SETTINGS.silenceThreshold,
+                    peakThreshold: SETTINGS.peakThreshold
+                });
+            }
+            
             // Use both RMS and peak for better silence detection with adjustable thresholds
             if (db > SETTINGS.silenceThreshold && peak > SETTINGS.peakThreshold) {
                 const pitchData = pitchDetector.detectPitch(timeDomainData, audioProcessor.getSampleRate());
@@ -166,14 +176,12 @@ function animate(timestamp) {
                     updateDisplays(pitchData);
                 }
             } else if (lastValidPitchData && (now - lastValidPitchTime) < DISPLAY_HOLD_TIME) {
-                // Keep showing last valid pitch for the hold time
                 updateDisplays(lastValidPitchData);
             } else {
                 resetDisplays();
                 lastValidPitchData = null;
             }
             
-            // Update spectrum analyzer with smoother transitions
             requestAnimationFrame(() => {
                 spectrumAnalyzer.draw(frequencyData, audioProcessor.getSampleRate());
             });
@@ -367,10 +375,23 @@ function initializeEventListeners() {
             const value = parseInt(e.target.value);
             SETTINGS.silenceThreshold = value;
             SILENCE_THRESHOLD = value;
-            // Adjust peak threshold proportionally
-            SETTINGS.peakThreshold = Math.pow(10, (value + 90) / 200);  // Exponential scaling
+            // Adjust peak threshold exponentially - more dramatic curve
+            SETTINGS.peakThreshold = Math.pow(10, (value + 100) / 400);  // Adjusted curve
             sensitivityValue.textContent = `${value} dB`;
+            
+            // Update display immediately
+            document.getElementById('sensitivityValue').textContent = `${value} dB`;
+            
+            // Log values for debugging
+            console.log('New sensitivity settings:', {
+                silenceThreshold: value,
+                peakThreshold: SETTINGS.peakThreshold
+            });
         });
+        
+        // Set initial value
+        sensitivitySlider.value = SETTINGS.silenceThreshold;
+        sensitivityValue.textContent = `${SETTINGS.silenceThreshold} dB`;
     }
     
     filterButtons.forEach(button => {
