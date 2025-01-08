@@ -28,7 +28,35 @@ class AudioProcessor {
     // Parse WAV header to get format information
     parseWAVHeader(arrayBuffer) {
         const view = new DataView(arrayBuffer);
+        
+        // Verify RIFF header
+        const riffHeader = String.fromCharCode(
+            view.getUint8(0),
+            view.getUint8(1),
+            view.getUint8(2),
+            view.getUint8(3)
+        );
+        
+        if (riffHeader !== 'RIFF') {
+            console.warn('Not a valid RIFF file');
+            return null;
+        }
+
+        // Verify WAVE format
+        const waveHeader = String.fromCharCode(
+            view.getUint8(8),
+            view.getUint8(9),
+            view.getUint8(10),
+            view.getUint8(11)
+        );
+        
+        if (waveHeader !== 'WAVE') {
+            console.warn('Not a valid WAVE file');
+            return null;
+        }
+
         let offset = 12; // Skip RIFF and WAVE headers
+        let format = null;
         
         // Find fmt chunk
         while (offset < arrayBuffer.byteLength - 8) {
@@ -41,7 +69,7 @@ class AudioProcessor {
             const chunkSize = view.getUint32(offset + 4, true);
             
             if (chunkId === 'fmt ') {
-                const format = {
+                format = {
                     audioFormat: view.getUint16(offset + 8, true),
                     numChannels: view.getUint16(offset + 10, true),
                     sampleRate: view.getUint32(offset + 12, true),
@@ -49,64 +77,61 @@ class AudioProcessor {
                     blockAlign: view.getUint16(offset + 20, true),
                     bitsPerSample: view.getUint16(offset + 22, true)
                 };
-                
-                // Check for float format (audioFormat = 3)
-                if (format.audioFormat === 3) {
-                    return {
-                        sampleRate: format.sampleRate,
-                        bitDepth: format.bitsPerSample + '-bit float'
-                    };
-                } else {
-                    return {
-                        sampleRate: format.sampleRate,
-                        bitDepth: format.bitsPerSample + '-bit'
-                    };
-                }
+                break;
             }
             
             offset += 8 + chunkSize;
             if (chunkSize % 2 !== 0) offset++; // Padding byte
         }
-        
-        return null;
+
+        if (!format) {
+            console.warn('No fmt chunk found');
+            return null;
+        }
+
+        // Determine format string
+        let formatString;
+        switch (format.audioFormat) {
+            case 1:  // PCM
+                formatString = 'WAV';
+                break;
+            case 3:  // IEEE float
+                formatString = 'WAV float';
+                break;
+            case 0xFFFE:  // Extensible
+                formatString = 'WAV extensible';
+                break;
+            default:
+                formatString = `WAV (type ${format.audioFormat})`;
+        }
+
+        return {
+            format: formatString,
+            sampleRate: format.sampleRate,
+            bitDepth: format.bitsPerSample + (format.audioFormat === 3 ? '-bit float' : '-bit'),
+            numChannels: format.numChannels
+        };
     }
 
     async getFileInfo(file) {
         try {
-            const { audioBuffer, arrayBuffer } = await this.loadAudioFile(file);
-            const duration = this.formatDuration(audioBuffer.duration);
-            
-            // Get format info from WAV header
+            // First read the raw file header
+            const arrayBuffer = await file.arrayBuffer();
             const wavInfo = this.parseWAVHeader(arrayBuffer);
             
-            // Use WAV header info if available, otherwise fallback to buffer analysis
-            let sampleRate, bitDepth;
-            
-            if (wavInfo) {
-                sampleRate = wavInfo.sampleRate;
-                bitDepth = wavInfo.bitDepth;
-            } else {
-                // Fallback to buffer analysis
-                sampleRate = audioBuffer.sampleRate;
-                
-                if (audioBuffer.length > 0) {
-                    const sample = audioBuffer.getChannelData(0)[0];
-                    if (Number.isInteger(sample * (2 ** 24))) {
-                        bitDepth = '24-bit';
-                    } else if (Number.isInteger(sample * (2 ** 16))) {
-                        bitDepth = '16-bit';
-                    } else {
-                        bitDepth = '32-bit float';
-                    }
-                } else {
-                    bitDepth = '16-bit'; // fallback
-                }
+            if (!wavInfo) {
+                throw new Error('Could not parse WAV header');
             }
+
+            // Now load the audio for duration calculation
+            const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+            const duration = this.formatDuration(audioBuffer.duration);
             
             return {
-                format: 'WAV',
-                sample_rate: sampleRate,
-                bit_depth: bitDepth,
+                format: wavInfo.format,
+                sample_rate: wavInfo.sampleRate,
+                bit_depth: wavInfo.bitDepth,
+                channels: wavInfo.numChannels,
                 duration: duration,
                 file_size: this.formatFileSize(file.size)
             };
