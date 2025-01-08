@@ -980,19 +980,23 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.addEventListener('mousedown', (e) => {
             const rect = canvas.getBoundingClientRect();
             const y = e.clientY - rect.top;
+            const chartArea = window.multibandChart.chartArea;
             
-            if (y >= window.multibandChart.chartArea.top && y <= window.multibandChart.chartArea.bottom) {
+            // Only start selection if within chart area
+            if (y >= chartArea.top && y <= chartArea.bottom) {
                 isSelecting = true;
-                startY = y;
-                currentY = y;
-                selectionBox = { start: y, end: y };
+                startY = Math.max(chartArea.top, Math.min(chartArea.bottom, y));
+                currentY = startY;
+                selectionBox = { start: startY, end: startY };
+                window.multibandChart.draw();
             }
         });
 
         canvas.addEventListener('mousemove', (e) => {
             if (isSelecting) {
                 const rect = canvas.getBoundingClientRect();
-                currentY = e.clientY - rect.top;
+                const chartArea = window.multibandChart.chartArea;
+                currentY = Math.max(chartArea.top, Math.min(chartArea.bottom, e.clientY - rect.top));
                 selectionBox.end = currentY;
                 window.multibandChart.draw();
             }
@@ -1003,6 +1007,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 isSelecting = false;
                 selectionBox = null;
                 window.multibandChart.draw();
+            }
+        });
+
+        // Update cursor style based on chart area
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const y = e.clientY - rect.top;
+            const chartArea = window.multibandChart.chartArea;
+            
+            if (y >= chartArea.top && y <= chartArea.bottom) {
+                canvas.style.cursor = 'crosshair';
+            } else {
+                canvas.style.cursor = 'default';
             }
         });
     }
