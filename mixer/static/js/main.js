@@ -909,6 +909,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Crossfader curve selector
     const crossfaderCurve = document.getElementById('crossfader-curve');
+    crossfaderCurve.value = 'smooth';  // Set default to 'smooth'
     crossfaderCurve.addEventListener('change', (e) => {
         audioProcessor.setCrossfaderCurve(e.target.value);
     });

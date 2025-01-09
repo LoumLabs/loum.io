@@ -456,35 +456,39 @@ class AudioProcessor {
     setCrossfader(value) {
         if (!this.crossfaderGains.a || !this.crossfaderGains.b) return;
         
-        const position = value / 100;
+        const position = value / 100;  // converts 0-100 to 0-1
         this.crossfaderPosition = position;
         
         let gainA, gainB;
         
         switch (this.crossfaderCurve) {
-            case 'slow':
-                // Smooth logarithmic curve for gradual blending
-                gainA = Math.pow(Math.cos(position * Math.PI / 2), 2);
-                gainB = Math.pow(Math.cos((1 - position) * Math.PI / 2), 2);
+            case 'sharp':
+                // Sharp curve with both channels at 100% in center
+                if (position === 0.5) {
+                    gainA = 1;
+                    gainB = 1;
+                } else if (position < 0.5) {
+                    gainA = 1;
+                    gainB = Math.pow((position * 2), 2);  // Quadratic for faster initial drop
+                } else {
+                    gainA = Math.pow((1 - position) * 2, 2);  // Quadratic for faster initial drop
+                    gainB = 1;
+                }
                 break;
                 
-            case 'fast':
-                // Exponential curve for quick transitions
-                gainA = Math.pow(Math.cos(position * Math.PI / 2), 0.5);
-                gainB = Math.pow(Math.cos((1 - position) * Math.PI / 2), 0.5);
-                break;
-                
-            case 'cut':
-                // Sharp cut curve for scratching
-                gainA = position <= 0.5 ? 1 : 0;
-                gainB = position >= 0.5 ? 1 : 0;
-                break;
-                
-            case 'linear':
+            case 'smooth':
             default:
-                // Linear curve
-                gainA = 1 - position;
-                gainB = position;
+                // Smooth curve with both channels at 100% in center
+                if (position === 0.5) {
+                    gainA = 1;
+                    gainB = 1;
+                } else if (position < 0.5) {
+                    gainA = 1;
+                    gainB = position * 2;  // Linear for smooth, consistent drop
+                } else {
+                    gainA = (1 - position) * 2;  // Linear for smooth, consistent drop
+                    gainB = 1;
+                }
                 break;
         }
         
