@@ -189,6 +189,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize dial visuals immediately
     ['a', 'b'].forEach(deck => {
+        // Initialize BPM display to '--'
+        const bpmDisplay = document.getElementById(`bpm-${deck}`);
+        if (bpmDisplay) {
+            bpmDisplay.textContent = '--';
+        }
+
         // EQ dials
         ['high', 'mid', 'low'].forEach(band => {
             const dial = document.getElementById(`${band}-${deck}`);
@@ -527,6 +533,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Reset tempo and BPM display
             deckControls.tempo.textContent = '100%';
+            tempo = 100;  // Reset tempo to 100%
+            originalBPM = 0;  // Reset originalBPM
             
             // If track has a stored BPM, use it and update the audioProcessor
             const bpmDisplay = document.getElementById(`bpm-${deck}`);
@@ -600,20 +608,25 @@ document.addEventListener('DOMContentLoaded', () => {
         let tempo = 100;
         let originalBPM = 0;
 
+        // Make these variables accessible to the loadTrackToDeck function
+        window[`tempo_${deck}`] = tempo;
+        window[`originalBPM_${deck}`] = originalBPM;
+
         // Function to update BPM display based on tempo
         const updateBPMDisplay = () => {
             const bpmDisplay = document.getElementById(`bpm-${deck}`);
             if (!bpmDisplay) return;  // Exit if BPM display element doesn't exist
 
-            if (originalBPM === 0 && audioProcessor.currentTrack[deck]) {
+            // Use the global variables
+            if (window[`originalBPM_${deck}`] === 0 && audioProcessor.currentTrack[deck]) {
                 const track = tracks.find(t => t.file === audioProcessor.currentTrack[deck]);
                 if (track && track.bpm) {
-                    originalBPM = track.bpm;
+                    window[`originalBPM_${deck}`] = track.bpm;
                 }
             }
 
-            if (originalBPM > 0) {
-                const adjustedBPM = (originalBPM * tempo) / 100;
+            if (window[`originalBPM_${deck}`] > 0) {
+                const adjustedBPM = (window[`originalBPM_${deck}`] * window[`tempo_${deck}`]) / 100;
                 bpmDisplay.textContent = adjustedBPM.toFixed(1);
             } else {
                 bpmDisplay.textContent = '--';
@@ -622,24 +635,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Add tempo adjustment handlers
         tempoMinus.addEventListener('click', () => {
-            const newTempo = Math.max(tempo - 0.5, 50); // Decrease by 0.5%, minimum 50%
-            tempo = Math.round(newTempo * 10) / 10; // Round to 1 decimal place
-            audioProcessor.setTempo(deck, tempo);
-            tempoValue.textContent = `${tempo.toFixed(1)}%`;
+            const newTempo = Math.max(window[`tempo_${deck}`] - 0.5, 50); // Decrease by 0.5%, minimum 50%
+            window[`tempo_${deck}`] = Math.round(newTempo * 10) / 10; // Round to 1 decimal place
+            audioProcessor.setTempo(deck, window[`tempo_${deck}`]);
+            tempoValue.textContent = `${window[`tempo_${deck}`].toFixed(1)}%`;
             updateBPMDisplay();
         });
 
         tempoPlus.addEventListener('click', () => {
-            const newTempo = Math.min(tempo + 0.5, 150); // Increase by 0.5%, maximum 150%
-            tempo = Math.round(newTempo * 10) / 10; // Round to 1 decimal place
-            audioProcessor.setTempo(deck, tempo);
-            tempoValue.textContent = `${tempo.toFixed(1)}%`;
+            const newTempo = Math.min(window[`tempo_${deck}`] + 0.5, 150); // Increase by 0.5%, maximum 150%
+            window[`tempo_${deck}`] = Math.round(newTempo * 10) / 10; // Round to 1 decimal place
+            audioProcessor.setTempo(deck, window[`tempo_${deck}`]);
+            tempoValue.textContent = `${window[`tempo_${deck}`].toFixed(1)}%`;
             updateBPMDisplay();
         });
 
         // Add reset button handler
         resetButton.addEventListener('click', () => {
-            tempo = 100;
+            window[`tempo_${deck}`] = 100;
+            window[`originalBPM_${deck}`] = 0;  // Reset originalBPM when resetting tempo
             audioProcessor.resetTempo(deck);
             tempoValue.textContent = '100%';
             updateBPMDisplay();
@@ -904,10 +918,19 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update loadTrackToDeck function to enable all transport buttons
         const originalLoadTrackToDeck = window.loadTrackToDeck;
         window.loadTrackToDeck = async (track, deckId) => {
-            await originalLoadTrackToDeck(track, deckId);
-            if (deckId === deck) {
-                updateButtonStates(true);
+            // Reset tempo and BPM variables in the correct scope
+            const tempoValue = document.getElementById(`tempo-value-${deckId}`);
+            if (tempoValue) {
+                const deck = deckId; // Reference for closure
+                const deckScope = ['a', 'b'].find(d => d === deck);
+                if (deckScope) {
+                    // Reset the variables in the deck's scope
+                    eval(`tempo_${deck} = 100`);
+                    eval(`originalBPM_${deck} = 0`);
+                }
             }
+            
+            await originalLoadTrackToDeck(track, deckId);
         };
 
         // Handle cue button
