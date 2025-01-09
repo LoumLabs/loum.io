@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let isDragging = false;
         let startY;
         let startValue;
+        let lastValue;  // Track last value for calculating actual change
         let currentValue = 50; // Start at center
         let sensitivity = 0.5; // Reduced sensitivity for finer control
 
@@ -62,6 +63,59 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             newValue = Math.min(Math.max(newValue, 0), 100);
+            
+            // Handle EQ mirroring when Alt/Option is pressed
+            if ((element.id.startsWith('high-') || 
+                 element.id.startsWith('mid-') || 
+                 element.id.startsWith('low-')) && 
+                (e.altKey || e.metaKey)) {
+                
+                // Only mirror if there's actual change from last value
+                if (lastValue !== undefined && newValue !== lastValue) {
+                    // Get the current deck and opposite deck
+                    const currentDeck = element.id.endsWith('-a') ? 'a' : 'b';
+                    const oppositeDeck = currentDeck === 'a' ? 'b' : 'a';
+                    
+                    // Get the EQ type (high, mid, low)
+                    const eqType = element.id.split('-')[0];
+                    
+                    // Calculate the actual dB change
+                    const lastDB = ((lastValue / 100) * 24) - 12;
+                    const newDB = ((newValue / 100) * 24) - 12;
+                    const dbChange = newDB - lastDB;
+                    
+                    // Get the opposite dial
+                    const oppositeDial = document.getElementById(`${eqType}-${oppositeDeck}`);
+                    if (oppositeDial) {
+                        // Get current value of opposite dial directly in dB
+                        const oppositeDisplay = oppositeDial.querySelector('.dial-value');
+                        const oppositeCurrentDB = parseFloat(oppositeDisplay.textContent);
+                        
+                        // Calculate new opposite dB value by subtracting the same change
+                        const oppositeNewDB = Math.round((oppositeCurrentDB - dbChange) * 10) / 10;
+                        
+                        // Clamp to -12 to +12 dB range
+                        const clampedDB = Math.max(-12, Math.min(12, oppositeNewDB));
+                        
+                        // Convert back to 0-100 scale for the dial rotation
+                        const oppositeNewValue = ((clampedDB + 12) / 24) * 100;
+                        
+                        // Update opposite dial
+                        const oppositeKnob = oppositeDial.querySelector('.dial-knob');
+                        if (oppositeKnob && oppositeDisplay) {
+                            const oppositeRotation = (oppositeNewValue / 100) * 300 - 150;
+                            oppositeKnob.style.transform = `translateX(-50%) rotate(${oppositeRotation}deg)`;
+                            oppositeDisplay.textContent = `${clampedDB > 0 ? '+' : ''}${clampedDB.toFixed(1)}`;
+                            
+                            // Update the audio processor with the exact dB value
+                            audioProcessor.setEQ(oppositeDeck, eqType, clampedDB);
+                        }
+                    }
+                }
+            }
+            
+            // Update last value for next comparison
+            lastValue = newValue;
             currentValue = newValue;
             
             setRotation(newValue);
@@ -82,6 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
             isDragging = true;
             startY = e.clientY;
             startValue = currentValue;
+            lastValue = currentValue;  // Initialize lastValue on mousedown
             document.body.style.cursor = 'ns-resize';
             element.classList.add('active');
             
@@ -90,15 +145,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Double click to reset to center
-        element.addEventListener('dblclick', () => {
-            currentValue = 50;
-            setRotation(currentValue);
-            if (element.id.startsWith('high-') || 
+        element.addEventListener('dblclick', (e) => {
+            if ((element.id.startsWith('high-') || 
                 element.id.startsWith('mid-') || 
-                element.id.startsWith('low-')) {
-                onChange(0); // Center EQ (0 dB)
+                element.id.startsWith('low-')) && 
+               (e.altKey || e.metaKey)) {
+                // Set current dial to -12dB
+                currentValue = 0;  // 0 in our 0-100 scale = -12dB
+                setRotation(currentValue);
+                onChange(-12);  // Set to -12dB
             } else {
-                onChange(50); // Center value
+                // Normal double-click behavior
+                currentValue = 50;
+                setRotation(currentValue);
+                if (element.id.startsWith('high-') || 
+                    element.id.startsWith('mid-') || 
+                    element.id.startsWith('low-')) {
+                    onChange(0); // Center EQ (0 dB)
+                } else {
+                    onChange(50); // Center value
+                }
             }
         });
 
@@ -556,16 +622,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Add tempo adjustment handlers
         tempoMinus.addEventListener('click', () => {
-            tempo = Math.max(tempo - 1, 50); // Minimum 50%
+            const newTempo = Math.max(tempo - 0.5, 50); // Decrease by 0.5%, minimum 50%
+            tempo = Math.round(newTempo * 10) / 10; // Round to 1 decimal place
             audioProcessor.setTempo(deck, tempo);
-            tempoValue.textContent = `${tempo}%`;
+            tempoValue.textContent = `${tempo.toFixed(1)}%`;
             updateBPMDisplay();
         });
 
         tempoPlus.addEventListener('click', () => {
-            tempo = Math.min(tempo + 1, 150); // Maximum 150%
+            const newTempo = Math.min(tempo + 0.5, 150); // Increase by 0.5%, maximum 150%
+            tempo = Math.round(newTempo * 10) / 10; // Round to 1 decimal place
             audioProcessor.setTempo(deck, tempo);
-            tempoValue.textContent = `${tempo}%`;
+            tempoValue.textContent = `${tempo.toFixed(1)}%`;
             updateBPMDisplay();
         });
 
