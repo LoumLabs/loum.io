@@ -35,12 +35,18 @@
 
         .app-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(4, minmax(200px, 1fr));
             gap: 15px;
             max-width: 1200px;
             padding: 30px;
             width: 100%;
             box-sizing: border-box;
+        }
+
+        @media (max-width: 1024px) {
+            .app-grid {
+                grid-template-columns: repeat(3, minmax(200px, 1fr));
+            }
         }
 
         .app-link {
