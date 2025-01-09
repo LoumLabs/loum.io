@@ -55,10 +55,15 @@ class AudioProcessor {
         if (this.isInitialized) return;
 
         try {
+            console.log('Initializing audio context...');
             // Create and resume AudioContext
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            console.log('Audio context created with sample rate:', this.audioContext.sampleRate);
+            
             if (this.audioContext.state === 'suspended') {
+                console.log('Resuming audio context...');
                 await this.audioContext.resume();
+                console.log('Audio context resumed:', this.audioContext.state);
             }
 
             // Create master gain node first
@@ -74,6 +79,7 @@ class AudioProcessor {
             this.masterGain.connect(this.masterAnalyzer);
             this.masterAnalyzer.connect(this.audioContext.destination);
 
+            console.log('Creating nodes for channels...');
             // Create nodes for each channel
             ['a', 'b'].forEach(deck => {
                 // Create gain nodes (channel faders)
@@ -116,6 +122,7 @@ class AudioProcessor {
             this.masterLevelData = new Uint8Array(this.masterAnalyzer.frequencyBinCount);
 
             this.isInitialized = true;
+            console.log('Audio processor initialization complete');
             this.monitorLevels();
         } catch (error) {
             console.error('Error initializing audio processor:', error);
@@ -204,10 +211,15 @@ class AudioProcessor {
             this.buffers[deck] = audioBuffer;
             this.currentTrack[deck] = file;
             
-            // Analyze BPM and beat grid when loading track
-            const bpm = await this.detectBPM(audioBuffer);
-            this.bpm[deck] = bpm;
-            this.beatLength[deck] = 60 / bpm;
+            // Only detect BPM if we don't have a stored value
+            const detectedBPM = await this.detectBPM(audioBuffer);
+            this.bpm[deck] = detectedBPM || 0;  // Default to 0 if detection fails
+            
+            if (this.bpm[deck] > 0) {
+                this.beatLength[deck] = 60 / this.bpm[deck];
+            } else {
+                this.beatLength[deck] = 0;
+            }
             
             return audioBuffer;
         } catch (error) {
@@ -252,7 +264,14 @@ class AudioProcessor {
 
         const source = this.audioContext.createBufferSource();
         source.buffer = this.buffers[deck];
-        source.playbackRate.value = this.playbackRate[deck];
+        
+        // Safety check for playback rate
+        const rate = this.playbackRate[deck];
+        if (isNaN(rate) || !isFinite(rate) || rate <= 0) {
+            source.playbackRate.value = 1.0;
+        } else {
+            source.playbackRate.value = rate;
+        }
 
         // Only set loop points if isLooping is true AND we have valid points
         if (this.isLooping[deck] && 
@@ -472,6 +491,12 @@ class AudioProcessor {
     }
 
     setTempo(deck, value) {
+        // Safety check for valid tempo value
+        if (isNaN(value) || !isFinite(value) || value < 50 || value > 150) {
+            console.log('Invalid tempo value:', value);
+            return;
+        }
+        
         // Store the tempo percentage
         const tempoPercentage = value;
         this.playbackRate[deck] = tempoPercentage / 100;
@@ -484,9 +509,11 @@ class AudioProcessor {
         }
 
         // Update the BPM based on the tempo change
-        if (this.bpm[deck]) {
-            const originalBPM = this.detectBPM(this.buffers[deck]);
-            this.bpm[deck] = (originalBPM * tempoPercentage) / 100;
+        if (this.bpm[deck] && !isNaN(this.bpm[deck])) {
+            // Calculate the original BPM without any tempo adjustments
+            const originalBPM = this.bpm[deck] / (this.playbackRate[deck] || 1);
+            // Apply the new tempo adjustment
+            this.bpm[deck] = originalBPM * (tempoPercentage / 100);
         }
     }
 
@@ -630,129 +657,188 @@ class AudioProcessor {
         updateLevels();
     }
 
-    detectBPM(audioBuffer) {
-        const data = audioBuffer.getChannelData(0);
-        const sampleRate = audioBuffer.sampleRate;
-        
-        // Create offline context for bass frequency analysis
-        const offlineCtx = new OfflineAudioContext(1, data.length, sampleRate);
-        const source = offlineCtx.createBufferSource();
-        source.buffer = audioBuffer;
-        
-        // Create low-pass filter for bass frequencies
-        const lowpass = offlineCtx.createBiquadFilter();
-        lowpass.type = 'lowpass';
-        lowpass.frequency.value = 150; // Focus on bass frequencies
-        lowpass.Q.value = 1;
-        
-        source.connect(lowpass);
-        lowpass.connect(offlineCtx.destination);
-        source.start();
-        
-        // Process audio and analyze
-        return offlineCtx.startRendering().then(filteredBuffer => {
-            const filteredData = filteredBuffer.getChannelData(0);
+    async detectBPM(audioBuffer) {
+        try {
+            console.log('Starting BPM detection...');
+            // Only analyze first 30 seconds for performance
+            const maxDuration = 30;
+            const sampleRate = audioBuffer.sampleRate;
+            const maxSamples = Math.min(audioBuffer.length, sampleRate * maxDuration);
+            const data = audioBuffer.getChannelData(0).slice(0, maxSamples);
             
-            // Use smaller chunks for better beat detection (23.2ms)
-            const chunkSize = Math.floor(sampleRate * 0.0232);
-            const energies = [];
+            console.log('Creating offline context for BPM detection...');
+            // Create offline context for processing
+            const offlineCtx = new OfflineAudioContext(1, data.length, sampleRate);
+            const source = offlineCtx.createBufferSource();
+            const tempBuffer = offlineCtx.createBuffer(1, data.length, sampleRate);
+            tempBuffer.getChannelData(0).set(data);
+            source.buffer = tempBuffer;
             
-            // Calculate RMS energy with 75% overlap
-            const overlap = Math.floor(chunkSize * 0.75);
-            for (let i = 0; i < filteredData.length - chunkSize; i += overlap) {
-                let sum = 0;
-                for (let j = 0; j < chunkSize; j++) {
-                    sum += filteredData[i + j] * filteredData[i + j];
-                }
-                energies.push(Math.sqrt(sum / chunkSize));
-            }
+            // Enhanced multi-stage filtering
+            // Stage 1: High-pass to remove DC offset and sub-bass rumble
+            const highPassFilter = offlineCtx.createBiquadFilter();
+            highPassFilter.type = 'highpass';
+            highPassFilter.frequency.value = 20;
+            highPassFilter.Q.value = 1.0;
+
+            // Stage 2: Low-pass for kick drum focus
+            const lowPassFilter = offlineCtx.createBiquadFilter();
+            lowPassFilter.type = 'lowpass';
+            lowPassFilter.frequency.value = 180;
+            lowPassFilter.Q.value = 1.0;
+
+            // Stage 3: Compressor to even out dynamics
+            const compressor = offlineCtx.createDynamicsCompressor();
+            compressor.threshold.value = -24;
+            compressor.knee.value = 6;
+            compressor.ratio.value = 10;
+            compressor.attack.value = 0.001;
+            compressor.release.value = 0.1;
             
-            // Normalize and apply enhanced low-pass filter
-            const maxEnergy = Math.max(...energies);
-            let normalizedEnergies = energies.map(e => e / maxEnergy);
+            // Connect filter chain
+            source.connect(highPassFilter);
+            highPassFilter.connect(lowPassFilter);
+            lowPassFilter.connect(compressor);
+            compressor.connect(offlineCtx.destination);
+            source.start();
             
-            // Apply 5-point moving average filter
-            for (let i = 2; i < normalizedEnergies.length - 2; i++) {
-                normalizedEnergies[i] = (
-                    normalizedEnergies[i - 2] * 0.1 +
-                    normalizedEnergies[i - 1] * 0.2 +
-                    normalizedEnergies[i] * 0.4 +
-                    normalizedEnergies[i + 1] * 0.2 +
-                    normalizedEnergies[i + 2] * 0.1
-                );
-            }
-            
-            // Find peaks with dynamic thresholding
-            const peaks = [];
-            const windowSize = 12;
-            const minPeakDistance = Math.floor(sampleRate * 0.15 / overlap);
-            
-            for (let i = windowSize; i < normalizedEnergies.length - windowSize; i++) {
-                const windowEnergies = normalizedEnergies.slice(i - windowSize, i + windowSize);
-                const avgEnergy = windowEnergies.reduce((a, b) => a + b) / (windowSize * 2);
-                const threshold = avgEnergy * 1.8;
+            return offlineCtx.startRendering().then(filteredBuffer => {
+                const filteredData = filteredBuffer.getChannelData(0);
+                const dataLength = filteredData.length;
                 
-                if (normalizedEnergies[i] > threshold &&
-                    normalizedEnergies[i] > normalizedEnergies[i-1] &&
-                    normalizedEnergies[i] > normalizedEnergies[i+1]) {
+                // Calculate energy envelope with smaller window for better precision
+                const windowSize = Math.floor(sampleRate * 0.004); // 4ms window
+                const hopSize = Math.floor(windowSize * 0.25); // 25% hop size
+                const numFrames = Math.floor((dataLength - windowSize) / hopSize);
+                const envelope = new Float32Array(numFrames);
+                
+                // Calculate energy envelope using RMS with Hanning window
+                for (let i = 0; i < numFrames; i++) {
+                    let sum = 0;
+                    const start = i * hopSize;
+                    const end = start + windowSize;
                     
-                    if (peaks.length === 0 || (i - peaks[peaks.length - 1]) > minPeakDistance) {
-                        peaks.push(i);
+                    for (let j = start; j < end; j++) {
+                        const windowPos = (j - start) / windowSize;
+                        const window = 0.5 * (1 - Math.cos(2 * Math.PI * windowPos));
+                        const sample = filteredData[j] * window;
+                        sum += sample * sample;
                     }
+                    
+                    envelope[i] = Math.sqrt(sum / windowSize);
                 }
-            }
-            
-            // Calculate intervals between peaks
-            const intervals = [];
-            for (let i = 1; i < peaks.length; i++) {
-                intervals.push(peaks[i] - peaks[i-1]);
-            }
-            
-            // Analyze possible octaves
-            const possibleBPMs = new Map();
-            const timePerChunk = overlap / sampleRate;
-            
-            intervals.forEach(interval => {
-                const secondsPerBeat = interval * timePerChunk;
-                let bpm = 60 / secondsPerBeat;
                 
-                // Check different octaves (half and double time)
-                [bpm/2, bpm, bpm*2].forEach(possibleBpm => {
-                    // Expand range to better handle higher BPMs (70-180)
-                    if (possibleBpm >= 70 && possibleBpm <= 180) {
-                        // Weight the BPM ranges differently
-                        let weight = 1;
-                        // Prefer BPMs in the common range of 120-150
-                        if (possibleBpm >= 120 && possibleBpm <= 150) {
-                            weight = 1.5;
-                        }
-                        // Extra weight for common BPMs (140, 128, 120)
-                        if (Math.abs(possibleBpm - 140) <= 1 || 
-                            Math.abs(possibleBpm - 128) <= 1 || 
-                            Math.abs(possibleBpm - 120) <= 1) {
-                            weight = 2;
-                        }
-                        
-                        const roundedBpm = Math.round(possibleBpm);
-                        possibleBPMs.set(roundedBpm, 
-                            (possibleBPMs.get(roundedBpm) || 0) + weight);
-                    }
-                });
-            });
-            
-            // Find most common BPM
-            let maxCount = 0;
-            let detectedBPM = 120; // Default fallback
-            
-            for (const [bpm, count] of possibleBPMs.entries()) {
-                if (count > maxCount) {
-                    maxCount = count;
-                    detectedBPM = bpm;
+                // Normalize envelope
+                const maxEnergy = Math.max(...envelope);
+                for (let i = 0; i < envelope.length; i++) {
+                    envelope[i] /= maxEnergy;
                 }
-            }
-            
-            return detectedBPM;
-        });
+                
+                // Calculate onset detection function
+                const onsets = new Float32Array(envelope.length);
+                const medianWindow = Math.floor(0.4 * sampleRate / hopSize); // 400ms window
+                
+                for (let i = 1; i < envelope.length - 1; i++) {
+                    // Calculate local median for adaptive thresholding
+                    const start = Math.max(0, i - medianWindow);
+                    const end = Math.min(envelope.length, i + medianWindow);
+                    const localValues = envelope.slice(start, end);
+                    localValues.sort();
+                    const median = localValues[Math.floor(localValues.length / 2)];
+                    
+                    // Spectral flux with adaptive thresholding
+                    const diff = envelope[i] - envelope[i - 1];
+                    onsets[i] = diff > median * 1.5 ? diff : 0;
+                }
+                
+                // Find peaks in onset detection function
+                const peaks = [];
+                const minPeakDistance = Math.floor(0.35 * sampleRate / hopSize); // Minimum 350ms between peaks
+                
+                for (let i = 2; i < onsets.length - 2; i++) {
+                    if (onsets[i] > onsets[i - 1] && onsets[i] > onsets[i + 1] && onsets[i] > 0.1) {
+                        if (peaks.length === 0 || (i - peaks[peaks.length - 1]) >= minPeakDistance) {
+                            peaks.push(i);
+                        }
+                    }
+                }
+                
+                // Calculate inter-onset intervals
+                const intervals = [];
+                for (let i = 1; i < peaks.length; i++) {
+                    intervals.push((peaks[i] - peaks[i - 1]) * hopSize / sampleRate);
+                }
+                
+                // Calculate tempo histogram
+                const bpmBins = new Float32Array(300); // 0-300 BPM range
+                const bpmRange = { min: 60, max: 200 };
+                
+                for (let i = 0; i < intervals.length - 1; i++) {
+                    const interval = intervals[i];
+                    const nextInterval = intervals[i + 1];
+                    const bpm = 60 / interval;
+                    
+                    if (bpm >= bpmRange.min && bpm <= bpmRange.max) {
+                        // Weight by consistency with next interval
+                        const nextBpm = 60 / nextInterval;
+                        const consistency = 1 - Math.min(Math.abs(bpm - nextBpm) / bpm, 1);
+                        const weight = Math.pow(consistency, 2);
+                        
+                        // Add weighted vote to histogram
+                        const roundedBpm = Math.round(bpm);
+                        bpmBins[roundedBpm] += weight;
+                        
+                        // Add smaller weights to nearby bins for continuity
+                        for (let offset = -2; offset <= 2; offset++) {
+                            const nearbyBpm = roundedBpm + offset;
+                            if (nearbyBpm > 0 && nearbyBpm < bpmBins.length) {
+                                bpmBins[nearbyBpm] += weight * Math.exp(-offset * offset / 2);
+                            }
+                        }
+                    }
+                }
+                
+                // Find highest peak in histogram
+                let maxBin = 0;
+                let maxValue = 0;
+                for (let i = bpmRange.min; i <= bpmRange.max; i++) {
+                    if (bpmBins[i] > maxValue) {
+                        maxValue = bpmBins[i];
+                        maxBin = i;
+                    }
+                }
+                
+                // Refine tempo estimate using quadratic interpolation
+                const alpha = bpmBins[maxBin - 1];
+                const beta = bpmBins[maxBin];
+                const gamma = bpmBins[maxBin + 1];
+                const p = 0.5 * (alpha - gamma) / (alpha - 2*beta + gamma);
+                let refinedBPM = maxBin + p;
+                
+                // Always double the tempo if it's below 80 BPM
+                if (refinedBPM < 80) {
+                    refinedBPM *= 2;
+                }
+                // For higher tempos, still check if we should double
+                else if (refinedBPM < 100) {
+                    const doubleBPM = refinedBPM * 2;
+                    if (doubleBPM <= bpmRange.max && bpmBins[Math.round(doubleBPM)] > maxValue * 0.4) {
+                        refinedBPM = doubleBPM;
+                    }
+                }
+                // Check for half tempo only for very high BPMs
+                else if (refinedBPM > 200) {
+                    refinedBPM /= 2;
+                }
+                
+                const detectedBPM = Math.round(refinedBPM);
+                console.log(`Detected BPM: ${detectedBPM} with confidence: ${maxValue}`);
+                return detectedBPM;
+            });
+        } catch (error) {
+            console.error('Error in BPM detection:', error);
+            return 0;  // Return 0 if BPM detection fails
+        }
     }
 
     setTrimGain(deck, value) {
@@ -981,28 +1067,51 @@ class AudioProcessor {
             return { success: false };
         }
 
-        // Get target BPM and current BPM from original detected values
-        const targetBPM = this.detectBPM(this.buffers[otherDeck]);
-        const currentBPM = this.detectBPM(this.buffers[deck]);
+        // Get current actual BPM values (including any tempo adjustments)
+        const targetBPM = this.bpm[otherDeck];
+        const currentBPM = this.bpm[deck];
         
-        if (!targetBPM || !currentBPM) {
+        // Safety checks for valid BPM values
+        if (!targetBPM || !currentBPM || isNaN(targetBPM) || isNaN(currentBPM) || 
+            targetBPM <= 0 || currentBPM <= 0) {
+            console.log('Invalid BPM values:', { targetBPM, currentBPM });
             return { success: false };
         }
         
         // Calculate tempo adjustment needed (as a percentage)
         const tempoAdjustment = Math.round((targetBPM / currentBPM) * 100);
         
-        // Apply tempo change with phase alignment
+        // Safety check for tempo adjustment
+        if (isNaN(tempoAdjustment) || !isFinite(tempoAdjustment) || 
+            tempoAdjustment < 50 || tempoAdjustment > 150) {
+            console.log('Invalid tempo adjustment:', tempoAdjustment);
+            return { success: false };
+        }
+        
+        // Apply tempo change
         this.setTempo(deck, tempoAdjustment);
 
-        // Try to align the beats
-        const currentBeat = this.getCurrentBeat(deck);
-        const targetBeat = this.getCurrentBeat(otherDeck);
-        
-        if (currentBeat && targetBeat) {
-            const beatDiff = (targetBeat.phase - currentBeat.phase) * currentBeat.beatLength;
-            const currentTime = this.getCurrentTime(deck);
-            this.seekTo(deck, (currentTime + beatDiff) / this.buffers[deck].duration, true);
+        // Try to align the beats if both decks are playing
+        if (this.sources[deck] && this.sources[otherDeck]) {
+            const currentBeat = this.getCurrentBeat(deck);
+            const targetBeat = this.getCurrentBeat(otherDeck);
+            
+            if (currentBeat && targetBeat && 
+                !isNaN(currentBeat.phase) && !isNaN(targetBeat.phase) && 
+                !isNaN(currentBeat.beatLength)) {
+                const beatDiff = (targetBeat.phase - currentBeat.phase) * currentBeat.beatLength;
+                const currentTime = this.getCurrentTime(deck);
+                
+                // Safety check for seek position
+                if (!isNaN(currentTime) && !isNaN(beatDiff) && 
+                    this.buffers[deck] && this.buffers[deck].duration) {
+                    const seekPosition = (currentTime + beatDiff) / this.buffers[deck].duration;
+                    if (seekPosition >= 0 && seekPosition <= 1) {
+                        // Only seek if already playing, don't auto-start playback
+                        this.seekTo(deck, seekPosition, this.sources[deck] !== null);
+                    }
+                }
+            }
         }
 
         return {
@@ -1015,11 +1124,18 @@ class AudioProcessor {
 
     // Helper method to get current beat position
     getCurrentBeat(deck) {
-        if (!this.buffers[deck]) return 0;
+        if (!this.buffers[deck] || !this.beatLength[deck]) return null;
         
         const currentTime = this.getCurrentTime(deck);
         const beatLength = this.beatLength[deck];
-        const beatPosition = (currentTime - this.beatGridOffset[deck]) / beatLength;
+        const offset = this.beatGridOffset[deck] || 0;
+        
+        // Safety checks
+        if (isNaN(currentTime) || isNaN(beatLength) || beatLength <= 0) {
+            return null;
+        }
+        
+        const beatPosition = (currentTime - offset) / beatLength;
         
         return {
             number: Math.floor(beatPosition),

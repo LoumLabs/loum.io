@@ -213,13 +213,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const arrayBuffer = await file.arrayBuffer();
             const audioBuffer = await audioProcessor.audioContext.decodeAudioData(arrayBuffer);
-            const detectedBPM = audioProcessor.detectBPM(audioBuffer);
+            const detectedBPM = await audioProcessor.detectBPM(audioBuffer);
             
             const track = {
                 file,
                 title: file.name.replace(/\.[^/.]+$/, ""),
                 artist: 'Unknown',
-                bpm: Number(detectedBPM) || 120, // Ensure BPM is a number, default to 120 if invalid
+                bpm: detectedBPM,
                 duration: audioBuffer.duration
             };
             
@@ -323,14 +323,55 @@ document.addEventListener('DOMContentLoaded', () => {
             const deckIndicator = deckA || deckB;
             
             // Ensure BPM is a number and has a valid value
-            const bpm = Number(track.bpm) || 120;
+            const bpm = Number(track.bpm);
             
-            trackElement.innerHTML = `
-                <div>${track.title}</div>
-                <div>${bpm.toFixed(1)}</div>
-                <div>${formatTime(track.duration)}</div>
-                <div class="deck-indicator">${deckIndicator}</div>
-            `;
+            // Create individual elements for better control
+            const titleDiv = document.createElement('div');
+            titleDiv.textContent = track.title;
+            
+            const bpmDiv = document.createElement('div');
+            bpmDiv.textContent = isNaN(bpm) ? '--' : bpm.toFixed(1);
+            bpmDiv.style.cursor = 'context-menu';
+            
+            // Add right-click handler for BPM
+            bpmDiv.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                const newBPM = prompt('Enter BPM:', bpm || '');
+                if (newBPM !== null) {
+                    const parsedBPM = parseFloat(newBPM);
+                    if (!isNaN(parsedBPM) && parsedBPM > 0) {
+                        track.bpm = parsedBPM;
+                        // Update BPM in deck if this track is loaded
+                        if (audioProcessor.currentTrack.a === track.file) {
+                            audioProcessor.bpm.a = parsedBPM;
+                            const bpmDisplayA = document.getElementById('bpm-a');
+                            if (bpmDisplayA) bpmDisplayA.textContent = parsedBPM.toFixed(1);
+                        }
+                        if (audioProcessor.currentTrack.b === track.file) {
+                            audioProcessor.bpm.b = parsedBPM;
+                            const bpmDisplayB = document.getElementById('bpm-b');
+                            if (bpmDisplayB) bpmDisplayB.textContent = parsedBPM.toFixed(1);
+                        }
+                        updateTrackList();
+                    } else {
+                        alert('Please enter a valid BPM value greater than 0');
+                    }
+                }
+            });
+            
+            const durationDiv = document.createElement('div');
+            durationDiv.textContent = formatTime(track.duration);
+            
+            const deckIndicatorDiv = document.createElement('div');
+            deckIndicatorDiv.className = 'deck-indicator';
+            deckIndicatorDiv.textContent = deckIndicator;
+            
+            // Clear existing content and append new elements
+            trackElement.innerHTML = '';
+            trackElement.appendChild(titleDiv);
+            trackElement.appendChild(bpmDiv);
+            trackElement.appendChild(durationDiv);
+            trackElement.appendChild(deckIndicatorDiv);
             
             // Drag and drop reordering
             trackElement.draggable = true;
@@ -422,7 +463,27 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Reset tempo and BPM display
             deckControls.tempo.textContent = '100%';
-            deckControls.bpm.textContent = track.bpm.toFixed(1);
+            
+            // If track has a stored BPM, use it and update the audioProcessor
+            const bpmDisplay = document.getElementById(`bpm-${deck}`);
+            if (track.bpm && !isNaN(track.bpm) && track.bpm > 0) {
+                audioProcessor.bpm[deck] = track.bpm;
+                audioProcessor.beatLength[deck] = 60 / track.bpm;
+                if (bpmDisplay) {
+                    bpmDisplay.textContent = track.bpm.toFixed(1);
+                }
+            } else if (audioProcessor.bpm[deck] > 0) {
+                // If no stored BPM but detection worked, use detected BPM
+                track.bpm = audioProcessor.bpm[deck];
+                if (bpmDisplay) {
+                    bpmDisplay.textContent = audioProcessor.bpm[deck].toFixed(1);
+                }
+            } else {
+                // If no valid BPM available
+                if (bpmDisplay) {
+                    bpmDisplay.textContent = '--';
+                }
+            }
             
             // Reset playhead position
             deckControls.playhead.style.left = '0%';
@@ -433,14 +494,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 deckControls.loop.classList.remove('active');
             }
 
-            // Update BPM display after loading
-            const bpmDisplay = document.getElementById(`bpm-${deck}`);
-            bpmDisplay.textContent = track.bpm.toFixed(1);
-            
             // Store the track reference for BPM calculations
             audioProcessor.currentTrack[deck] = track.file;
-            audioProcessor.bpm[deck] = track.bpm;
-
+            
             // Update track list to show deck indicators
             updateTrackList();
         } catch (error) {
@@ -452,7 +508,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add tracks button handler
     document.getElementById('add-tracks').addEventListener('click', (e) => {
         if (audioProcessor.isInitialized) {
-            document.getElementById('track-file-input').click();
+            const fileInput = document.getElementById('track-file-input');
+            fileInput.accept = 'audio/*,.json';  // Accept both audio and JSON files
+            fileInput.click();
         }
     });
 
@@ -480,16 +538,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Function to update BPM display based on tempo
         const updateBPMDisplay = () => {
-            if (originalBPM === 0) {
+            const bpmDisplay = document.getElementById(`bpm-${deck}`);
+            if (!bpmDisplay) return;  // Exit if BPM display element doesn't exist
+
+            if (originalBPM === 0 && audioProcessor.currentTrack[deck]) {
                 const track = tracks.find(t => t.file === audioProcessor.currentTrack[deck]);
-                if (track) {
+                if (track && track.bpm) {
                     originalBPM = track.bpm;
                 }
             }
-            const adjustedBPM = (originalBPM * tempo) / 100;
-            const bpmDisplay = document.getElementById(`bpm-${deck}`);
-            if (bpmDisplay) {
+
+            if (originalBPM > 0) {
+                const adjustedBPM = (originalBPM * tempo) / 100;
                 bpmDisplay.textContent = adjustedBPM.toFixed(1);
+            } else {
+                bpmDisplay.textContent = '--';
             }
         };
 
@@ -977,16 +1040,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Master gain control
     const masterGain = document.getElementById('master-gain');
-    const masterGainValue = document.getElementById('master-gain-value');
 
     masterGain.addEventListener('input', (e) => {
         const value = parseInt(e.target.value);
-        // Convert 0-127 range to decibels (-Infinity to 0)
-        const gainDB = value === 0 ? -Infinity : 20 * Math.log10(value / 100);
         audioProcessor.setMasterGain(value / 127);
-        masterGainValue.textContent = value === 0 ? '-∞' : 
-                                    gainDB > -0.1 ? '0' : 
-                                    gainDB.toFixed(1);
     });
 
     // Initialize master gain
@@ -1059,18 +1116,46 @@ document.addEventListener('DOMContentLoaded', () => {
     saveButton.addEventListener('click', () => {
         if (tracks.length === 0) return;
         
-        const collection = tracks.map(track => ({
-            title: track.title,
-            bpm: track.bpm,
-            duration: track.duration,
-            path: track.file.name
-        }));
+        // Get current date and time
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: '2-digit', 
+            day: '2-digit' 
+        });
+        const timeStr = now.toLocaleTimeString('en-US', { 
+            hour12: false, 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
         
-        const blob = new Blob([JSON.stringify(collection, null, 2)], { type: 'application/json' });
+        // Create a formatted text table with fixed column widths
+        const header = `Track List - ${dateStr} ${timeStr}\n` +
+                      '='.repeat(70) + '\n\n' +
+                      'Order | Title                                    | BPM   | Duration\n' +
+                      '------+------------------------------------------+-------+----------\n';
+                      
+        const trackList = tracks.map((track, index) => {
+            const orderNum = (index + 1).toString().padStart(2, ' ');
+            const title = track.title.length > 40 ? track.title.substring(0, 37) + '...' : track.title.padEnd(40);
+            const bpm = track.bpm ? track.bpm.toFixed(1).padStart(5) : '  --  ';
+            const duration = formatTime(track.duration);
+            return `  ${orderNum}  | ${title} | ${bpm} |   ${duration}`;
+        }).join('\n');
+        
+        const footer = '\n' + '='.repeat(70) + '\n' +
+                      `Total Tracks: ${tracks.length}\n` +
+                      `Total Duration: ${formatTime(tracks.reduce((sum, track) => sum + track.duration, 0))}`;
+        
+        const content = header + trackList + footer;
+        
+        // Save as text file with date in filename
+        const filename = `mixer-tracklist_${dateStr.replace(/\//g, '-')}_${timeStr.replace(':', '-')}.txt`;
+        const blob = new Blob([content], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'mixer-collection.json';
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -1078,45 +1163,155 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Track file input handler
-    document.getElementById('track-file-input').addEventListener('change', async (e) => {
-        if (e.target.files.length > 0) {
-            for (const file of e.target.files) {
-                if (file.type.startsWith('audio/')) {
-                    await addTrackToList(file);
-                } else if (file.name.endsWith('.json')) {
-                    // Handle JSON collection file
+    const trackFileInput = document.getElementById('track-file-input');
+    if (trackFileInput) {
+        trackFileInput.addEventListener('change', async (e) => {
+            if (e.target.files.length > 0) {
+                const audioFiles = [];
+                const jsonFiles = [];
+                
+                // Sort files into audio and JSON
+                for (const file of e.target.files) {
+                    // Check if it's a JSON file by both MIME type and extension
+                    if (file.type === 'application/json' || file.name.toLowerCase().endsWith('.json')) {
+                        jsonFiles.push(file);
+                    } else if (file.type.startsWith('audio/')) {
+                        audioFiles.push(file);
+                    }
+                }
+
+                // Handle audio files first
+                for (const file of audioFiles) {
                     try {
+                        await addTrackToList(file);
+                    } catch (error) {
+                        console.error('Error adding track:', error);
+                        alert(`Error adding track ${file.name}. Please ensure it's a valid audio file.`);
+                    }
+                }
+
+                // Then handle JSON collections
+                for (const file of jsonFiles) {
+                    try {
+                        console.log('Reading JSON file:', file.name);
                         const text = await file.text();
+                        console.log('JSON content:', text);
                         const collection = JSON.parse(text);
+                        console.log('Parsed collection:', collection);
                         
-                        // Clear current tracks
-                        tracks = [];
-                        updateTrackList();
+                        if (!Array.isArray(collection)) {
+                            throw new Error('Invalid collection format: expected an array');
+                        }
                         
-                        // Show file picker for each track in collection
-                        alert('Please select the audio files in the order they appear in your collection.');
-                        const input = document.createElement('input');
-                        input.type = 'file';
-                        input.multiple = true;
-                        input.accept = 'audio/*';
+                        if (collection.length === 0) {
+                            throw new Error('Collection is empty');
+                        }
+
+                        const message = `Please select the audio files for your collection "${file.name}".\n` +
+                                      `The collection contains ${collection.length} tracks.\n` +
+                                      `Try to select them in the same order as they appear in your collection.\n\n` +
+                                      `Expected files:\n${collection.map(t => `- ${t.path}`).join('\n')}`;
                         
-                        input.addEventListener('change', async () => {
-                            const files = Array.from(input.files);
-                            for (const savedTrack of collection) {
-                                const matchingFile = files.find(f => f.name === savedTrack.path);
-                                if (matchingFile) {
-                                    await addTrackToList(matchingFile);
-                                }
+                        if (confirm(message)) {
+                            // Create a persistent file input
+                            let collectionInput = document.getElementById('collection-file-input');
+                            if (!collectionInput) {
+                                collectionInput = document.createElement('input');
+                                collectionInput.type = 'file';
+                                collectionInput.id = 'collection-file-input';
+                                collectionInput.multiple = true;
+                                collectionInput.accept = 'audio/*';
+                                collectionInput.style.display = 'none';
+                                document.body.appendChild(collectionInput);
                             }
-                        });
-                        
-                        input.click();
+
+                            // Store collection data for later use
+                            collectionInput.dataset.collection = JSON.stringify(collection);
+                            
+                            // Add one-time listener for this specific collection
+                            const handleCollectionFiles = async (e) => {
+                                if (!e.target.files || e.target.files.length === 0) return;
+                                
+                                collectionInput.removeEventListener('change', handleCollectionFiles);
+                                const storedCollection = JSON.parse(collectionInput.dataset.collection);
+                                
+                                console.log('Selected files:', Array.from(e.target.files).map(f => f.name));
+                                const selectedFiles = Array.from(e.target.files);
+                                const matchedTracks = [];
+                                const unmatchedTracks = [];
+
+                                // Try to match files with collection entries
+                                for (const collectionTrack of storedCollection) {
+                                    console.log('Trying to match track:', collectionTrack.path);
+                                    
+                                    // Try to find matching file by name first
+                                    let matchedFile = selectedFiles.find(f => f.name === collectionTrack.path);
+                                    console.log('Name match:', matchedFile?.name);
+                                    
+                                    // If no exact match, try to match by size and last modified if available
+                                    if (!matchedFile && collectionTrack.size && collectionTrack.lastModified) {
+                                        matchedFile = selectedFiles.find(f => 
+                                            f.size === collectionTrack.size && 
+                                            f.lastModified === collectionTrack.lastModified
+                                        );
+                                        console.log('Size/date match:', matchedFile?.name);
+                                    }
+                                    
+                                    // If still no match, take the first remaining file
+                                    if (!matchedFile && selectedFiles.length > 0) {
+                                        matchedFile = selectedFiles[0];
+                                        console.log('Fallback match:', matchedFile.name);
+                                    }
+                                    
+                                    if (matchedFile) {
+                                        // Remove the matched file from the pool
+                                        selectedFiles.splice(selectedFiles.indexOf(matchedFile), 1);
+                                        
+                                        try {
+                                            // Create a new track object with the collection metadata
+                                            console.log('Adding track to list:', matchedFile.name);
+                                            const track = await addTrackToList(matchedFile);
+                                            if (track) {
+                                                track.title = collectionTrack.title;
+                                                track.artist = collectionTrack.artist;
+                                                track.bpm = collectionTrack.bpm;
+                                                matchedTracks.push(track);
+                                                console.log('Successfully added track:', track.title);
+                                            }
+                                        } catch (error) {
+                                            console.error('Error adding track:', matchedFile.name, error);
+                                            unmatchedTracks.push(collectionTrack.path);
+                                        }
+                                    } else {
+                                        console.log('No match found for:', collectionTrack.path);
+                                        unmatchedTracks.push(collectionTrack.path);
+                                    }
+                                }
+
+                                // Update the UI with the matched tracks
+                                if (matchedTracks.length > 0) {
+                                    console.log('Updating track list with matched tracks:', matchedTracks.length);
+                                    tracks = [...tracks.filter(t => !matchedTracks.includes(t)), ...matchedTracks];
+                                    updateTrackList();
+                                }
+
+                                // Report any unmatched tracks
+                                if (unmatchedTracks.length > 0) {
+                                    const message = `Some tracks could not be matched:\n${unmatchedTracks.join('\n')}`;
+                                    console.warn(message);
+                                    alert(message);
+                                }
+                            };
+
+                            collectionInput.addEventListener('change', handleCollectionFiles);
+                            collectionInput.click();
+                        }
                     } catch (error) {
                         console.error('Error loading collection:', error);
-                        alert('Error loading collection file. Please ensure it\'s a valid collection file.');
+                        alert(`Error loading collection ${file.name}: ${error.message}\n\nCheck the browser console for more details.`);
                     }
                 }
             }
-        }
-    });
+        });
+    }
 }); 
