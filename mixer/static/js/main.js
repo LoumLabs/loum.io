@@ -34,6 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // For EQ, convert 0-100 to -12 to +12
                 const eqValue = ((value / 100) * 24) - 12;
                 valueDisplay.textContent = `${eqValue > 0 ? '+' : ''}${eqValue.toFixed(1)}`;
+            } else if (element.id.startsWith('trim-')) {
+                // For trim, let the callback handle the display
+                // (since it gets the actual dB value from audioProcessor)
             } else {
                 // For other controls, show percentage
                 valueDisplay.textContent = `${Math.round(value)}`;
@@ -118,6 +121,35 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     };
 
+    // Initialize dial visuals immediately
+    ['a', 'b'].forEach(deck => {
+        // EQ dials
+        ['high', 'mid', 'low'].forEach(band => {
+            const dial = document.getElementById(`${band}-${deck}`);
+            if (dial) {
+                handleDial(dial, (value) => {
+                    if (audioProcessor.isInitialized) {
+                        audioProcessor.setEQ(deck, band, value);
+                    }
+                }).setValue(50); // Center position
+            }
+        });
+
+        // Trim dial
+        const trimDial = document.getElementById(`trim-${deck}`);
+        if (trimDial) {
+            handleDial(trimDial, (value) => {
+                if (audioProcessor.isInitialized) {
+                    // Convert 0-100 to -5 to +5 dB gain range
+                    const db = audioProcessor.setTrimGain(deck, value);
+                    // Update value display to show dB with special case for 0
+                    const displayValue = Math.abs(db) < 0.1 ? "0" : `${db > 0 ? '+' : ''}${db.toFixed(1)}`;
+                    trimDial.querySelector('.dial-value').textContent = displayValue;
+                }
+            }).setValue(50); // Center position (0 dB)
+        }
+    });
+
     // Initialize audio context on first user interaction
     const initializeAudio = async (e) => {
         // Only initialize on direct user interaction
@@ -128,9 +160,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Remove initialization listeners once initialized
             document.removeEventListener('click', initializeAudio);
             document.removeEventListener('touchstart', initializeAudio);
-            
-            // Initialize all dials after audio context is ready
-            initializeDials();
             
             // If this was triggered by the "Add Tracks" button, trigger the file input
             if (e.target.id === 'add-tracks') {
@@ -144,37 +173,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add initialization listeners
     document.addEventListener('click', initializeAudio);
     document.addEventListener('touchstart', initializeAudio);
-
-    // Separate function to initialize dials
-    const initializeDials = () => {
-        // Initialize dials for each channel
-        ['a', 'b'].forEach(deck => {
-            // EQ dials
-            ['high', 'mid', 'low'].forEach(band => {
-                const dial = document.getElementById(`${band}-${deck}`);
-                if (dial) {
-                    handleDial(dial, (value) => {
-                        audioProcessor.setEQ(deck, band, value);
-                    }).setValue(50); // Center position
-                }
-            });
-
-            // Trim dial
-            const trimDial = document.getElementById(`trim-${deck}`);
-            if (trimDial) {
-                handleDial(trimDial, (value) => {
-                    // Convert 0-100 to -12 to +12 dB gain range
-                    const gainDB = ((value / 100) * 24) - 12;
-                    // Convert dB to gain value (0 dB = 1.0)
-                    const gain = Math.pow(10, gainDB / 20);
-                    audioProcessor.setTrimGain(deck, gain);
-                    // Update value display to show dB with special case for 0
-                    const displayValue = Math.abs(gainDB) < 0.1 ? "0" : `${gainDB > 0 ? '+' : ''}${gainDB.toFixed(1)}`;
-                    trimDial.querySelector('.dial-value').textContent = displayValue;
-                }).setValue(50); // Center position (0 dB)
-            }
-        });
-    };
 
     // Utility function to format time
     const formatTime = (seconds) => {
@@ -915,30 +913,6 @@ document.addEventListener('DOMContentLoaded', () => {
         audioProcessor.setCrossfaderCurve(e.target.value);
     });
 
-    // Initialize dials for each channel
-    ['a', 'b'].forEach(deck => {
-        // EQ dials
-        ['high', 'mid', 'low'].forEach(band => {
-            const dial = document.getElementById(`${band}-${deck}`);
-            handleDial(dial, (value) => {
-                audioProcessor.setEQ(deck, band, value);
-            }).setValue(50); // Center position
-        });
-
-        // Trim dial
-        const trimDial = document.getElementById(`trim-${deck}`);
-        handleDial(trimDial, (value) => {
-            // Convert 0-100 to -12 to +12 dB gain range
-            const gainDB = ((value / 100) * 24) - 12;
-            // Convert dB to gain value (0 dB = 1.0)
-            const gain = Math.pow(10, gainDB / 20);
-            audioProcessor.setTrimGain(deck, gain);
-            // Update value display to show dB with special case for 0
-            const displayValue = Math.abs(gainDB) < 0.1 ? "0" : `${gainDB > 0 ? '+' : ''}${gainDB.toFixed(1)}`;
-            trimDial.querySelector('.dial-value').textContent = displayValue;
-        }).setValue(50); // Center position (0 dB)
-    });
-
     // Create LED segments for meters
     const createMeterSegments = (meterId) => {
         const meter = document.getElementById(meterId);
@@ -978,17 +952,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!meter) return;
                 const segments = meter.getElementsByClassName('led-segment');
                 
-                // Update segments based on level
+                // Update segments based on level with improved scaling
                 Array.from(segments).forEach((segment, i) => {
-                    // Adjust threshold scaling to better match audio levels
-                    // Using a more logarithmic scale for better visual representation
-                    const threshold = Math.pow(1.15, i + 1) * 2;
+                    // Adjust threshold scaling for better visual representation
+                    // Using a more logarithmic scale with finer gradation
+                    const threshold = Math.pow(1.12, i + 1) * 2;
                     segment.classList.remove('active', 'warning', 'peak');
                     
                     if (level >= threshold) {
-                        if (i >= 25) { // Top 5 segments for peak (red)
+                        if (i >= 26) { // Top 4 segments for peak (red)
                             segment.classList.add('peak');
-                        } else if (i >= 20) { // Next 5 segments for warning (yellow)
+                        } else if (i >= 20) { // Next 6 segments for warning (yellow)
                             segment.classList.add('warning');
                         } else {
                             segment.classList.add('active');
@@ -1006,11 +980,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const segments = meter.getElementsByClassName('led-segment');
             
             Array.from(segments).forEach((segment, i) => {
-                const threshold = Math.pow(1.15, i + 1) * 2;
+                const threshold = Math.pow(1.12, i + 1) * 2;
                 segment.classList.remove('active', 'warning', 'peak');
                 
                 if (masterLevel >= threshold) {
-                    if (i >= 25) {
+                    if (i >= 26) {
                         segment.classList.add('peak');
                     } else if (i >= 20) {
                         segment.classList.add('warning');

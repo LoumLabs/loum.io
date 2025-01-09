@@ -8,22 +8,26 @@ class AudioProcessor {
         this.playbackRate = { a: 1, b: 1 };
         this.isLooping = { a: false, b: false };
         this.pausePosition = { a: undefined, b: undefined };
-        this.cuePoints = { a: 0, b: 0 }; // Add cue points storage
+        this.cuePoints = { a: 0, b: 0 };
+        this.loopPoints = { a: { start: null, end: null }, b: { start: null, end: null } };
         
         // Create nodes after context is initialized
-        this.gainNodes = { a: null, b: null };
+        this.gainNodes = { a: null, b: null };  // Channel faders
         this.trimNodes = { a: null, b: null };
-        this.analyzers = { a: null, b: null };
+        this.trimRange = { min: -5, max: 5 }; // -5dB to +5dB range
+        this.analyzers = { a: null, b: null };  // Post-fader analyzers
         this.eqNodes = { a: null, b: null };
+        this.crossfaderGains = { a: null, b: null };  // Separate crossfader gains
         this.isInitialized = false;
         this.levelData = { a: null, b: null };
         this.peakLevels = { a: 0, b: 0 };
-        this.peakHoldTime = 1000; // Hold peak for 1 second
+        this.peakHoldTime = 1000;
         this.lastPeakTime = { a: 0, b: 0 };
         
-        // Add crossfader curve settings
-        this.crossfaderCurve = 'linear'; // Options: 'linear', 'slow', 'fast', 'cut'
+        this.crossfaderCurve = 'linear';
+        this.crossfaderPosition = 0.5;  // Center by default
 
+        this.masterGain = null;
         this.masterAnalyzer = null;
         this.masterLevelData = null;
         this.masterPeakLevel = 0;
@@ -33,17 +37,11 @@ class AudioProcessor {
         this.preFaderAnalyzers = { a: null, b: null };
         this.preFaderLevelData = { a: null, b: null };
 
-        // Add loop points
-        this.loopPoints = { 
-            a: { start: null, end: null },
-            b: { start: null, end: null }
-        };
-
         // Add sync properties
         this.bpm = { a: 0, b: 0 };
-        this.beatGridOffset = { a: 0, b: 0 };
         this.beatLength = { a: 0, b: 0 };
-        this.currentTrack = { a: null, b: null };
+        this.beatGridOffset = { a: 0, b: 0 };
+        this.currentTrack = { a: null, b: null };  // Track references for each deck
 
         this.channelFaderValues = {
             a: 1.0,
@@ -56,70 +54,62 @@ class AudioProcessor {
 
         try {
             console.log('Initializing audio context...');
-            // Create and resume AudioContext
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            console.log('Audio context created with sample rate:', this.audioContext.sampleRate);
             
             if (this.audioContext.state === 'suspended') {
-                console.log('Resuming audio context...');
                 await this.audioContext.resume();
-                console.log('Audio context resumed:', this.audioContext.state);
             }
 
-            // Create master gain node first
+            // Create master section first
             this.masterGain = this.audioContext.createGain();
-            this.masterGain.gain.value = 1.0; // Full volume at master
+            this.masterGain.gain.value = 1.0; // Full volume to match UI
 
-            // Create master analyzer
             this.masterAnalyzer = this.audioContext.createAnalyser();
-            this.masterAnalyzer.fftSize = 1024;
-            this.masterAnalyzer.smoothingTimeConstant = 0.5;
+            this.masterAnalyzer.fftSize = 2048;
+            this.masterAnalyzer.smoothingTimeConstant = 0.2;  // Match channel settings
+            this.masterAnalyzer.minDecibels = -60;
+            this.masterAnalyzer.maxDecibels = -20;
+
+            // Create crossfader gains (final mixing stage before master)
+            this.crossfaderGains.a = this.audioContext.createGain();
+            this.crossfaderGains.b = this.audioContext.createGain();
+
+            // Connect crossfader outputs to master
+            this.crossfaderGains.a.connect(this.masterGain);
+            this.crossfaderGains.b.connect(this.masterGain);
 
             // Connect master chain
             this.masterGain.connect(this.masterAnalyzer);
             this.masterAnalyzer.connect(this.audioContext.destination);
 
-            console.log('Creating nodes for channels...');
-            // Create nodes for each channel
+            // Create channel-specific nodes
             ['a', 'b'].forEach(deck => {
                 // Create gain nodes (channel faders)
                 this.gainNodes[deck] = this.audioContext.createGain();
-                this.gainNodes[deck].gain.value = 1.0; // Start at full volume
+                this.gainNodes[deck].gain.value = 1.0; // Full volume to match UI
 
                 // Create trim nodes
                 this.trimNodes[deck] = this.audioContext.createGain();
-                this.trimNodes[deck].gain.value = 0.7; // Slight headroom on trim
+                this.trimNodes[deck].gain.value = 1.0; // Unity gain (0dB) to match UI
 
-                // Create analyzers
+                // Create post-fader analyzers (after channel fader, before crossfader)
                 this.analyzers[deck] = this.audioContext.createAnalyser();
-                this.analyzers[deck].fftSize = 1024;
-                this.analyzers[deck].smoothingTimeConstant = 0.5;
-
-                // Create pre-fader analyzers
-                this.preFaderAnalyzers[deck] = this.audioContext.createAnalyser();
-                this.preFaderAnalyzers[deck].fftSize = 1024;
-                this.preFaderAnalyzers[deck].smoothingTimeConstant = 0.5;
+                this.analyzers[deck].fftSize = 2048;
+                this.analyzers[deck].smoothingTimeConstant = 0.2;  // Faster response
+                this.analyzers[deck].minDecibels = -60;
+                this.analyzers[deck].maxDecibels = -20;
 
                 // Create EQ nodes
                 this.eqNodes[deck] = this.createEQNodes();
             });
 
-            // Connect audio chains
-            this.connectEQChain('a');
-            this.connectEQChain('b');
-
             // Initialize analyzer data arrays
             this.levelData = {
-                a: new Uint8Array(this.analyzers.a.frequencyBinCount),
-                b: new Uint8Array(this.analyzers.b.frequencyBinCount)
+                a: new Float32Array(this.analyzers.a.frequencyBinCount),
+                b: new Float32Array(this.analyzers.b.frequencyBinCount)
             };
 
-            this.preFaderLevelData = {
-                a: new Uint8Array(this.preFaderAnalyzers.a.frequencyBinCount),
-                b: new Uint8Array(this.preFaderAnalyzers.b.frequencyBinCount)
-            };
-
-            this.masterLevelData = new Uint8Array(this.masterAnalyzer.frequencyBinCount);
+            this.masterLevelData = new Float32Array(this.masterAnalyzer.frequencyBinCount);
 
             this.isInitialized = true;
             console.log('Audio processor initialization complete');
@@ -150,34 +140,44 @@ class AudioProcessor {
         if (!this.sources[deck]) return;
 
         try {
-            // Disconnect any existing connections
+            // Disconnect existing connections
             if (this.trimNodes[deck]) this.trimNodes[deck].disconnect();
             if (this.eqNodes[deck].low) this.eqNodes[deck].low.disconnect();
             if (this.eqNodes[deck].mid) this.eqNodes[deck].mid.disconnect();
             if (this.eqNodes[deck].high) this.eqNodes[deck].high.disconnect();
             if (this.gainNodes[deck]) this.gainNodes[deck].disconnect();
-            if (this.preFaderAnalyzers[deck]) this.preFaderAnalyzers[deck].disconnect();
             if (this.analyzers[deck]) this.analyzers[deck].disconnect();
+            if (this.crossfaderGains[deck]) this.crossfaderGains[deck].disconnect();
 
-            // Connect source to trim
+            // Connect the audio chain:
+            // source -> trim -> EQ -> channel fader -> analyzer -> crossfader -> master
+            
+            // Source to trim
             this.sources[deck].connect(this.trimNodes[deck]);
 
-            // Connect trim to pre-fader analyzer (for channel meters)
-            this.trimNodes[deck].connect(this.preFaderAnalyzers[deck]);
-
-            // Connect trim to EQ chain
+            // Trim to EQ chain
             this.trimNodes[deck].connect(this.eqNodes[deck].high);
             this.eqNodes[deck].high.connect(this.eqNodes[deck].mid);
             this.eqNodes[deck].mid.connect(this.eqNodes[deck].low);
 
-            // Connect EQ to gain node
+            // EQ to channel fader
             this.eqNodes[deck].low.connect(this.gainNodes[deck]);
 
-            // Connect gain to post-fader analyzer
+            // Channel fader to analyzer
             this.gainNodes[deck].connect(this.analyzers[deck]);
+            
+            // Analyzer to crossfader
+            this.analyzers[deck].connect(this.crossfaderGains[deck]);
 
-            // Connect gain to master
-            this.gainNodes[deck].connect(this.masterGain);
+            // Reconnect crossfader to master (in case it was disconnected)
+            this.crossfaderGains[deck].connect(this.masterGain);
+
+            // Set analyzer parameters
+            this.analyzers[deck].minDecibels = -90;
+            this.analyzers[deck].maxDecibels = 0;
+            this.masterAnalyzer.minDecibels = -90;
+            this.masterAnalyzer.maxDecibels = 0;
+
         } catch (error) {
             console.error(`Failed to connect audio chain for deck ${deck}:`, error);
         }
@@ -284,7 +284,9 @@ class AudioProcessor {
             source.loop = false;
         }
 
+        // Connect source to trim node (rest of chain is connected in connectEQChain)
         source.connect(this.trimNodes[deck]);
+        
         return source;
     }
 
@@ -452,7 +454,7 @@ class AudioProcessor {
     }
 
     setCrossfader(value) {
-        if (!this.gainNodes.a || !this.gainNodes.b) return;
+        if (!this.crossfaderGains.a || !this.crossfaderGains.b) return;
         
         const position = value / 100;
         this.crossfaderPosition = position;
@@ -480,14 +482,15 @@ class AudioProcessor {
                 
             case 'linear':
             default:
-                // Linear curve (original behavior)
-                gainA = Math.cos(position * Math.PI / 2);
-                gainB = Math.cos((1 - position) * Math.PI / 2);
+                // Linear curve
+                gainA = 1 - position;
+                gainB = position;
                 break;
         }
         
-        this.gainNodes.a.gain.setTargetAtTime(gainA, this.audioContext.currentTime, 0.01);
-        this.gainNodes.b.gain.setTargetAtTime(gainB, this.audioContext.currentTime, 0.01);
+        // Apply crossfader gains with smoothing
+        this.crossfaderGains.a.gain.setTargetAtTime(gainA, this.audioContext.currentTime, 0.01);
+        this.crossfaderGains.b.gain.setTargetAtTime(gainB, this.audioContext.currentTime, 0.01);
     }
 
     setTempo(deck, value) {
@@ -609,46 +612,62 @@ class AudioProcessor {
         const updateLevels = () => {
             if (!this.isInitialized) return;
 
-            // Update channel levels from pre-fader analyzers
             ['a', 'b'].forEach(deck => {
-                this.preFaderAnalyzers[deck].getByteTimeDomainData(this.preFaderLevelData[deck]);
+                const levelData = new Float32Array(this.analyzers[deck].frequencyBinCount);
+                this.analyzers[deck].getFloatTimeDomainData(levelData);
                 let sum = 0;
                 let peak = 0;
-                for (let i = 0; i < this.preFaderLevelData[deck].length; i++) {
-                    const sample = Math.abs((this.preFaderLevelData[deck][i] - 128) / 128);
+                
+                for (let i = 0; i < levelData.length; i++) {
+                    const sample = Math.abs(levelData[i]);
                     sum += sample * sample;
                     peak = Math.max(peak, sample);
                 }
-                const rms = Math.sqrt(sum / this.preFaderLevelData[deck].length);
-                const db = 20 * Math.log10(Math.max(rms, 0.00001));
-                const level = Math.max(0, Math.min(100, (db + 50) * (100/50)));
-
+                
+                // Simple RMS and peak calculation with aggressive scaling
+                const rms = Math.sqrt(sum / levelData.length);
+                const rmsLevel = rms * 40; // Scale down significantly
+                const peakLevel = peak * 40; // Scale down significantly
+                
+                // Blend RMS and peak with much more emphasis on peak for faster response
+                const level = Math.min((rmsLevel * 0.05) + (peakLevel * 0.95), 100);
+                
+                // Update peak levels with faster decay
                 if (level > this.peakLevels[deck]) {
                     this.peakLevels[deck] = level;
                     this.lastPeakTime[deck] = Date.now();
                 } else if (Date.now() - this.lastPeakTime[deck] > this.peakHoldTime) {
-                    this.peakLevels[deck] *= 0.85;
+                    // Faster decay rate
+                    this.peakLevels[deck] = Math.max(level, this.peakLevels[deck] * 0.85);
                 }
             });
 
-            // Update master levels from master analyzer (post-fader)
-            this.masterAnalyzer.getByteTimeDomainData(this.masterLevelData);
+            // Master levels
+            const masterLevelData = new Float32Array(this.masterAnalyzer.frequencyBinCount);
+            this.masterAnalyzer.getFloatTimeDomainData(masterLevelData);
             let masterSum = 0;
             let masterPeak = 0;
-            for (let i = 0; i < this.masterLevelData.length; i++) {
-                const sample = Math.abs((this.masterLevelData[i] - 128) / 128);
+            
+            for (let i = 0; i < masterLevelData.length; i++) {
+                const sample = Math.abs(masterLevelData[i]);
                 masterSum += sample * sample;
                 masterPeak = Math.max(masterPeak, sample);
             }
-            const masterRms = Math.sqrt(masterSum / this.masterLevelData.length);
-            const masterDb = 20 * Math.log10(Math.max(masterRms, 0.00001));
-            const masterLevel = Math.max(0, Math.min(100, (masterDb + 50) * (100/50)));
+            
+            const masterRms = Math.sqrt(masterSum / masterLevelData.length);
+            // Use same scaling as channel meters
+            const masterRmsLevel = masterRms * 40;
+            const masterPeakLevel = masterPeak * 40;
+            
+            // Use same blend ratio and clamping as channel meters
+            const masterLevel = Math.min((masterRmsLevel * 0.05) + (masterPeakLevel * 0.95), 100);
 
             if (masterLevel > this.masterPeakLevel) {
                 this.masterPeakLevel = masterLevel;
                 this.lastMasterPeakTime = Date.now();
             } else if (Date.now() - this.lastMasterPeakTime > this.peakHoldTime) {
-                this.masterPeakLevel *= 0.85;
+                // Use same decay rate as channel meters
+                this.masterPeakLevel = Math.max(masterLevel, this.masterPeakLevel * 0.85);
             }
 
             requestAnimationFrame(updateLevels);
@@ -843,7 +862,12 @@ class AudioProcessor {
 
     setTrimGain(deck, value) {
         if (!this.trimNodes[deck]) return;
-        this.trimNodes[deck].gain.setTargetAtTime(value, this.audioContext.currentTime, 0.01);
+        // Convert 0-100 UI value to dB range (-20 to +5)
+        const db = this.trimRange.min + (value / 100) * (this.trimRange.max - this.trimRange.min);
+        // Convert dB to gain value
+        const gain = Math.pow(10, db / 20);
+        this.trimNodes[deck].gain.setTargetAtTime(gain, this.audioContext.currentTime, 0.01);
+        return db;  // Return dB value for UI display
     }
 
     setCrossfaderCurve(curve) {
