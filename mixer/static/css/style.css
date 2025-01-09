@@ -1171,4 +1171,90 @@ canvas {
     min-width: 50px;
     text-align: right;
     font-family: monospace;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+    .app-container {
+        padding: 10px;
+        height: auto;
+    }
+
+    .container {
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    /* Force specific order of sections */
+    .header-section {
+        order: 1;
+        width: 100%;
+    }
+
+    .track-list {
+        order: 2;
+        width: 100%;
+        height: 200px;
+        overflow-y: auto;
+    }
+
+    .waveform-section {
+        order: 3;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .waveform-stack {
+        height: 160px;
+        margin: 0;  /* Remove margin-bottom */
+        position: relative;  /* Ensure proper stacking */
+    }
+
+    .meters-section {
+        order: 4;
+        width: 100%;
+        height: auto;
+        padding: 10px;
+        margin-top: 20px;  /* Add space after decks */
+    }
+
+    .mixer-section {
+        order: 5;
+        width: 100%;
+        flex-direction: column;
+        padding: 10px;
+    }
+
+    .channel {
+        width: 100%;
+        margin-bottom: 20px;  /* Space between channels */
+    }
+
+    /* Ensure all sections take full width */
+    .main-section {
+        flex-direction: column;
+        width: 100%;
+        height: auto;
+        gap: 20px;
+    }
+
+    /* Basic spacing and size adjustments */
+    .header-section {
+        padding: 12px;
+    }
+
+    #add-tracks, #save-tracks {
+        padding: 8px 12px;
+    }
+
+    /* Ensure transport controls don't overlap */
+    .transport-controls {
+        position: relative;
+        z-index: 1;
+        margin-top: 10px;
+    }
 } 
