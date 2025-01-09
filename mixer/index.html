@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mixer - loum.io</title>
+    <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+   
+    <div class="app-container">
+        <div class="container">
+            <div class="header-section">
+                <a href="/" class="home-link">loum.io</a>
+                <h1>Mixer</h1>
+                <input type="range" class="master-gain-slider" id="master-gain" min="0" max="127" value="127">
+            </div>
+            <div class="main-section">
+                <div class="track-list">
+                    <div class="track-list-header">
+                        <span>Collection</span>
+                        <div class="track-list-controls">
+                            <button id="save-tracks">Save</button>
+                            <button id="add-tracks">Add Tracks</button>
+                            <input type="file" id="track-file-input" accept="audio/*" multiple class="file-input">
+                            <input type="file" id="collection-file-input" accept=".json" class="file-input">
+                        </div>
+                    </div>
+                    <div class="track-list-columns">
+                        <div class="track-column">Title</div>
+                        <div class="track-column">BPM</div>
+                        <div class="track-column">Time</div>
+                    </div>
+                    <div class="track-list-content" id="track-list"></div>
+                </div>
+
+                <div class="waveform-section">
+                    <div class="waveform-stack">
+                        <div class="deck-info">
+                            <span class="deck-label">Deck A</span>
+                            <div class="bpm-display">
+                                <span id="bpm-a" class="bpm-value">0.0</span>
+                                <span class="bpm-label">BPM</span>
+                            </div>
+                            <div class="time-display">
+                                <span id="time-a">00:00</span>
+                                <span id="remaining-a" class="time-remaining">-00:00</span>
+                            </div>
+                        </div>
+                        <div id="deck-a" class="waveform-container">
+                            <button id="clear-deck-a" class="clear-deck-button">×</button>
+                            <div id="playhead-a" class="playhead"></div>
+                            <div class="seek-indicator"></div>
+                        </div>
+                        <div class="transport-controls">
+                            <button id="cue-a" class="cue-btn">Cue</button>
+                            <button id="play-a" class="play-btn">Play</button>
+                            <button id="pause-a" class="pause-btn">Pause</button>
+                            <button id="stop-a" class="stop-btn">Stop</button>
+                            <button id="loop-a" class="loop-btn">Loop In</button>
+                            <div class="tempo-controls">
+                                <button id="tempo-minus-a" class="tempo-btn">-</button>
+                                <span id="tempo-value-a" class="tempo-value">100%</span>
+                                <button id="tempo-plus-a" class="tempo-btn">+</button>
+                                <button id="reset-a" class="tempo-btn">R</button>
+                                <button id="pitch-down-a" class="tempo-btn">↓</button>
+                                <button id="pitch-up-a" class="tempo-btn">↑</button>
+                                <button id="sync-a" class="tempo-btn sync-btn">SYNC</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="waveform-stack">
+                        <div class="deck-info">
+                            <span class="deck-label">Deck B</span>
+                            <div class="bpm-display">
+                                <span id="bpm-b" class="bpm-value">0.0</span>
+                                <span class="bpm-label">BPM</span>
+                            </div>
+                            <div class="time-display">
+                                <span id="time-b">00:00</span>
+                                <span id="remaining-b" class="time-remaining">-00:00</span>
+                            </div>
+                        </div>
+                        <div id="deck-b" class="waveform-container">
+                            <button id="clear-deck-b" class="clear-deck-button">×</button>
+                            <div id="playhead-b" class="playhead"></div>
+                            <div class="seek-indicator"></div>
+                        </div>
+                        <div class="transport-controls">
+                            <button id="cue-b" class="cue-btn">Cue</button>
+                            <button id="play-b" class="play-btn">Play</button>
+                            <button id="pause-b" class="pause-btn">Pause</button>
+                            <button id="stop-b" class="stop-btn">Stop</button>
+                            <button id="loop-b" class="loop-btn">Loop In</button>
+                            <div class="tempo-controls">
+                                <button id="tempo-minus-b" class="tempo-btn">-</button>
+                                <span id="tempo-value-b" class="tempo-value">100%</span>
+                                <button id="tempo-plus-b" class="tempo-btn">+</button>
+                                <button id="reset-b" class="tempo-btn">R</button>
+                                <button id="pitch-down-b" class="tempo-btn">↓</button>
+                                <button id="pitch-up-b" class="tempo-btn">↑</button>
+                                <button id="sync-b" class="tempo-btn sync-btn">SYNC</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mixer-section">
+                <div class="channel" id="channel-a">
+                    <div class="channel-strip">
+                        <div class="controls-section">
+                            <div class="trim-control">
+                                <div class="dial-container">
+                                    <div class="dial" id="trim-a">
+                                        <div class="dial-knob"></div>
+                                        <div class="dial-value">0</div>
+                                    </div>
+                                    <label>TRIM</label>
+                                </div>
+                            </div>
+                            <div class="eq-section">
+                                <div class="eq-control">
+                                    <div class="dial-container">
+                                        <div class="dial" id="high-a">
+                                            <div class="dial-knob"></div>
+                                            <div class="dial-value">0</div>
+                                        </div>
+                                        <label>HI</label>
+                                    </div>
+                                </div>
+                                <div class="eq-control">
+                                    <div class="dial-container">
+                                        <div class="dial" id="mid-a">
+                                            <div class="dial-knob"></div>
+                                            <div class="dial-value">0</div>
+                                        </div>
+                                        <label>MID</label>
+                                    </div>
+                                </div>
+                                <div class="eq-control">
+                                    <div class="dial-container">
+                                        <div class="dial" id="low-a">
+                                            <div class="dial-knob"></div>
+                                            <div class="dial-value">0</div>
+                                        </div>
+                                        <label>LOW</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="channel-fader">
+                            <input type="range" class="fader" id="fader-a" min="0" max="127" value="0" orient="vertical">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mixer-controls">
+                    <div class="meters-section">
+                        <div class="channel-meters">
+                            <div class="led-meter" id="meter-a-l"></div>
+                            <div class="led-meter" id="meter-a-r"></div>
+                        </div>
+                        <div class="master-meters">
+                            <div class="led-meter" id="meter-master-l"></div>
+                            <div class="led-meter" id="meter-master-r"></div>
+                        </div>
+                        <div class="channel-meters">
+                            <div class="led-meter" id="meter-b-l"></div>
+                            <div class="led-meter" id="meter-b-r"></div>
+                        </div>
+                    </div>
+                    <div class="crossfader-section">
+                        <input type="range" id="crossfader" min="0" max="100" value="50">
+                        <div class="crossfader-value" id="crossfader-value">C</div>
+                        <div class="crossfader-curve">
+                            <select id="crossfader-curve">
+                                <option value="linear">Linear</option>
+                                <option value="slow">Smooth</option>
+                                <option value="fast">Quick</option>
+                                <option value="cut">Cut</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="channel" id="channel-b">
+                    <div class="channel-strip">
+                        <div class="channel-fader">
+                            <input type="range" class="fader" id="fader-b" min="0" max="127" value="0" orient="vertical">
+                        </div>
+                        <div class="controls-section">
+                            <div class="trim-control">
+                                <div class="dial-container">
+                                    <div class="dial" id="trim-b">
+                                        <div class="dial-knob"></div>
+                                        <div class="dial-value">0</div>
+                                    </div>
+                                    <label>TRIM</label>
+                                </div>
+                            </div>
+                            <div class="eq-section">
+                                <div class="eq-control">
+                                    <div class="dial-container">
+                                        <div class="dial" id="high-b">
+                                            <div class="dial-knob"></div>
+                                            <div class="dial-value">0</div>
+                                        </div>
+                                        <label>HI</label>
+                                    </div>
+                                </div>
+                                <div class="eq-control">
+                                    <div class="dial-container">
+                                        <div class="dial" id="mid-b">
+                                            <div class="dial-knob"></div>
+                                            <div class="dial-value">0</div>
+                                        </div>
+                                        <label>MID</label>
+                                    </div>
+                                </div>
+                                <div class="eq-control">
+                                    <div class="dial-container">
+                                        <div class="dial" id="low-b">
+                                            <div class="dial-knob"></div>
+                                            <div class="dial-value">0</div>
+                                        </div>
+                                        <label>LOW</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="static/js/audioProcessor.js"></script>
+    <script src="static/js/waveform.js"></script>
+    <script src="static/js/main.js"></script>
+</body>
+</html> 
