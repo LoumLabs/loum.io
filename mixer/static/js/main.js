@@ -8,6 +8,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Track collection
     let tracks = [];
 
+    // Deck state variables
+    const deckState = {
+        a: { isPlaying: false, isPaused: false },
+        b: { isPlaying: false, isPaused: false }
+    };
+
     // Dial control handler
     const handleDial = (element, onChange) => {
         if (!element) return { setValue: () => {} };
@@ -504,13 +510,18 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Reset UI state when loading new track
             const deckControls = {
-                play: document.getElementById(`play-${deck}`),
-                pause: document.getElementById(`pause-${deck}`),
+                playPause: document.getElementById(`play-pause-${deck}`),
                 stop: document.getElementById(`stop-${deck}`),
                 tempo: document.getElementById(`tempo-value-${deck}`),
                 bpm: document.getElementById(`bpm-${deck}`),
                 playhead: document.getElementById(`playhead-${deck}`),
                 loop: document.getElementById(`loop-${deck}`)
+            };
+
+            // Initialize deck state
+            deckState[deck] = {
+                isPlaying: false,
+                isPaused: false
             };
 
             // Update track name in deck info
@@ -525,11 +536,8 @@ document.addEventListener('DOMContentLoaded', () => {
             trackNameElement.textContent = track.title;
 
             // Reset transport button states
-            deckControls.play.classList.remove('active');
-            deckControls.pause.classList.remove('active');
-            deckControls.play.disabled = false;
-            deckControls.pause.disabled = false;
-            deckControls.stop.disabled = false;
+            deckControls.playPause.classList.remove('active');
+            deckControls.playPause.textContent = 'Play';
             
             // Reset tempo and BPM display
             deckControls.tempo.textContent = '100%';
@@ -589,8 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Deck handlers
     ['a', 'b'].forEach(deck => {
         const container = document.getElementById(`deck-${deck}`);
-        const playButton = document.getElementById(`play-${deck}`);
-        const pauseButton = document.getElementById(`pause-${deck}`);
+        const playPauseButton = document.getElementById(`play-pause-${deck}`);
         const stopButton = document.getElementById(`stop-${deck}`);
         const cueButton = document.getElementById(`cue-${deck}`);
         const loopButton = document.getElementById(`loop-${deck}`);
@@ -602,12 +609,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const syncButton = document.getElementById(`sync-${deck}`);
         const pitchUpBtn = document.getElementById(`pitch-up-${deck}`);
         const pitchDownBtn = document.getElementById(`pitch-down-${deck}`);
-        let isPlaying = false;
-        let isPaused = false;
         let seekPosition = 0;
         let tempo = 100;
         let originalBPM = 0;
-        let isKeyboardCue = false;  // Add flag for keyboard cue
+        let isKeyboardCue = false;
 
         // Make these variables accessible to the loadTrackToDeck function
         window[`tempo_${deck}`] = tempo;
@@ -701,13 +706,6 @@ document.addEventListener('DOMContentLoaded', () => {
             audioProcessor.resetPitch(deck);
         });
 
-        // Enable/disable transport buttons when track is loaded
-        const updateButtonStates = (hasTrack) => {
-            playButton.disabled = !hasTrack;
-            pauseButton.disabled = !hasTrack;
-            stopButton.disabled = !hasTrack;
-        };
-
         // Waveform seeking
         if (container) {
             container.addEventListener('mousedown', (e) => {
@@ -720,31 +718,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (audioProcessor.buffers[deck]) {
                     // Store current play state
-                    const wasPlaying = isPlaying;
+                    const wasPlaying = deckState[deck].isPlaying;
                     
-                    // Stop any current playback
-                    if (audioProcessor.sources[deck]) {
-                        audioProcessor.stop(deck);
-                        audioProcessor.sources[deck] = null;
-                    }
+                    // Update pause position first
+                    audioProcessor.pausePosition[deck] = position * audioProcessor.buffers[deck].duration;
                     
-                    // Store seek position
-                    seekPosition = position;
-                    
-                    // Only start playback if it was already playing
-                    audioProcessor.seekTo(deck, position, wasPlaying);
-                    
-                    // Update button states based on previous state
                     if (wasPlaying) {
-                        isPlaying = true;
-                        isPaused = false;
-                        playButton.classList.add('active');
+                        // If playing, seek with immediate playback
+                        audioProcessor.seekTo(deck, position, true);
+                        deckState[deck].isPlaying = true;
+                        deckState[deck].isPaused = false;
+                        playPauseButton.classList.add('active');
+                        playPauseButton.textContent = 'Pause';
                     } else {
-                        isPlaying = false;
-                        isPaused = true;
-                        playButton.classList.remove('active');
-                        // Update pause position in audio processor
-                        audioProcessor.pausePosition[deck] = position * audioProcessor.buffers[deck].duration;
+                        // If not playing, just update position
+                        audioProcessor.seekTo(deck, position, false);
+                        deckState[deck].isPlaying = false;
+                        deckState[deck].isPaused = true;
+                        playPauseButton.classList.remove('active');
+                        playPauseButton.textContent = 'Play';
                     }
                 }
             });
@@ -805,7 +797,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     loopState = 'active';
                     
                     // If we're not playing, set the pause position to loop start
-                    if (!isPlaying) {
+                    if (!deckState[deck].isPlaying) {
                         audioProcessor.pausePosition[deck] = audioProcessor.loopPoints[deck].start;
                     }
                     break;
@@ -825,55 +817,37 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Handle play button
-        playButton.addEventListener('click', async () => {
+        // Handle play/pause button
+        playPauseButton.addEventListener('click', async () => {
             if (!audioProcessor.buffers[deck]) return;
 
             try {
-                // If we have an active loop and we're not playing, start from loop start
-                if (loopState === 'active' && !isPlaying) {
-                    audioProcessor.startTime[deck] = audioProcessor.audioContext.currentTime;
-                    audioProcessor.pausePosition[deck] = audioProcessor.loopPoints[deck].start;
-                }
-                
-                await audioProcessor.play(deck);
-                isPlaying = true;
-                isPaused = false;
-                playButton.classList.add('active');
-                pauseButton.classList.remove('active');
-                // Enable pause and stop buttons
-                pauseButton.disabled = false;
-                stopButton.disabled = false;
-            } catch (error) {
-                console.error('Error playing track:', error);
-                // Reset state on error
-                isPlaying = false;
-                isPaused = false;
-                playButton.classList.remove('active');
-            }
-        });
-
-        // Handle pause button
-        pauseButton.addEventListener('click', () => {
-            if (!audioProcessor.buffers[deck]) return;
-
-            if (isPlaying) {
-                try {
+                if (!playPauseButton.classList.contains('active')) {
+                    // If we have an active loop and we're not playing, start from loop start
+                    if (loopState === 'active' && !deckState[deck].isPlaying) {
+                        audioProcessor.startTime[deck] = audioProcessor.audioContext.currentTime;
+                        audioProcessor.pausePosition[deck] = audioProcessor.loopPoints[deck].start;
+                    }
+                    
+                    await audioProcessor.play(deck);
+                    deckState[deck].isPlaying = true;
+                    deckState[deck].isPaused = false;
+                    playPauseButton.classList.add('active');
+                    playPauseButton.textContent = 'Pause';
+                } else {
                     audioProcessor.pause(deck);
-                    isPlaying = false;
-                    isPaused = true;
-                    playButton.classList.remove('active');
-                    pauseButton.classList.add('active');
-                    // Keep stop button enabled
-                    stopButton.disabled = false;
-                } catch (error) {
-                    console.error('Error pausing track:', error);
-                    // Reset state on error
-                    isPlaying = false;
-                    isPaused = false;
-                    playButton.classList.remove('active');
-                    pauseButton.classList.remove('active');
+                    deckState[deck].isPlaying = false;
+                    deckState[deck].isPaused = true;
+                    playPauseButton.classList.remove('active');
+                    playPauseButton.textContent = 'Play';
                 }
+            } catch (error) {
+                console.error('Error playing/pausing track:', error);
+                // Reset state on error
+                deckState[deck].isPlaying = false;
+                deckState[deck].isPaused = false;
+                playPauseButton.classList.remove('active');
+                playPauseButton.textContent = 'Play';
             }
         });
 
@@ -883,25 +857,37 @@ document.addEventListener('DOMContentLoaded', () => {
             
             stopButton.classList.add('active');
             audioProcessor.stop(deck);
-            isPlaying = false;
-            isPaused = false;
-            seekPosition = 0;
-            playButton.classList.remove('active');
-            pauseButton.classList.remove('active');
+            deckState[deck].isPlaying = false;
+            deckState[deck].isPaused = false;
+            playPauseButton.classList.remove('active');
+            playPauseButton.textContent = 'Play';
             
-            // Force playhead to start position
+            // Force playhead to appropriate position
             const playhead = document.getElementById(`playhead-${deck}`);
-            playhead.style.left = '0%';
-
-            // If we have an active loop, set pause position to loop start
+            
+            // If we have an active loop
             if (loopState === 'active') {
-                audioProcessor.pausePosition[deck] = audioProcessor.loopPoints[deck].start;
+                // If we're already stopped at loop start, clear the loop
+                if (Math.abs(audioProcessor.pausePosition[deck] - audioProcessor.loopPoints[deck].start) < 0.01) {
+                    // Reset loop UI state
+                    loopState = 'in';
+                    loopButton.textContent = 'Loop In';
+                    loopButton.classList.remove('active');
+                    waveforms[deck].clearLoop();
+                    audioProcessor.clearLoop(deck);
+                    // Reset to track start
+                    audioProcessor.pausePosition[deck] = 0;
+                    playhead.style.left = '0%';
+                } else {
+                    // First stop: move to loop start
+                    audioProcessor.pausePosition[deck] = audioProcessor.loopPoints[deck].start;
+                    const loopStartPercent = (audioProcessor.loopPoints[deck].start / audioProcessor.buffers[deck].duration) * 100;
+                    playhead.style.left = `${loopStartPercent}%`;
+                }
             } else {
-                // Reset loop UI state
-                loopState = 'in';
-                loopButton.textContent = 'Loop In';
-                loopButton.classList.remove('active');
-                waveforms[deck].clearLoop();
+                // No loop: reset to track start
+                audioProcessor.pausePosition[deck] = 0;
+                playhead.style.left = '0%';
             }
 
             // Remove active class after a short delay
@@ -950,14 +936,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!audioProcessor.buffers[deck]) return;
             if (window[`isKeyboardCue_${deck}`]) return;  // Use global flag
 
-            if (!isPlaying) {
+            if (!deckState[deck].isPlaying) {
                 audioProcessor.cue(deck);
                 cueButton.classList.add('active');
             } else {
                 audioProcessor.cue(deck);
-                isPlaying = false;
-                isPaused = false;
-                playButton.classList.remove('active');
+                deckState[deck].isPlaying = false;
+                deckState[deck].isPaused = true;
+                playPauseButton.classList.remove('active');
             }
         });
 
@@ -975,7 +961,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!audioProcessor.buffers[deck]) return;
             if (window[`isKeyboardCue_${deck}`]) return;  // Use global flag
             
-            if (audioProcessor.sources[deck]?._isCuePreview && !window[`isKeyboardCue_${deck}`]) {
+            // Only release cue if we're in cue preview mode and not playing normally
+            if (audioProcessor.sources[deck]?._isCuePreview && !deckState[deck].isPlaying) {
                 audioProcessor.releaseCue(deck);
                 cueButton.classList.remove('active');
             }
@@ -1162,13 +1149,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Reset transport button states
-            const playButton = document.getElementById(`play-${deck}`);
-            const pauseButton = document.getElementById(`pause-${deck}`);
+            const playPauseButton = document.getElementById(`play-pause-${deck}`);
             const stopButton = document.getElementById(`stop-${deck}`);
             const loopButton = document.getElementById(`loop-${deck}`);
             
-            playButton.classList.remove('active');
-            pauseButton.classList.remove('active');
+            playPauseButton.classList.remove('active');
             
             // Reset loop state if exists
             if (loopButton) {
@@ -1404,61 +1389,76 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.isKeyboardCue_a = true;  // Set keyboard flag
                 cueA.classList.add('active');
                 if (audioProcessor.buffers.a) {
-                    const deckAPlaying = document.getElementById('play-a').classList.contains('active');
+                    const playPauseABtn = document.getElementById('play-pause-a');
+                    const isPlaying = playPauseABtn.classList.contains('active');
                     audioProcessor.cue('a');
-                    if (deckAPlaying) {
-                        document.getElementById('play-a').classList.remove('active');
+                    if (isPlaying) {
+                        playPauseABtn.classList.remove('active');
+                        playPauseABtn.textContent = 'Play';
+                        deckState.a.isPlaying = false;
+                        deckState.a.isPaused = true;
                     }
                 }
                 break;
             case 's':
-                const deckA = document.getElementById('play-a');
+                const playPauseA = document.getElementById('play-pause-a');
                 const cueAButton = document.getElementById('cue-a');
-                const pauseAButton = document.getElementById('pause-a');
                 // If cue is being held down, just mark as playing and let cue release handle the transition
                 if (cueAButton.classList.contains('active')) {
-                    deckA.classList.add('active');
-                    // Don't call play() here - let the cue release handle it
+                    playPauseA.classList.add('active');
+                    playPauseA.textContent = 'Pause';
                 } else {
-                    // Direct control of play/pause state
-                    if (!deckA.classList.contains('active')) {
+                    // Toggle play/pause
+                    if (!playPauseA.classList.contains('active')) {
                         audioProcessor.play('a');
-                        deckA.classList.add('active');
-                        pauseAButton.classList.remove('active');
+                        playPauseA.classList.add('active');
+                        playPauseA.textContent = 'Pause';
+                        deckState.a.isPlaying = true;
+                        deckState.a.isPaused = false;
                     } else {
                         audioProcessor.pause('a');
-                        deckA.classList.remove('active');
-                        pauseAButton.classList.add('active');
+                        playPauseA.classList.remove('active');
+                        playPauseA.textContent = 'Play';
+                        deckState.a.isPlaying = false;
+                        deckState.a.isPaused = true;
                     }
                 }
                 break;
             case 'd':
                 const stopA = document.getElementById('stop-a');
-                const playA = document.getElementById('play-a');
-                const pauseA = document.getElementById('pause-a');
-                // If playing, first pause
-                if (playA.classList.contains('active')) {
-                    audioProcessor.pause('a');
-                    playA.classList.remove('active');
-                    pauseA.classList.add('active');
-                } else if (pauseA.classList.contains('active')) {
-                    // If paused, then stop
-                    audioProcessor.stop('a');
-                    pauseA.classList.remove('active');
-                    // Visual feedback
-                    stopA.classList.add('active');
-                    setTimeout(() => stopA.classList.remove('active'), 100);
-                    // Reset playhead
-                    const playheadA = document.getElementById('playhead-a');
-                    playheadA.style.left = '0%';
+                const playPauseABtn = document.getElementById('play-pause-a');
+                const loopABtn = document.getElementById('loop-a');
+                const deckAContainer = document.getElementById('deck-a');
+                // Stop immediately
+                audioProcessor.stop('a');
+                playPauseABtn.classList.remove('active');
+                playPauseABtn.textContent = 'Play';
+                // Visual feedback
+                stopA.classList.add('active');
+                setTimeout(() => stopA.classList.remove('active'), 100);
+                // Handle loop state
+                const loopStateA = loopABtn.textContent === 'Loop' ? 'active' : 'in';
+                const playheadA = document.getElementById('playhead-a');
+                if (loopStateA === 'active') {
+                    // If we're already at loop start, clear the loop
+                    if (Math.abs(audioProcessor.pausePosition.a - audioProcessor.loopPoints.a?.start) < 0.01) {
+                        // Reset loop UI state
+                        loopABtn.textContent = 'Loop In';
+                        loopABtn.classList.remove('active');
+                        waveforms.a.clearLoop();
+                        audioProcessor.clearLoop('a');
+                        // Reset to track start
+                        audioProcessor.pausePosition.a = 0;
+                        playheadA.style.left = '0%';
+                    } else {
+                        // First stop: move to loop start
+                        audioProcessor.pausePosition.a = audioProcessor.loopPoints.a.start;
+                        const loopStartPercent = (audioProcessor.loopPoints.a.start / audioProcessor.buffers.a.duration) * 100;
+                        playheadA.style.left = `${loopStartPercent}%`;
+                    }
                 } else {
-                    // If neither playing nor paused, just stop
-                    audioProcessor.stop('a');
-                    // Visual feedback
-                    stopA.classList.add('active');
-                    setTimeout(() => stopA.classList.remove('active'), 100);
-                    // Reset playhead
-                    const playheadA = document.getElementById('playhead-a');
+                    // No loop: reset to track start
+                    audioProcessor.pausePosition.a = 0;
                     playheadA.style.left = '0%';
                 }
                 break;
@@ -1477,61 +1477,76 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.isKeyboardCue_b = true;  // Set keyboard flag
                 cueB.classList.add('active');
                 if (audioProcessor.buffers.b) {
-                    const deckBPlaying = document.getElementById('play-b').classList.contains('active');
+                    const playPauseBBtn = document.getElementById('play-pause-b');
+                    const isPlaying = playPauseBBtn.classList.contains('active');
                     audioProcessor.cue('b');
-                    if (deckBPlaying) {
-                        document.getElementById('play-b').classList.remove('active');
+                    if (isPlaying) {
+                        playPauseBBtn.classList.remove('active');
+                        playPauseBBtn.textContent = 'Play';
+                        deckState.b.isPlaying = false;
+                        deckState.b.isPaused = true;
                     }
                 }
                 break;
             case 'n':
-                const deckB = document.getElementById('play-b');
+                const playPauseB = document.getElementById('play-pause-b');
                 const cueBButton = document.getElementById('cue-b');
-                const pauseBButton = document.getElementById('pause-b');
                 // If cue is being held down, just mark as playing and let cue release handle the transition
                 if (cueBButton.classList.contains('active')) {
-                    deckB.classList.add('active');
-                    // Don't call play() here - let the cue release handle it
+                    playPauseB.classList.add('active');
+                    playPauseB.textContent = 'Pause';
                 } else {
-                    // Direct control of play/pause state
-                    if (!deckB.classList.contains('active')) {
+                    // Toggle play/pause
+                    if (!playPauseB.classList.contains('active')) {
                         audioProcessor.play('b');
-                        deckB.classList.add('active');
-                        pauseBButton.classList.remove('active');
+                        playPauseB.classList.add('active');
+                        playPauseB.textContent = 'Pause';
+                        deckState.b.isPlaying = true;
+                        deckState.b.isPaused = false;
                     } else {
                         audioProcessor.pause('b');
-                        deckB.classList.remove('active');
-                        pauseBButton.classList.add('active');
+                        playPauseB.classList.remove('active');
+                        playPauseB.textContent = 'Play';
+                        deckState.b.isPlaying = false;
+                        deckState.b.isPaused = true;
                     }
                 }
                 break;
             case 'm':
                 const stopB = document.getElementById('stop-b');
-                const playB = document.getElementById('play-b');
-                const pauseB = document.getElementById('pause-b');
-                // If playing, first pause
-                if (playB.classList.contains('active')) {
-                    audioProcessor.pause('b');
-                    playB.classList.remove('active');
-                    pauseB.classList.add('active');
-                } else if (pauseB.classList.contains('active')) {
-                    // If paused, then stop
-                    audioProcessor.stop('b');
-                    pauseB.classList.remove('active');
-                    // Visual feedback
-                    stopB.classList.add('active');
-                    setTimeout(() => stopB.classList.remove('active'), 100);
-                    // Reset playhead
-                    const playheadB = document.getElementById('playhead-b');
-                    playheadB.style.left = '0%';
+                const playPauseBBtn = document.getElementById('play-pause-b');
+                const loopBBtn = document.getElementById('loop-b');
+                const deckBContainer = document.getElementById('deck-b');
+                // Stop immediately
+                audioProcessor.stop('b');
+                playPauseBBtn.classList.remove('active');
+                playPauseBBtn.textContent = 'Play';
+                // Visual feedback
+                stopB.classList.add('active');
+                setTimeout(() => stopB.classList.remove('active'), 100);
+                // Handle loop state
+                const loopStateB = loopBBtn.textContent === 'Loop' ? 'active' : 'in';
+                const playheadB = document.getElementById('playhead-b');
+                if (loopStateB === 'active') {
+                    // If we're already at loop start, clear the loop
+                    if (Math.abs(audioProcessor.pausePosition.b - audioProcessor.loopPoints.b?.start) < 0.01) {
+                        // Reset loop UI state
+                        loopBBtn.textContent = 'Loop In';
+                        loopBBtn.classList.remove('active');
+                        waveforms.b.clearLoop();
+                        audioProcessor.clearLoop('b');
+                        // Reset to track start
+                        audioProcessor.pausePosition.b = 0;
+                        playheadB.style.left = '0%';
+                    } else {
+                        // First stop: move to loop start
+                        audioProcessor.pausePosition.b = audioProcessor.loopPoints.b.start;
+                        const loopStartPercent = (audioProcessor.loopPoints.b.start / audioProcessor.buffers.b.duration) * 100;
+                        playheadB.style.left = `${loopStartPercent}%`;
+                    }
                 } else {
-                    // If neither playing nor paused, just stop
-                    audioProcessor.stop('b');
-                    // Visual feedback
-                    stopB.classList.add('active');
-                    setTimeout(() => stopB.classList.remove('active'), 100);
-                    // Reset playhead
-                    const playheadB = document.getElementById('playhead-b');
+                    // No loop: reset to track start
+                    audioProcessor.pausePosition.b = 0;
                     playheadB.style.left = '0%';
                 }
                 break;
@@ -1545,22 +1560,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 pitchUpB.classList.add('active');
                 pitchUpB.dispatchEvent(new MouseEvent('mousedown'));
                 break;
-            case 'e':
-                // Tempo down for deck A
-                document.getElementById('tempo-minus-a').click();
-                break;
-            case 'r':
-                // Tempo up for deck A
-                document.getElementById('tempo-plus-a').click();
-                break;
-            case 'j':
-                // Tempo down for deck B
-                document.getElementById('tempo-minus-b').click();
-                break;
-            case 'k':
-                // Tempo up for deck B
-                document.getElementById('tempo-plus-b').click();
-                break;
         }
     });
 
@@ -1571,16 +1570,19 @@ document.addEventListener('DOMContentLoaded', () => {
         switch (e.key.toLowerCase()) {
             case 'a':
                 const cueA = document.getElementById('cue-a');
-                const playA = document.getElementById('play-a');
+                const playPauseABtn = document.getElementById('play-pause-a');
                 window.isKeyboardCue_a = false;  // Clear keyboard flag
                 cueA.classList.remove('active');
                 if (audioProcessor.buffers.a) {
-                    // If play button is active, just let it continue playing from current position
-                    if (playA.classList.contains('active')) {
-                        // Don't call play() - just let it continue from where it was previewing
+                    // If play button is active, start playing from current position
+                    if (playPauseABtn.classList.contains('active')) {
+                        deckState.a.isPlaying = true;
+                        deckState.a.isPaused = false;
                     } else {
                         // Otherwise release the cue preview
                         audioProcessor.releaseCue('a');
+                        deckState.a.isPlaying = false;
+                        deckState.a.isPaused = true;
                     }
                 }
                 break;
@@ -1596,16 +1598,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'b':
                 const cueB = document.getElementById('cue-b');
-                const playB = document.getElementById('play-b');
+                const playPauseBBtn = document.getElementById('play-pause-b');
                 window.isKeyboardCue_b = false;  // Clear keyboard flag
                 cueB.classList.remove('active');
                 if (audioProcessor.buffers.b) {
-                    // If play button is active, just let it continue playing from current position
-                    if (playB.classList.contains('active')) {
-                        // Don't call play() - just let it continue from where it was previewing
+                    // If play button is active, start playing from current position
+                    if (playPauseBBtn.classList.contains('active')) {
+                        deckState.b.isPlaying = true;
+                        deckState.b.isPaused = false;
                     } else {
                         // Otherwise release the cue preview
                         audioProcessor.releaseCue('b');
+                        deckState.b.isPlaying = false;
+                        deckState.b.isPaused = true;
                     }
                 }
                 break;
