@@ -16,7 +16,7 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            overflow: hidden;
+            overflow-y: auto;
             transform: translateY(-7vh);
         }
 
@@ -78,20 +78,23 @@
 
         @media (max-width: 768px) {
             body {
-                padding: 40px 30px;
+                padding: 40px 20px;
                 transform: none;
                 justify-content: flex-start;
+                min-height: auto;
+                height: auto;
             }
             
             .app-grid {
                 grid-template-columns: 1fr;
                 gap: 15px;
                 padding: 0;
+                margin-bottom: 40px;
             }
             
             .site-title {
                 font-size: 20px;
-                margin-bottom: 40px;
+                margin: 20px 0 40px 0;
             }
         }
     </style>
