@@ -1,30 +1,71 @@
-// Ensure DOM is fully loaded before running any code
-document.addEventListener('DOMContentLoaded', () => {
-    // Wait a small amount of time to ensure all elements are ready
-    setTimeout(() => {
-        console.log('Initializing mixer...');
-        
-        // Debug: log which elements are missing
-        ['a', 'b'].forEach(deck => {
-            const elements = {
-                container: document.getElementById(`deck-${deck}`),
-                playPauseButton: document.getElementById(`play-pause-${deck}`),
-                stopButton: document.getElementById(`stop-${deck}`),
-                cueButton: document.getElementById(`cue-${deck}`),
-                loopButton: document.getElementById(`loop-${deck}`)
-            };
-            
-            // Log which elements are missing
-            Object.entries(elements).forEach(([name, element]) => {
-                if (!element) {
-                    console.warn(`Missing element: ${name} for deck ${deck}`);
-                }
-            });
-        });
+// Function to check if all required elements are present
+function checkRequiredElements() {
+    const requiredElements = {};
+    let missingElements = [];
 
-        // Initialize the mixer
-        initializeMixer();
-    }, 100); // Small delay to ensure DOM is ready
+    // Check deck elements
+    ['a', 'b'].forEach(deck => {
+        requiredElements[`deck-${deck}`] = {
+            container: document.getElementById(`deck-${deck}`),
+            playPauseButton: document.getElementById(`play-pause-${deck}`),
+            stopButton: document.getElementById(`stop-${deck}`),
+            cueButton: document.getElementById(`cue-${deck}`),
+            loopButton: document.getElementById(`loop-${deck}`),
+            tempoMinus: document.getElementById(`tempo-minus-${deck}`),
+            tempoPlus: document.getElementById(`tempo-plus-${deck}`),
+            tempoValue: document.getElementById(`tempo-value-${deck}`),
+            resetButton: document.getElementById(`reset-${deck}`),
+            syncButton: document.getElementById(`sync-${deck}`),
+            pitchUpBtn: document.getElementById(`pitch-up-${deck}`),
+            pitchDownBtn: document.getElementById(`pitch-down-${deck}`),
+            bpmDisplay: document.getElementById(`bpm-${deck}`),
+            playhead: document.getElementById(`playhead-${deck}`)
+        };
+
+        // Check which elements are missing
+        Object.entries(requiredElements[`deck-${deck}`]).forEach(([name, element]) => {
+            if (!element) {
+                missingElements.push(`${name} for deck ${deck}`);
+            }
+        });
+    });
+
+    // Check mixer elements
+    const mixerElements = {
+        crossfader: document.getElementById('crossfader'),
+        crossfaderValue: document.getElementById('crossfader-value'),
+        crossfaderCurve: document.getElementById('crossfader-curve'),
+        addTracks: document.getElementById('add-tracks'),
+        trackFileInput: document.getElementById('track-file-input')
+    };
+
+    Object.entries(mixerElements).forEach(([name, element]) => {
+        if (!element) {
+            missingElements.push(name);
+        }
+    });
+
+    return {
+        success: missingElements.length === 0,
+        missingElements,
+        elements: requiredElements
+    };
+}
+
+// Ensure DOM is fully loaded before running any code
+window.addEventListener('load', () => {
+    console.log('Initializing mixer...');
+    
+    // Check for required elements
+    const elementCheck = checkRequiredElements();
+    
+    if (!elementCheck.success) {
+        console.error('Missing required elements:', elementCheck.missingElements);
+        return;
+    }
+
+    // Initialize the mixer
+    initializeMixer();
 });
 
 function initializeMixer() {
@@ -719,30 +760,61 @@ function initializeMixer() {
             }
         });
 
-        // Add pitch bend handlers
+        // Add pitch bend handlers with keyboard state tracking
+        let isKeyboardPitchUp = false;
+        let isKeyboardPitchDown = false;
+
         elements.pitchUpBtn.addEventListener('mousedown', () => {
-            audioProcessor.setPitch(deck, 1.15); // Speed up by 15%
+            if (!audioProcessor.buffers[deck]) return;
+            if (!isKeyboardPitchUp) { // Only set pitch if not already set by keyboard
+                elements.pitchUpBtn._mousePressed = true;
+                audioProcessor.setPitch(deck, 1.15);
+            }
         });
 
         elements.pitchUpBtn.addEventListener('mouseup', () => {
-            audioProcessor.resetPitch(deck);
+            if (!audioProcessor.buffers[deck]) return;
+            if (elements.pitchUpBtn._mousePressed && !isKeyboardPitchUp) {
+                audioProcessor.resetPitch(deck);
+            }
+            elements.pitchUpBtn._mousePressed = false;
         });
 
         elements.pitchUpBtn.addEventListener('mouseleave', () => {
-            audioProcessor.resetPitch(deck);
+            if (!audioProcessor.buffers[deck]) return;
+            if (elements.pitchUpBtn._mousePressed && !isKeyboardPitchUp) {
+                audioProcessor.resetPitch(deck);
+            }
+            elements.pitchUpBtn._mousePressed = false;
         });
 
         elements.pitchDownBtn.addEventListener('mousedown', () => {
-            audioProcessor.setPitch(deck, 0.85); // Slow down by 15%
+            if (!audioProcessor.buffers[deck]) return;
+            if (!isKeyboardPitchDown) { // Only set pitch if not already set by keyboard
+                elements.pitchDownBtn._mousePressed = true;
+                audioProcessor.setPitch(deck, 0.85);
+            }
         });
 
         elements.pitchDownBtn.addEventListener('mouseup', () => {
-            audioProcessor.resetPitch(deck);
+            if (!audioProcessor.buffers[deck]) return;
+            if (elements.pitchDownBtn._mousePressed && !isKeyboardPitchDown) {
+                audioProcessor.resetPitch(deck);
+            }
+            elements.pitchDownBtn._mousePressed = false;
         });
 
         elements.pitchDownBtn.addEventListener('mouseleave', () => {
-            audioProcessor.resetPitch(deck);
+            if (!audioProcessor.buffers[deck]) return;
+            if (elements.pitchDownBtn._mousePressed && !isKeyboardPitchDown) {
+                audioProcessor.resetPitch(deck);
+            }
+            elements.pitchDownBtn._mousePressed = false;
         });
+
+        // Store keyboard state flags in a way accessible to keyboard event handlers
+        window[`isKeyboardPitchUp_${deck}`] = isKeyboardPitchUp;
+        window[`isKeyboardPitchDown_${deck}`] = isKeyboardPitchDown;
 
         // Function to update BPM display based on tempo
         const updateBPMDisplay = () => {
@@ -857,19 +929,71 @@ function initializeMixer() {
             }
         });
 
+        // Handle cue button
+        elements.cueButton.addEventListener('mousedown', () => {
+            if (!audioProcessor.buffers[deck]) return;
+            
+            elements.cueButton.classList.add('active');
+            
+            // Always update play/pause button state when pressing cue
+            elements.playPauseButton.classList.remove('active');
+            elements.playPauseButton.textContent = 'Play';
+            deckState[deck].isPlaying = false;
+            deckState[deck].isPaused = true;
+            
+            audioProcessor.cue(deck);
+            elements.cueButton._mousePressed = true; // Track if mouse initiated the cue
+        });
+
+        elements.cueButton.addEventListener('mouseup', () => {
+            if (!audioProcessor.buffers[deck]) return;
+            
+            elements.cueButton.classList.remove('active');
+            if (!isKeyboardCue && elements.cueButton._mousePressed) {
+                audioProcessor.releaseCue(deck);
+                deckState[deck].isPlaying = false;
+                deckState[deck].isPaused = true;
+            }
+            elements.cueButton._mousePressed = false;
+        });
+
+        elements.cueButton.addEventListener('mouseleave', () => {
+            if (!audioProcessor.buffers[deck] || isKeyboardCue) return;
+            
+            elements.cueButton.classList.remove('active');
+            if (elements.cueButton._mousePressed) {
+                audioProcessor.releaseCue(deck);
+                deckState[deck].isPlaying = false;
+                deckState[deck].isPaused = true;
+            }
+            elements.cueButton._mousePressed = false;
+        });
+
         // Handle play/pause button
         elements.playPauseButton.addEventListener('click', async () => {
             if (!audioProcessor.buffers[deck]) return;
 
             try {
                 if (!elements.playPauseButton.classList.contains('active')) {
-                    // If we have an active loop and we're not playing, start from loop start
-                    if (loopState === 'active' && !deckState[deck].isPlaying) {
+                    // Check if we're holding cue
+                    if (elements.cueButton.classList.contains('active')) {
+                        // Continue playback from current preview without re-triggering
+                        if (audioProcessor.sources[deck] && audioProcessor.sources[deck]._isCuePreview) {
+                            audioProcessor.sources[deck]._isCuePreview = false; // Convert preview to normal playback
+                            elements.cueButton.classList.remove('active');
+                            elements.cueButton._mousePressed = false;
+                            isKeyboardCue = false;
+                        }
+                    } else if (loopState === 'active' && !deckState[deck].isPlaying) {
+                        // If we have an active loop and we're not playing, start from loop start
                         audioProcessor.startTime[deck] = audioProcessor.audioContext.currentTime;
                         audioProcessor.pausePosition[deck] = audioProcessor.loopPoints[deck].start;
+                        await audioProcessor.play(deck);
+                    } else {
+                        // Normal play from current position
+                        await audioProcessor.play(deck);
                     }
                     
-                    await audioProcessor.play(deck);
                     deckState[deck].isPlaying = true;
                     deckState[deck].isPaused = false;
                     elements.playPauseButton.classList.add('active');
@@ -932,36 +1056,6 @@ function initializeMixer() {
 
             // Remove active class after a short delay
             setTimeout(() => elements.stopButton.classList.remove('active'), 100);
-        });
-
-        // Handle cue button
-        elements.cueButton.addEventListener('mousedown', () => {
-            if (!audioProcessor.buffers[deck]) return;
-            
-            elements.cueButton.classList.add('active');
-            audioProcessor.cue(deck);
-            deckState[deck].isPlaying = true;
-            deckState[deck].isPaused = false;
-        });
-
-        elements.cueButton.addEventListener('mouseup', () => {
-            if (!audioProcessor.buffers[deck]) return;
-            
-            elements.cueButton.classList.remove('active');
-            if (!isKeyboardCue) {
-                audioProcessor.pause(deck);
-                deckState[deck].isPlaying = false;
-                deckState[deck].isPaused = true;
-            }
-        });
-
-        elements.cueButton.addEventListener('mouseleave', () => {
-            if (!audioProcessor.buffers[deck] || isKeyboardCue) return;
-            
-            elements.cueButton.classList.remove('active');
-            audioProcessor.pause(deck);
-            deckState[deck].isPlaying = false;
-            deckState[deck].isPaused = true;
         });
     });
 
@@ -1366,251 +1460,137 @@ function initializeMixer() {
         });
     }
 
-    // Add keyboard shortcuts
+    // Keyboard event handlers
     document.addEventListener('keydown', (e) => {
-        // Only respond if not typing in an input field
-        if (e.target.tagName === 'INPUT') return;
+        if (e.repeat) return; // Ignore key repeat events
         
         switch (e.key.toLowerCase()) {
+            // Deck A controls
             case 'a':
-                const cueA = document.getElementById('cue-a');
-                window.isKeyboardCue_a = true;  // Set keyboard flag
-                cueA.classList.add('active');
-                if (audioProcessor.buffers.a) {
-                    const playPauseABtn = document.getElementById('play-pause-a');
-                    const isPlaying = playPauseABtn.classList.contains('active');
-                    audioProcessor.cue('a');
-                    if (isPlaying) {
-                        playPauseABtn.classList.remove('active');
-                        playPauseABtn.textContent = 'Play';
-                        deckState.a.isPlaying = false;
-                        deckState.a.isPaused = true;
-                    }
-                }
+                if (!audioProcessor.buffers.a) return;
+                const cueButtonA = document.getElementById('cue-a');
+                const playPauseButtonA = document.getElementById('play-pause-a');
+                
+                // Always update play/pause button state when pressing cue
+                playPauseButtonA.classList.remove('active');
+                playPauseButtonA.textContent = 'Play';
+                deckState.a.isPlaying = false;
+                deckState.a.isPaused = true;
+                
+                cueButtonA.classList.add('active');
+                audioProcessor.cue('a');
+                isKeyboardCue = true;
                 break;
             case 's':
+                if (!audioProcessor.buffers.a) return;
                 const playPauseA = document.getElementById('play-pause-a');
-                const cueAButton = document.getElementById('cue-a');
-                // If cue is being held down, just mark as playing and let cue release handle the transition
-                if (cueAButton.classList.contains('active')) {
-                    playPauseA.classList.add('active');
-                    playPauseA.textContent = 'Pause';
-                } else {
-                    // Toggle play/pause
-                    if (!playPauseA.classList.contains('active')) {
-                        audioProcessor.play('a');
-                        playPauseA.classList.add('active');
-                        playPauseA.textContent = 'Pause';
-                        deckState.a.isPlaying = true;
-                        deckState.a.isPaused = false;
-                    } else {
-                        audioProcessor.pause('a');
-                        playPauseA.classList.remove('active');
-                        playPauseA.textContent = 'Play';
-                        deckState.a.isPlaying = false;
-                        deckState.a.isPaused = true;
-                    }
-                }
+                playPauseA.click();
                 break;
             case 'd':
+                if (!audioProcessor.buffers.a) return;
                 const stopA = document.getElementById('stop-a');
-                const playPauseABtn = document.getElementById('play-pause-a');
-                const loopABtn = document.getElementById('loop-a');
-                const deckAContainer = document.getElementById('deck-a');
-                // Stop immediately
-                audioProcessor.stop('a');
-                playPauseABtn.classList.remove('active');
-                playPauseABtn.textContent = 'Play';
-                // Visual feedback
-                stopA.classList.add('active');
-                setTimeout(() => stopA.classList.remove('active'), 100);
-                // Handle loop state
-                const loopStateA = loopABtn.textContent === 'Loop' ? 'active' : 'in';
-                const playheadA = document.getElementById('playhead-a');
-                if (loopStateA === 'active') {
-                    // If we're already at loop start, clear the loop
-                    if (Math.abs(audioProcessor.pausePosition.a - audioProcessor.loopPoints.a?.start) < 0.01) {
-                        // Reset loop UI state
-                        loopABtn.textContent = 'Loop In';
-                        loopABtn.classList.remove('active');
-                        waveforms.a.clearLoop();
-                        audioProcessor.clearLoop('a');
-                        // Reset to track start
-                        audioProcessor.pausePosition.a = 0;
-                        playheadA.style.left = '0%';
-                    } else {
-                        // First stop: move to loop start
-                        audioProcessor.pausePosition.a = audioProcessor.loopPoints.a.start;
-                        const loopStartPercent = (audioProcessor.loopPoints.a.start / audioProcessor.buffers.a.duration) * 100;
-                        playheadA.style.left = `${loopStartPercent}%`;
-                    }
-                } else {
-                    // No loop: reset to track start
-                    audioProcessor.pausePosition.a = 0;
-                    playheadA.style.left = '0%';
-                }
+                stopA.dispatchEvent(new MouseEvent('mousedown'));
                 break;
             case 'q':
-                const pitchDownA = document.getElementById('pitch-down-a');
-                pitchDownA.classList.add('active');
-                pitchDownA.dispatchEvent(new MouseEvent('mousedown'));
+                const pitchUpA = document.getElementById('pitch-up-a');
+                window.isKeyboardPitchUp_a = true;
+                pitchUpA.classList.add('active');
+                audioProcessor.setPitch('a', 1.15);
                 break;
             case 'w':
-                const pitchUpA = document.getElementById('pitch-up-a');
-                pitchUpA.classList.add('active');
-                pitchUpA.dispatchEvent(new MouseEvent('mousedown'));
+                const pitchDownA = document.getElementById('pitch-down-a');
+                window.isKeyboardPitchDown_a = true;
+                pitchDownA.classList.add('active');
+                audioProcessor.setPitch('a', 0.85);
                 break;
+
+            // Deck B controls
             case 'b':
-                const cueB = document.getElementById('cue-b');
-                window.isKeyboardCue_b = true;  // Set keyboard flag
-                cueB.classList.add('active');
-                if (audioProcessor.buffers.b) {
-                    const playPauseBBtn = document.getElementById('play-pause-b');
-                    const isPlaying = playPauseBBtn.classList.contains('active');
-                    audioProcessor.cue('b');
-                    if (isPlaying) {
-                        playPauseBBtn.classList.remove('active');
-                        playPauseBBtn.textContent = 'Play';
-                        deckState.b.isPlaying = false;
-                        deckState.b.isPaused = true;
-                    }
-                }
+                if (!audioProcessor.buffers.b) return;
+                const cueButtonB = document.getElementById('cue-b');
+                const playPauseButtonB = document.getElementById('play-pause-b');
+                
+                // Always update play/pause button state when pressing cue
+                playPauseButtonB.classList.remove('active');
+                playPauseButtonB.textContent = 'Play';
+                deckState.b.isPlaying = false;
+                deckState.b.isPaused = true;
+                
+                cueButtonB.classList.add('active');
+                audioProcessor.cue('b');
+                isKeyboardCue = true;
                 break;
             case 'n':
+                if (!audioProcessor.buffers.b) return;
                 const playPauseB = document.getElementById('play-pause-b');
-                const cueBButton = document.getElementById('cue-b');
-                // If cue is being held down, just mark as playing and let cue release handle the transition
-                if (cueBButton.classList.contains('active')) {
-                    playPauseB.classList.add('active');
-                    playPauseB.textContent = 'Pause';
-                } else {
-                    // Toggle play/pause
-                    if (!playPauseB.classList.contains('active')) {
-                        audioProcessor.play('b');
-                        playPauseB.classList.add('active');
-                        playPauseB.textContent = 'Pause';
-                        deckState.b.isPlaying = true;
-                        deckState.b.isPaused = false;
-                    } else {
-                        audioProcessor.pause('b');
-                        playPauseB.classList.remove('active');
-                        playPauseB.textContent = 'Play';
-                        deckState.b.isPlaying = false;
-                        deckState.b.isPaused = true;
-                    }
-                }
+                playPauseB.click();
                 break;
             case 'm':
+                if (!audioProcessor.buffers.b) return;
                 const stopB = document.getElementById('stop-b');
-                const playPauseBBtn = document.getElementById('play-pause-b');
-                const loopBBtn = document.getElementById('loop-b');
-                const deckBContainer = document.getElementById('deck-b');
-                // Stop immediately
-                audioProcessor.stop('b');
-                playPauseBBtn.classList.remove('active');
-                playPauseBBtn.textContent = 'Play';
-                // Visual feedback
-                stopB.classList.add('active');
-                setTimeout(() => stopB.classList.remove('active'), 100);
-                // Handle loop state
-                const loopStateB = loopBBtn.textContent === 'Loop' ? 'active' : 'in';
-                const playheadB = document.getElementById('playhead-b');
-                if (loopStateB === 'active') {
-                    // If we're already at loop start, clear the loop
-                    if (Math.abs(audioProcessor.pausePosition.b - audioProcessor.loopPoints.b?.start) < 0.01) {
-                        // Reset loop UI state
-                        loopBBtn.textContent = 'Loop In';
-                        loopBBtn.classList.remove('active');
-                        waveforms.b.clearLoop();
-                        audioProcessor.clearLoop('b');
-                        // Reset to track start
-                        audioProcessor.pausePosition.b = 0;
-                        playheadB.style.left = '0%';
-                    } else {
-                        // First stop: move to loop start
-                        audioProcessor.pausePosition.b = audioProcessor.loopPoints.b.start;
-                        const loopStartPercent = (audioProcessor.loopPoints.b.start / audioProcessor.buffers.b.duration) * 100;
-                        playheadB.style.left = `${loopStartPercent}%`;
-                    }
-                } else {
-                    // No loop: reset to track start
-                    audioProcessor.pausePosition.b = 0;
-                    playheadB.style.left = '0%';
-                }
+                stopB.dispatchEvent(new MouseEvent('mousedown'));
                 break;
             case 'g':
-                const pitchDownB = document.getElementById('pitch-down-b');
-                pitchDownB.classList.add('active');
-                pitchDownB.dispatchEvent(new MouseEvent('mousedown'));
+                const pitchUpB = document.getElementById('pitch-up-b');
+                window.isKeyboardPitchUp_b = true;
+                pitchUpB.classList.add('active');
+                audioProcessor.setPitch('b', 1.15);
                 break;
             case 'h':
-                const pitchUpB = document.getElementById('pitch-up-b');
-                pitchUpB.classList.add('active');
-                pitchUpB.dispatchEvent(new MouseEvent('mousedown'));
+                const pitchDownB = document.getElementById('pitch-down-b');
+                window.isKeyboardPitchDown_b = true;
+                pitchDownB.classList.add('active');
+                audioProcessor.setPitch('b', 0.85);
                 break;
         }
     });
 
     document.addEventListener('keyup', (e) => {
-        // Only respond if not typing in an input field
-        if (e.target.tagName === 'INPUT') return;
-        
         switch (e.key.toLowerCase()) {
+            // Deck A controls
             case 'a':
-                const cueA = document.getElementById('cue-a');
-                const playPauseABtn = document.getElementById('play-pause-a');
-                window.isKeyboardCue_a = false;  // Clear keyboard flag
-                cueA.classList.remove('active');
-                if (audioProcessor.buffers.a) {
-                    // If play button is active, start playing from current position
-                    if (playPauseABtn.classList.contains('active')) {
-                        deckState.a.isPlaying = true;
-                        deckState.a.isPaused = false;
-                    } else {
-                        // Otherwise release the cue preview
-                        audioProcessor.releaseCue('a');
-                        deckState.a.isPlaying = false;
-                        deckState.a.isPaused = true;
-                    }
-                }
+                if (!audioProcessor.buffers.a) return;
+                const cueButtonA = document.getElementById('cue-a');
+                cueButtonA.classList.remove('active');
+                audioProcessor.releaseCue('a');
+                deckState.a.isPlaying = false;
+                deckState.a.isPaused = true;
+                isKeyboardCue = false;
                 break;
             case 'q':
-                const pitchDownA = document.getElementById('pitch-down-a');
-                pitchDownA.classList.remove('active');
-                pitchDownA.dispatchEvent(new MouseEvent('mouseup'));
+                const pitchUpA = document.getElementById('pitch-up-a');
+                window.isKeyboardPitchUp_a = false;
+                pitchUpA.classList.remove('active');
+                audioProcessor.resetPitch('a');
                 break;
             case 'w':
-                const pitchUpA = document.getElementById('pitch-up-a');
-                pitchUpA.classList.remove('active');
-                pitchUpA.dispatchEvent(new MouseEvent('mouseup'));
+                const pitchDownA = document.getElementById('pitch-down-a');
+                window.isKeyboardPitchDown_a = false;
+                pitchDownA.classList.remove('active');
+                audioProcessor.resetPitch('a');
                 break;
+
+            // Deck B controls
             case 'b':
-                const cueB = document.getElementById('cue-b');
-                const playPauseBBtn = document.getElementById('play-pause-b');
-                window.isKeyboardCue_b = false;  // Clear keyboard flag
-                cueB.classList.remove('active');
-                if (audioProcessor.buffers.b) {
-                    // If play button is active, start playing from current position
-                    if (playPauseBBtn.classList.contains('active')) {
-                        deckState.b.isPlaying = true;
-                        deckState.b.isPaused = false;
-                    } else {
-                        // Otherwise release the cue preview
-                        audioProcessor.releaseCue('b');
-                        deckState.b.isPlaying = false;
-                        deckState.b.isPaused = true;
-                    }
-                }
+                if (!audioProcessor.buffers.b) return;
+                const cueButtonB = document.getElementById('cue-b');
+                cueButtonB.classList.remove('active');
+                audioProcessor.releaseCue('b');
+                deckState.b.isPlaying = false;
+                deckState.b.isPaused = true;
+                isKeyboardCue = false;
                 break;
             case 'g':
-                const pitchDownB = document.getElementById('pitch-down-b');
-                pitchDownB.classList.remove('active');
-                pitchDownB.dispatchEvent(new MouseEvent('mouseup'));
+                const pitchUpB = document.getElementById('pitch-up-b');
+                window.isKeyboardPitchUp_b = false;
+                pitchUpB.classList.remove('active');
+                audioProcessor.resetPitch('b');
                 break;
             case 'h':
-                const pitchUpB = document.getElementById('pitch-up-b');
-                pitchUpB.classList.remove('active');
-                pitchUpB.dispatchEvent(new MouseEvent('mouseup'));
+                const pitchDownB = document.getElementById('pitch-down-b');
+                window.isKeyboardPitchDown_b = false;
+                pitchDownB.classList.remove('active');
+                audioProcessor.resetPitch('b');
                 break;
         }
     });

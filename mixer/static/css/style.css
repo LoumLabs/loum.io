@@ -617,7 +617,12 @@ canvas {
     color: white;
 }
 
-.cue-btn:active {
+.cue-btn.active, .cue-btn:active {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.stop-btn.active {
     background-color: #4CAF50;
     color: white;
 }
