@@ -1,65 +1,30 @@
 // Ensure DOM is fully loaded before running any code
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Initializing mixer...');
-    
-    // Create deck elements first
-    ['a', 'b'].forEach(deck => {
-        // Create deck container if it doesn't exist
-        let container = document.getElementById(`deck-${deck}`);
-        if (!container) {
-            container = document.createElement('div');
-            container.id = `deck-${deck}`;
-            container.className = 'deck';
-            document.querySelector('.deck-container').appendChild(container);
-        }
-
-        // Create transport controls if they don't exist
-        let transportControls = container.querySelector('.transport-controls');
-        if (!transportControls) {
-            transportControls = document.createElement('div');
-            transportControls.className = 'transport-controls';
-            container.appendChild(transportControls);
-
-            // Create buttons
-            const buttons = {
-                playPause: { id: `play-pause-${deck}`, text: 'Play' },
-                stop: { id: `stop-${deck}`, text: 'Stop' },
-                cue: { id: `cue-${deck}`, text: 'Cue' },
-                loop: { id: `loop-${deck}`, text: 'Loop In' }
+    // Wait a small amount of time to ensure all elements are ready
+    setTimeout(() => {
+        console.log('Initializing mixer...');
+        
+        // Debug: log which elements are missing
+        ['a', 'b'].forEach(deck => {
+            const elements = {
+                container: document.getElementById(`deck-${deck}`),
+                playPauseButton: document.getElementById(`deck-${deck}-play-pause`),
+                stopButton: document.getElementById(`deck-${deck}-stop`),
+                cueButton: document.getElementById(`deck-${deck}-cue`),
+                loopButton: document.getElementById(`deck-${deck}-loop`)
             };
-
-            Object.entries(buttons).forEach(([type, config]) => {
-                if (!document.getElementById(config.id)) {
-                    const button = document.createElement('button');
-                    button.id = config.id;
-                    button.className = 'transport-button';
-                    button.textContent = config.text;
-                    transportControls.appendChild(button);
+            
+            // Log which elements are missing
+            Object.entries(elements).forEach(([name, element]) => {
+                if (!element) {
+                    console.warn(`Missing element: ${name} for deck ${deck}`);
                 }
             });
-        }
-
-        // Create meters if they don't exist
-        ['l', 'r'].forEach(channel => {
-            const meterId = `meter-${deck}-${channel}`;
-            let meter = document.getElementById(meterId);
-            if (!meter) {
-                meter = document.createElement('div');
-                meter.id = meterId;
-                meter.className = 'led-meter';
-                // Create 30 LED segments
-                for (let i = 0; i < 30; i++) {
-                    const segment = document.createElement('div');
-                    segment.className = 'led-segment';
-                    meter.appendChild(segment);
-                }
-                container.appendChild(meter);
-            }
         });
-    });
 
-    // Now initialize the mixer after elements are created
-    setTimeout(initializeMixer, 100);
+        // Initialize the mixer
+        initializeMixer();
+    }, 100); // Small delay to ensure DOM is ready
 });
 
 function initializeMixer() {
@@ -572,12 +537,12 @@ function initializeMixer() {
             // Get all required elements
             const deckElements = {
                 container: document.getElementById(`deck-${deck}`),
-                playPauseButton: document.getElementById(`play-pause-${deck}`),
-                stopButton: document.getElementById(`stop-${deck}`),
+                playPauseButton: document.getElementById(`deck-${deck}-play-pause`),
+                stopButton: document.getElementById(`deck-${deck}-stop`),
                 tempoValue: document.getElementById(`tempo-value-${deck}`),
                 bpmDisplay: document.getElementById(`bpm-${deck}`),
                 playhead: document.getElementById(`playhead-${deck}`),
-                loopButton: document.getElementById(`loop-${deck}`)
+                loopButton: document.getElementById(`deck-${deck}-loop`)
             };
 
             // Check if all required elements exist
@@ -588,7 +553,7 @@ function initializeMixer() {
             if (missingElements.length > 0) {
                 throw new Error(`Missing required elements for deck ${deck}: ${missingElements.join(', ')}`);
             }
-
+            
             // Add has-track class to show clear button
             deckElements.container.classList.add('has-track');
             
@@ -601,15 +566,15 @@ function initializeMixer() {
             // Update track name in deck info
             const waveformStack = document.querySelector(`.waveform-stack:nth-child(${deck === 'a' ? 1 : 2})`);
             if (waveformStack) {
-                const deckInfo = waveformStack.querySelector('.deck-info');
+            const deckInfo = waveformStack.querySelector('.deck-info');
                 if (deckInfo) {
-                    let trackNameElement = deckInfo.querySelector('.track-name');
-                    if (!trackNameElement) {
-                        trackNameElement = document.createElement('div');
-                        trackNameElement.className = 'track-name';
-                        deckInfo.insertBefore(trackNameElement, deckInfo.querySelector('.bpm-display'));
-                    }
-                    trackNameElement.textContent = track.title;
+            let trackNameElement = deckInfo.querySelector('.track-name');
+            if (!trackNameElement) {
+                trackNameElement = document.createElement('div');
+                trackNameElement.className = 'track-name';
+                deckInfo.insertBefore(trackNameElement, deckInfo.querySelector('.bpm-display'));
+            }
+            trackNameElement.textContent = track.title;
                 }
             }
 
@@ -674,18 +639,18 @@ function initializeMixer() {
     // Deck handlers
     ['a', 'b'].forEach(deck => {
         const container = document.getElementById(`deck-${deck}`);
-        const playPauseButton = document.getElementById(`play-pause-${deck}`);
-        const stopButton = document.getElementById(`stop-${deck}`);
-        const cueButton = document.getElementById(`cue-${deck}`);
-        const loopButton = document.getElementById(`loop-${deck}`);
+        const playPauseButton = document.getElementById(`deck-${deck}-play-pause`);
+        const stopButton = document.getElementById(`deck-${deck}-stop`);
+        const cueButton = document.getElementById(`deck-${deck}-cue`);
+        const loopButton = document.getElementById(`deck-${deck}-loop`);
         const tempoControls = document.querySelector(`#deck-${deck} .transport-controls .tempo-controls`);
-        const tempoMinus = document.getElementById(`tempo-minus-${deck}`);
-        const tempoPlus = document.getElementById(`tempo-plus-${deck}`);
-        const tempoValue = document.getElementById(`tempo-value-${deck}`);
-        const resetButton = document.getElementById(`reset-${deck}`);
-        const syncButton = document.getElementById(`sync-${deck}`);
-        const pitchUpBtn = document.getElementById(`pitch-up-${deck}`);
-        const pitchDownBtn = document.getElementById(`pitch-down-${deck}`);
+        const tempoMinus = document.getElementById(`deck-${deck}-tempo-minus`);
+        const tempoPlus = document.getElementById(`deck-${deck}-tempo-plus`);
+        const tempoValue = document.getElementById(`deck-${deck}-tempo-value`);
+        const resetButton = document.getElementById(`deck-${deck}-reset`);
+        const syncButton = document.getElementById(`deck-${deck}-sync`);
+        const pitchUpBtn = document.getElementById(`deck-${deck}-pitch-up`);
+        const pitchDownBtn = document.getElementById(`deck-${deck}-pitch-down`);
 
         // Check if required elements exist
         if (!container || !playPauseButton || !stopButton || !cueButton || !loopButton) {
@@ -925,9 +890,9 @@ function initializeMixer() {
                     playPauseButton.classList.remove('active');
                     playPauseButton.textContent = 'Play';
                 }
-            } catch (error) {
+                } catch (error) {
                 console.error('Error playing/pausing track:', error);
-                // Reset state on error
+                    // Reset state on error
                 deckState[deck].isPlaying = false;
                 deckState[deck].isPaused = false;
                 playPauseButton.classList.remove('active');
@@ -1232,9 +1197,9 @@ function initializeMixer() {
             }
 
             // Reset transport button states
-            const playPauseButton = document.getElementById(`play-pause-${deck}`);
-            const stopButton = document.getElementById(`stop-${deck}`);
-            const loopButton = document.getElementById(`loop-${deck}`);
+            const playPauseButton = document.getElementById(`deck-${deck}-play-pause`);
+            const stopButton = document.getElementById(`deck-${deck}-stop`);
+            const loopButton = document.getElementById(`deck-${deck}-loop`);
             
             playPauseButton.classList.remove('active');
             
