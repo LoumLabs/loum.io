@@ -8,10 +8,10 @@ document.addEventListener('DOMContentLoaded', () => {
         ['a', 'b'].forEach(deck => {
             const elements = {
                 container: document.getElementById(`deck-${deck}`),
-                playPauseButton: document.getElementById(`deck-${deck}-play-pause`),
-                stopButton: document.getElementById(`deck-${deck}-stop`),
-                cueButton: document.getElementById(`deck-${deck}-cue`),
-                loopButton: document.getElementById(`deck-${deck}-loop`)
+                playPauseButton: document.getElementById(`play-pause-${deck}`),
+                stopButton: document.getElementById(`stop-${deck}`),
+                cueButton: document.getElementById(`cue-${deck}`),
+                loopButton: document.getElementById(`loop-${deck}`)
             };
             
             // Log which elements are missing
@@ -537,12 +537,12 @@ function initializeMixer() {
             // Get all required elements
             const deckElements = {
                 container: document.getElementById(`deck-${deck}`),
-                playPauseButton: document.getElementById(`deck-${deck}-play-pause`),
-                stopButton: document.getElementById(`deck-${deck}-stop`),
+                playPauseButton: document.getElementById(`play-pause-${deck}`),
+                stopButton: document.getElementById(`stop-${deck}`),
                 tempoValue: document.getElementById(`tempo-value-${deck}`),
                 bpmDisplay: document.getElementById(`bpm-${deck}`),
                 playhead: document.getElementById(`playhead-${deck}`),
-                loopButton: document.getElementById(`deck-${deck}-loop`)
+                loopButton: document.getElementById(`loop-${deck}`)
             };
 
             // Check if all required elements exist
@@ -566,15 +566,15 @@ function initializeMixer() {
             // Update track name in deck info
             const waveformStack = document.querySelector(`.waveform-stack:nth-child(${deck === 'a' ? 1 : 2})`);
             if (waveformStack) {
-            const deckInfo = waveformStack.querySelector('.deck-info');
+                const deckInfo = waveformStack.querySelector('.deck-info');
                 if (deckInfo) {
-            let trackNameElement = deckInfo.querySelector('.track-name');
-            if (!trackNameElement) {
-                trackNameElement = document.createElement('div');
-                trackNameElement.className = 'track-name';
-                deckInfo.insertBefore(trackNameElement, deckInfo.querySelector('.bpm-display'));
-            }
-            trackNameElement.textContent = track.title;
+                    let trackNameElement = deckInfo.querySelector('.track-name');
+                    if (!trackNameElement) {
+                        trackNameElement = document.createElement('div');
+                        trackNameElement.className = 'track-name';
+                        deckInfo.insertBefore(trackNameElement, deckInfo.querySelector('.bpm-display'));
+                    }
+                    trackNameElement.textContent = track.title;
                 }
             }
 
@@ -638,22 +638,32 @@ function initializeMixer() {
 
     // Deck handlers
     ['a', 'b'].forEach(deck => {
-        const container = document.getElementById(`deck-${deck}`);
-        const playPauseButton = document.getElementById(`deck-${deck}-play-pause`);
-        const stopButton = document.getElementById(`deck-${deck}-stop`);
-        const cueButton = document.getElementById(`deck-${deck}-cue`);
-        const loopButton = document.getElementById(`deck-${deck}-loop`);
-        const tempoControls = document.querySelector(`#deck-${deck} .transport-controls .tempo-controls`);
-        const tempoMinus = document.getElementById(`deck-${deck}-tempo-minus`);
-        const tempoPlus = document.getElementById(`deck-${deck}-tempo-plus`);
-        const tempoValue = document.getElementById(`deck-${deck}-tempo-value`);
-        const resetButton = document.getElementById(`deck-${deck}-reset`);
-        const syncButton = document.getElementById(`deck-${deck}-sync`);
-        const pitchUpBtn = document.getElementById(`deck-${deck}-pitch-up`);
-        const pitchDownBtn = document.getElementById(`deck-${deck}-pitch-down`);
+        // Get all required elements
+        const elements = {
+            container: document.getElementById(`deck-${deck}`),
+            playPauseButton: document.getElementById(`play-pause-${deck}`),
+            stopButton: document.getElementById(`stop-${deck}`),
+            cueButton: document.getElementById(`cue-${deck}`),
+            loopButton: document.getElementById(`loop-${deck}`),
+            tempoMinus: document.getElementById(`tempo-minus-${deck}`),
+            tempoPlus: document.getElementById(`tempo-plus-${deck}`),
+            tempoValue: document.getElementById(`tempo-value-${deck}`),
+            resetButton: document.getElementById(`reset-${deck}`),
+            syncButton: document.getElementById(`sync-${deck}`),
+            pitchUpBtn: document.getElementById(`pitch-up-${deck}`),
+            pitchDownBtn: document.getElementById(`pitch-down-${deck}`)
+        };
 
-        // Check if required elements exist
-        if (!container || !playPauseButton || !stopButton || !cueButton || !loopButton) {
+        // Log missing elements
+        Object.entries(elements).forEach(([name, element]) => {
+            if (!element) {
+                console.warn(`Missing element: ${name} for deck ${deck}`);
+            }
+        });
+
+        // Check if required elements exist before setting up event listeners
+        if (!elements.container || !elements.playPauseButton || !elements.stopButton || 
+            !elements.cueButton || !elements.loopButton) {
             console.warn(`Required elements for deck ${deck} not found`);
             return;
         }
@@ -666,6 +676,73 @@ function initializeMixer() {
         // Make these variables accessible to the loadTrackToDeck function
         window[`tempo_${deck}`] = tempo;
         window[`originalBPM_${deck}`] = originalBPM;
+
+        // Add tempo adjustment handlers
+        elements.tempoMinus.addEventListener('click', () => {
+            const newTempo = Math.max(window[`tempo_${deck}`] - 0.5, 50); // Decrease by 0.5%, minimum 50%
+            window[`tempo_${deck}`] = Math.round(newTempo * 10) / 10; // Round to 1 decimal place
+            audioProcessor.setTempo(deck, window[`tempo_${deck}`]);
+            elements.tempoValue.textContent = `${window[`tempo_${deck}`].toFixed(1)}%`;
+            updateBPMDisplay();
+        });
+
+        elements.tempoPlus.addEventListener('click', () => {
+            const newTempo = Math.min(window[`tempo_${deck}`] + 0.5, 150); // Increase by 0.5%, maximum 150%
+            window[`tempo_${deck}`] = Math.round(newTempo * 10) / 10; // Round to 1 decimal place
+            audioProcessor.setTempo(deck, window[`tempo_${deck}`]);
+            elements.tempoValue.textContent = `${window[`tempo_${deck}`].toFixed(1)}%`;
+            updateBPMDisplay();
+        });
+
+        // Add reset button handler
+        elements.resetButton.addEventListener('click', () => {
+            window[`tempo_${deck}`] = 100;
+            window[`originalBPM_${deck}`] = 0;  // Reset originalBPM when resetting tempo
+            audioProcessor.resetTempo(deck);
+            elements.tempoValue.textContent = '100%';
+            updateBPMDisplay();
+        });
+
+        // Add sync button handler
+        elements.syncButton.addEventListener('click', () => {
+            const result = audioProcessor.syncToDeck(deck);
+            if (result.success) {
+                window[`tempo_${deck}`] = result.tempoAdjustment;
+                elements.tempoValue.textContent = `${Math.round(window[`tempo_${deck}`])}%`;
+                window[`originalBPM_${deck}`] = result.currentBPM;
+                const bpmDisplay = document.getElementById(`bpm-${deck}`);
+                if (bpmDisplay) {
+                    bpmDisplay.textContent = result.targetBPM.toFixed(1);
+                }
+                elements.syncButton.classList.add('active');
+                setTimeout(() => elements.syncButton.classList.remove('active'), 200);
+            }
+        });
+
+        // Add pitch bend handlers
+        elements.pitchUpBtn.addEventListener('mousedown', () => {
+            audioProcessor.setPitch(deck, 1.15); // Speed up by 15%
+        });
+
+        elements.pitchUpBtn.addEventListener('mouseup', () => {
+            audioProcessor.resetPitch(deck);
+        });
+
+        elements.pitchUpBtn.addEventListener('mouseleave', () => {
+            audioProcessor.resetPitch(deck);
+        });
+
+        elements.pitchDownBtn.addEventListener('mousedown', () => {
+            audioProcessor.setPitch(deck, 0.85); // Slow down by 15%
+        });
+
+        elements.pitchDownBtn.addEventListener('mouseup', () => {
+            audioProcessor.resetPitch(deck);
+        });
+
+        elements.pitchDownBtn.addEventListener('mouseleave', () => {
+            audioProcessor.resetPitch(deck);
+        });
 
         // Function to update BPM display based on tempo
         const updateBPMDisplay = () => {
@@ -688,80 +765,13 @@ function initializeMixer() {
             }
         };
 
-        // Add tempo adjustment handlers
-        tempoMinus.addEventListener('click', () => {
-            const newTempo = Math.max(window[`tempo_${deck}`] - 0.5, 50); // Decrease by 0.5%, minimum 50%
-            window[`tempo_${deck}`] = Math.round(newTempo * 10) / 10; // Round to 1 decimal place
-            audioProcessor.setTempo(deck, window[`tempo_${deck}`]);
-            tempoValue.textContent = `${window[`tempo_${deck}`].toFixed(1)}%`;
-            updateBPMDisplay();
-        });
-
-        tempoPlus.addEventListener('click', () => {
-            const newTempo = Math.min(window[`tempo_${deck}`] + 0.5, 150); // Increase by 0.5%, maximum 150%
-            window[`tempo_${deck}`] = Math.round(newTempo * 10) / 10; // Round to 1 decimal place
-            audioProcessor.setTempo(deck, window[`tempo_${deck}`]);
-            tempoValue.textContent = `${window[`tempo_${deck}`].toFixed(1)}%`;
-            updateBPMDisplay();
-        });
-
-        // Add reset button handler
-        resetButton.addEventListener('click', () => {
-            window[`tempo_${deck}`] = 100;
-            window[`originalBPM_${deck}`] = 0;  // Reset originalBPM when resetting tempo
-            audioProcessor.resetTempo(deck);
-            tempoValue.textContent = '100%';
-            updateBPMDisplay();
-        });
-
-        // Add sync button handler
-        syncButton.addEventListener('click', () => {
-            const result = audioProcessor.syncToDeck(deck);
-            if (result.success) {
-                tempo = result.tempoAdjustment;
-                tempoValue.textContent = `${Math.round(tempo)}%`;
-                originalBPM = result.currentBPM;
-                const bpmDisplay = document.getElementById(`bpm-${deck}`);
-                if (bpmDisplay) {
-                    bpmDisplay.textContent = result.targetBPM.toFixed(1);
-                }
-                syncButton.classList.add('active');
-                setTimeout(() => syncButton.classList.remove('active'), 200);
-            }
-        });
-
-        // Add pitch bend handlers
-        pitchUpBtn.addEventListener('mousedown', () => {
-            audioProcessor.setPitch(deck, 1.15); // Speed up by 15% (reduced from 50%)
-        });
-
-        pitchUpBtn.addEventListener('mouseup', () => {
-            audioProcessor.resetPitch(deck);
-        });
-
-        pitchUpBtn.addEventListener('mouseleave', () => {
-            audioProcessor.resetPitch(deck);
-        });
-
-        pitchDownBtn.addEventListener('mousedown', () => {
-            audioProcessor.setPitch(deck, 0.85); // Slow down by 15% (reduced from 50%)
-        });
-
-        pitchDownBtn.addEventListener('mouseup', () => {
-            audioProcessor.resetPitch(deck);
-        });
-
-        pitchDownBtn.addEventListener('mouseleave', () => {
-            audioProcessor.resetPitch(deck);
-        });
-
-        // Waveform seeking
-        if (container) {
-            container.addEventListener('mousedown', (e) => {
+        // Set up waveform container event listeners
+        if (elements.container) {
+            elements.container.addEventListener('mousedown', (e) => {
                 // Prevent if not left click
                 if (e.button !== 0) return;
                 
-                const rect = container.getBoundingClientRect();
+                const rect = elements.container.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const position = x / rect.width;
                 
@@ -773,37 +783,37 @@ function initializeMixer() {
                     audioProcessor.pausePosition[deck] = position * audioProcessor.buffers[deck].duration;
                     
                     if (wasPlaying) {
-                      // If playing, seek with immediate playback
-                      audioProcessor.seekTo(deck, position, true);
-                      deckState[deck].isPlaying = true;
-                      deckState[deck].isPaused = false;
-                      playPauseButton.classList.add('active');
-                      playPauseButton.textContent = 'Pause';
+                        // If playing, seek with immediate playback
+                        audioProcessor.seekTo(deck, position, true);
+                        deckState[deck].isPlaying = true;
+                        deckState[deck].isPaused = false;
+                        elements.playPauseButton.classList.add('active');
+                        elements.playPauseButton.textContent = 'Pause';
                     } else {
-                      // If not playing, just update position
-                      audioProcessor.seekTo(deck, position, false);
-                      deckState[deck].isPlaying = false;
-                      deckState[deck].isPaused = true;
-                      playPauseButton.classList.remove('active');
-                      playPauseButton.textContent = 'Play';
+                        // If not playing, just update position
+                        audioProcessor.seekTo(deck, position, false);
+                        deckState[deck].isPlaying = false;
+                        deckState[deck].isPaused = true;
+                        elements.playPauseButton.classList.remove('active');
+                        elements.playPauseButton.textContent = 'Play';
                     }
                 }
             });
 
             // Add waveform hover effect for better visual feedback
-            container.addEventListener('mousemove', (e) => {
-                const rect = container.getBoundingClientRect();
+            elements.container.addEventListener('mousemove', (e) => {
+                const rect = elements.container.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const position = x / rect.width;
                 
                 // Update cursor style
-                container.style.cursor = audioProcessor.buffers[deck] ? 'pointer' : 'default';
+                elements.container.style.cursor = audioProcessor.buffers[deck] ? 'pointer' : 'default';
                 
                 // Show potential seek position
-                const seekIndicator = container.querySelector('.seek-indicator') || (() => {
+                const seekIndicator = elements.container.querySelector('.seek-indicator') || (() => {
                     const indicator = document.createElement('div');
                     indicator.className = 'seek-indicator';
-                    container.appendChild(indicator);
+                    elements.container.appendChild(indicator);
                     return indicator;
                 })();
                 
@@ -811,8 +821,8 @@ function initializeMixer() {
                 seekIndicator.style.display = audioProcessor.buffers[deck] ? 'block' : 'none';
             });
 
-            container.addEventListener('mouseleave', () => {
-                const seekIndicator = container.querySelector('.seek-indicator');
+            elements.container.addEventListener('mouseleave', () => {
+                const seekIndicator = elements.container.querySelector('.seek-indicator');
                 if (seekIndicator) {
                     seekIndicator.style.display = 'none';
                 }
@@ -821,107 +831,88 @@ function initializeMixer() {
 
         // Loop control
         let loopState = 'in'; // States: 'in', 'out', 'active'
-        loopButton.textContent = 'Loop In';
+        elements.loopButton.textContent = 'Loop In';
         
-        loopButton.addEventListener('click', () => {
+        elements.loopButton.addEventListener('click', () => {
             if (!audioProcessor.buffers[deck]) return;
-            
-            const currentTime = audioProcessor.getCurrentTime(deck);
             
             switch (loopState) {
                 case 'in':
-                    // Set loop in point
                     audioProcessor.setLoopIn(deck);
-                    waveforms[deck].setLoopStart(currentTime);
-                    loopButton.textContent = 'Loop Out';
+                    elements.loopButton.textContent = 'Loop Out';
                     loopState = 'out';
                     break;
-                    
                 case 'out':
-                    // Set loop out point and start looping
                     audioProcessor.setLoopOut(deck);
-                    waveforms[deck].setLoopEnd(currentTime);
-                    loopButton.textContent = 'Loop';
-                    loopButton.classList.add('active');
+                    elements.loopButton.textContent = 'Loop';
+                    elements.loopButton.classList.add('active');
                     loopState = 'active';
-                    
-                    // If we're not playing, set the pause position to loop start
-                    if (!deckState[deck].isPlaying) {
-                        audioProcessor.pausePosition[deck] = audioProcessor.loopPoints[deck].start;
-                    }
                     break;
-                    
                 case 'active':
-                    // Toggle loop on/off
-                    const newState = audioProcessor.toggleLoop(deck);
-                    if (newState === 'in') {
-                        // Clear loop
-                        audioProcessor.clearLoop(deck);
-                        waveforms[deck].clearLoop();
-                        loopButton.textContent = 'Loop In';
-                        loopButton.classList.remove('active');
-                        loopState = 'in';
-                    }
+                    audioProcessor.clearLoop(deck);
+                    elements.loopButton.textContent = 'Loop In';
+                    elements.loopButton.classList.remove('active');
+                    loopState = 'in';
                     break;
             }
         });
 
         // Handle play/pause button
-        playPauseButton.addEventListener('click', async () => {
+        elements.playPauseButton.addEventListener('click', async () => {
             if (!audioProcessor.buffers[deck]) return;
 
             try {
-                if (!playPauseButton.classList.contains('active')) {
-                // If we have an active loop and we're not playing, start from loop start
+                if (!elements.playPauseButton.classList.contains('active')) {
+                    // If we have an active loop and we're not playing, start from loop start
                     if (loopState === 'active' && !deckState[deck].isPlaying) {
-                    audioProcessor.startTime[deck] = audioProcessor.audioContext.currentTime;
-                    audioProcessor.pausePosition[deck] = audioProcessor.loopPoints[deck].start;
-                }
-                
-                await audioProcessor.play(deck);
+                        audioProcessor.startTime[deck] = audioProcessor.audioContext.currentTime;
+                        audioProcessor.pausePosition[deck] = audioProcessor.loopPoints[deck].start;
+                    }
+                    
+                    await audioProcessor.play(deck);
                     deckState[deck].isPlaying = true;
                     deckState[deck].isPaused = false;
-                    playPauseButton.classList.add('active');
-                    playPauseButton.textContent = 'Pause';
+                    elements.playPauseButton.classList.add('active');
+                    elements.playPauseButton.textContent = 'Pause';
                 } else {
                     audioProcessor.pause(deck);
                     deckState[deck].isPlaying = false;
                     deckState[deck].isPaused = true;
-                    playPauseButton.classList.remove('active');
-                    playPauseButton.textContent = 'Play';
+                    elements.playPauseButton.classList.remove('active');
+                    elements.playPauseButton.textContent = 'Play';
                 }
-                } catch (error) {
+            } catch (error) {
                 console.error('Error playing/pausing track:', error);
-                    // Reset state on error
+                // Reset state on error
                 deckState[deck].isPlaying = false;
                 deckState[deck].isPaused = false;
-                playPauseButton.classList.remove('active');
-                playPauseButton.textContent = 'Play';
+                elements.playPauseButton.classList.remove('active');
+                elements.playPauseButton.textContent = 'Play';
             }
         });
 
         // Handle stop button
-        stopButton.addEventListener('mousedown', () => {
+        elements.stopButton.addEventListener('mousedown', () => {
             if (!audioProcessor.buffers[deck]) return;
 
-            stopButton.classList.add('active');
-                audioProcessor.stop(deck);
+            elements.stopButton.classList.add('active');
+            audioProcessor.stop(deck);
             deckState[deck].isPlaying = false;
             deckState[deck].isPaused = false;
-            playPauseButton.classList.remove('active');
-            playPauseButton.textContent = 'Play';
+            elements.playPauseButton.classList.remove('active');
+            elements.playPauseButton.textContent = 'Play';
             
             // Force playhead to appropriate position
-                const playhead = document.getElementById(`playhead-${deck}`);
+            const playhead = document.getElementById(`playhead-${deck}`);
 
             // If we have an active loop
-                if (loopState === 'active') {
+            if (loopState === 'active') {
                 // If we're already stopped at loop start, clear the loop
                 if (Math.abs(audioProcessor.pausePosition[deck] - audioProcessor.loopPoints[deck].start) < 0.01) {
                     // Reset loop UI state
                     loopState = 'in';
-                    loopButton.textContent = 'Loop In';
-                    loopButton.classList.remove('active');
+                    elements.loopButton.textContent = 'Loop In';
+                    elements.loopButton.classList.remove('active');
                     waveforms[deck].clearLoop();
                     audioProcessor.clearLoop(deck);
                     // Reset to track start
@@ -940,89 +931,38 @@ function initializeMixer() {
             }
 
             // Remove active class after a short delay
-            setTimeout(() => stopButton.classList.remove('active'), 100);
+            setTimeout(() => elements.stopButton.classList.remove('active'), 100);
         });
-
-        stopButton.addEventListener('mouseup', () => {
-            stopButton.classList.remove('active');
-        });
-
-        stopButton.addEventListener('mouseleave', () => {
-            stopButton.classList.remove('active');
-        });
-
-        // Add a click handler for touch devices or quick clicks
-        stopButton.addEventListener('click', (e) => {
-            // Prevent double triggering on desktop
-            if (e.detail > 0) { // Only handle real clicks, not synthetic ones
-                if (!audioProcessor.buffers[deck]) return;
-                
-                stopButton.classList.add('active');
-                setTimeout(() => stopButton.classList.remove('active'), 150);
-            }
-        });
-
-        // Update loadTrackToDeck function to enable all transport buttons
-        const originalLoadTrackToDeck = window.loadTrackToDeck;
-        window.loadTrackToDeck = async (track, deckId) => {
-            // Reset tempo and BPM variables in the correct scope
-            const tempoValue = document.getElementById(`tempo-value-${deckId}`);
-            if (tempoValue) {
-                const deck = deckId; // Reference for closure
-                const deckScope = ['a', 'b'].find(d => d === deck);
-                if (deckScope) {
-                    // Reset the variables in the deck's scope
-                    eval(`tempo_${deck} = 100`);
-                    eval(`originalBPM_${deck} = 0`);
-                }
-            }
-            
-            await originalLoadTrackToDeck(track, deckId);
-        };
 
         // Handle cue button
-        cueButton.addEventListener('mousedown', () => {
+        elements.cueButton.addEventListener('mousedown', () => {
             if (!audioProcessor.buffers[deck]) return;
-            if (window[`isKeyboardCue_${deck}`]) return;  // Use global flag
+            
+            elements.cueButton.classList.add('active');
+            audioProcessor.cue(deck);
+            deckState[deck].isPlaying = true;
+            deckState[deck].isPaused = false;
+        });
 
-            if (!deckState[deck].isPlaying) {
-                audioProcessor.cue(deck);
-                cueButton.classList.add('active');
-            } else {
-                audioProcessor.cue(deck);
+        elements.cueButton.addEventListener('mouseup', () => {
+            if (!audioProcessor.buffers[deck]) return;
+            
+            elements.cueButton.classList.remove('active');
+            if (!isKeyboardCue) {
+                audioProcessor.pause(deck);
                 deckState[deck].isPlaying = false;
                 deckState[deck].isPaused = true;
-                playPauseButton.classList.remove('active');
             }
         });
 
-        cueButton.addEventListener('mouseup', () => {
-            if (!audioProcessor.buffers[deck]) return;
-            if (window[`isKeyboardCue_${deck}`]) return;  // Use global flag
+        elements.cueButton.addEventListener('mouseleave', () => {
+            if (!audioProcessor.buffers[deck] || isKeyboardCue) return;
             
-            if (audioProcessor.sources[deck]?._isCuePreview) {
-                audioProcessor.releaseCue(deck);
-                cueButton.classList.remove('active');
-            }
+            elements.cueButton.classList.remove('active');
+            audioProcessor.pause(deck);
+            deckState[deck].isPlaying = false;
+            deckState[deck].isPaused = true;
         });
-
-        cueButton.addEventListener('mouseleave', () => {
-            if (!audioProcessor.buffers[deck]) return;
-            if (window[`isKeyboardCue_${deck}`]) return;  // Use global flag
-            
-            // Only release cue if we're in cue preview mode and not playing normally
-            if (audioProcessor.sources[deck]?._isCuePreview && !deckState[deck].isPlaying) {
-                audioProcessor.releaseCue(deck);
-                cueButton.classList.remove('active');
-            }
-        });
-
-        cueButton.addEventListener('dblclick', () => {
-            audioProcessor.setCuePoint(deck);
-        });
-
-        // Store the isKeyboardCue flag in a way accessible to the keyboard event handlers
-        window[`isKeyboardCue_${deck}`] = isKeyboardCue;
     });
 
     // Crossfader control
@@ -1197,9 +1137,9 @@ function initializeMixer() {
             }
 
             // Reset transport button states
-            const playPauseButton = document.getElementById(`deck-${deck}-play-pause`);
-            const stopButton = document.getElementById(`deck-${deck}-stop`);
-            const loopButton = document.getElementById(`deck-${deck}-loop`);
+            const playPauseButton = document.getElementById(`play-pause-${deck}`);
+            const stopButton = document.getElementById(`stop-${deck}`);
+            const loopButton = document.getElementById(`loop-${deck}`);
             
             playPauseButton.classList.remove('active');
             
