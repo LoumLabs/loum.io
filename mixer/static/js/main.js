@@ -1,30 +1,65 @@
 // Ensure DOM is fully loaded before running any code
 document.addEventListener('DOMContentLoaded', () => {
-    // Wait a small amount of time to ensure all elements are ready
-    setTimeout(() => {
-        console.log('Initializing mixer...');
-        
-        // Debug: log which elements are missing
-        ['a', 'b'].forEach(deck => {
-            const elements = {
-                container: document.getElementById(`deck-${deck}`),
-                playPauseButton: document.getElementById(`play-pause-${deck}`),
-                stopButton: document.getElementById(`stop-${deck}`),
-                cueButton: document.getElementById(`cue-${deck}`),
-                loopButton: document.getElementById(`loop-${deck}`)
+    console.log('Initializing mixer...');
+    
+    // Create deck elements first
+    ['a', 'b'].forEach(deck => {
+        // Create deck container if it doesn't exist
+        let container = document.getElementById(`deck-${deck}`);
+        if (!container) {
+            container = document.createElement('div');
+            container.id = `deck-${deck}`;
+            container.className = 'deck';
+            document.querySelector('.deck-container').appendChild(container);
+        }
+
+        // Create transport controls if they don't exist
+        let transportControls = container.querySelector('.transport-controls');
+        if (!transportControls) {
+            transportControls = document.createElement('div');
+            transportControls.className = 'transport-controls';
+            container.appendChild(transportControls);
+
+            // Create buttons
+            const buttons = {
+                playPause: { id: `play-pause-${deck}`, text: 'Play' },
+                stop: { id: `stop-${deck}`, text: 'Stop' },
+                cue: { id: `cue-${deck}`, text: 'Cue' },
+                loop: { id: `loop-${deck}`, text: 'Loop In' }
             };
-            
-            // Log which elements are missing
-            Object.entries(elements).forEach(([name, element]) => {
-                if (!element) {
-                    console.warn(`Missing element: ${name} for deck ${deck}`);
+
+            Object.entries(buttons).forEach(([type, config]) => {
+                if (!document.getElementById(config.id)) {
+                    const button = document.createElement('button');
+                    button.id = config.id;
+                    button.className = 'transport-button';
+                    button.textContent = config.text;
+                    transportControls.appendChild(button);
                 }
             });
-        });
+        }
 
-        // Initialize the mixer
-        initializeMixer();
-    }, 100); // Small delay to ensure DOM is ready
+        // Create meters if they don't exist
+        ['l', 'r'].forEach(channel => {
+            const meterId = `meter-${deck}-${channel}`;
+            let meter = document.getElementById(meterId);
+            if (!meter) {
+                meter = document.createElement('div');
+                meter.id = meterId;
+                meter.className = 'led-meter';
+                // Create 30 LED segments
+                for (let i = 0; i < 30; i++) {
+                    const segment = document.createElement('div');
+                    segment.className = 'led-segment';
+                    meter.appendChild(segment);
+                }
+                container.appendChild(meter);
+            }
+        });
+    });
+
+    // Now initialize the mixer after elements are created
+    setTimeout(initializeMixer, 100);
 });
 
 function initializeMixer() {
