@@ -32,7 +32,7 @@ body {
     justify-content: space-between;
     background-color: #1e1e1e;
     border-radius: 4px;
-    padding: 8px;
+    padding: 4px 8px;
     box-sizing: border-box;
 }
 
@@ -345,7 +345,7 @@ canvas {
     flex-direction: column;
     gap: 25px;
     background: #1e1e1e;
-    padding: 20px 15px;
+    padding: 15px;
     border-radius: 3px;
     align-items: center;
     height: 100%;
@@ -814,16 +814,16 @@ canvas {
     align-items: center;
     background: #1e1e1e;
     border-radius: 3px;
-    height: calc(100% - 30px);
+    height: 240px;
     padding: 10px 0;
-    margin-top: auto;
+    margin: 0;
 }
 
 .fader {
     -webkit-appearance: none;
     appearance: none;
     width: 4px;
-    height: 140px;
+    height: 100%;
     background: #333;
     border-radius: 2px;
     cursor: pointer;
