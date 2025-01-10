@@ -1496,22 +1496,22 @@ function initializeMixer() {
                 window.isKeyboardPitchDown_a = true;
                 pitchDownA.classList.add('active');
                 // Start with a small pitch change and gradually increase
-                let pitchValueA = 0.95;
+                let pitchValueA = 0.98;
                 window.pitchIntervalA = setInterval(() => {
-                    pitchValueA = Math.max(0.85, pitchValueA - 0.01);
+                    pitchValueA = Math.max(0.92, pitchValueA - 0.005);
                     audioProcessor.setPitch('a', pitchValueA);
-                }, 50);
+                }, 30);
                 break;
             case 'w':
                 const pitchUpA = document.getElementById('pitch-up-a');
                 window.isKeyboardPitchUp_a = true;
                 pitchUpA.classList.add('active');
                 // Start with a small pitch change and gradually increase
-                let pitchValueUpA = 1.05;
+                let pitchValueUpA = 1.02;
                 window.pitchIntervalUpA = setInterval(() => {
-                    pitchValueUpA = Math.min(1.15, pitchValueUpA + 0.01);
+                    pitchValueUpA = Math.min(1.08, pitchValueUpA + 0.005);
                     audioProcessor.setPitch('a', pitchValueUpA);
-                }, 50);
+                }, 30);
                 break;
 
             // Deck B controls
@@ -1545,22 +1545,22 @@ function initializeMixer() {
                 window.isKeyboardPitchDown_b = true;
                 pitchDownB.classList.add('active');
                 // Start with a small pitch change and gradually increase
-                let pitchValueB = 0.95;
+                let pitchValueB = 0.98;
                 window.pitchIntervalB = setInterval(() => {
-                    pitchValueB = Math.max(0.85, pitchValueB - 0.01);
+                    pitchValueB = Math.max(0.92, pitchValueB - 0.005);
                     audioProcessor.setPitch('b', pitchValueB);
-                }, 50);
+                }, 30);
                 break;
             case 'h':
                 const pitchUpB = document.getElementById('pitch-up-b');
                 window.isKeyboardPitchUp_b = true;
                 pitchUpB.classList.add('active');
                 // Start with a small pitch change and gradually increase
-                let pitchValueUpB = 1.05;
+                let pitchValueUpB = 1.02;
                 window.pitchIntervalUpB = setInterval(() => {
-                    pitchValueUpB = Math.min(1.15, pitchValueUpB + 0.01);
+                    pitchValueUpB = Math.min(1.08, pitchValueUpB + 0.005);
                     audioProcessor.setPitch('b', pitchValueUpB);
-                }, 50);
+                }, 30);
                 break;
         }
     });
