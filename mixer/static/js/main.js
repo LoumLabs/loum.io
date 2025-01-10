@@ -1,4 +1,11 @@
-document.addEventListener('DOMContentLoaded', () => {
+// Ensure DOM is fully loaded before running any code
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeMixer);
+} else {
+    initializeMixer();
+}
+
+function initializeMixer() {
     const audioProcessor = new AudioProcessor();
     const waveforms = {
         a: new Waveform('deck-a'),
@@ -609,6 +616,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const syncButton = document.getElementById(`sync-${deck}`);
         const pitchUpBtn = document.getElementById(`pitch-up-${deck}`);
         const pitchDownBtn = document.getElementById(`pitch-down-${deck}`);
+
+        // Check if required elements exist
+        if (!container || !playPauseButton || !stopButton || !cueButton || !loopButton) {
+            console.warn(`Required elements for deck ${deck} not found`);
+            return;
+        }
+
         let seekPosition = 0;
         let tempo = 100;
         let originalBPM = 0;
@@ -1626,4 +1640,4 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
         }
     });
-}); 
+} 
