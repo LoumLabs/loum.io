@@ -1492,16 +1492,16 @@ function initializeMixer() {
                 stopA.dispatchEvent(new MouseEvent('mousedown'));
                 break;
             case 'q':
-                const pitchUpA = document.getElementById('pitch-up-a');
-                window.isKeyboardPitchUp_a = true;
-                pitchUpA.classList.add('active');
-                audioProcessor.setPitch('a', 1.15);
-                break;
-            case 'w':
                 const pitchDownA = document.getElementById('pitch-down-a');
                 window.isKeyboardPitchDown_a = true;
                 pitchDownA.classList.add('active');
                 audioProcessor.setPitch('a', 0.85);
+                break;
+            case 'w':
+                const pitchUpA = document.getElementById('pitch-up-a');
+                window.isKeyboardPitchUp_a = true;
+                pitchUpA.classList.add('active');
+                audioProcessor.setPitch('a', 1.15);
                 break;
 
             // Deck B controls
@@ -1531,16 +1531,16 @@ function initializeMixer() {
                 stopB.dispatchEvent(new MouseEvent('mousedown'));
                 break;
             case 'g':
-                const pitchUpB = document.getElementById('pitch-up-b');
-                window.isKeyboardPitchUp_b = true;
-                pitchUpB.classList.add('active');
-                audioProcessor.setPitch('b', 1.15);
-                break;
-            case 'h':
                 const pitchDownB = document.getElementById('pitch-down-b');
                 window.isKeyboardPitchDown_b = true;
                 pitchDownB.classList.add('active');
                 audioProcessor.setPitch('b', 0.85);
+                break;
+            case 'h':
+                const pitchUpB = document.getElementById('pitch-up-b');
+                window.isKeyboardPitchUp_b = true;
+                pitchUpB.classList.add('active');
+                audioProcessor.setPitch('b', 1.15);
                 break;
         }
     });
@@ -1558,15 +1558,15 @@ function initializeMixer() {
                 isKeyboardCue = false;
                 break;
             case 'q':
-                const pitchUpA = document.getElementById('pitch-up-a');
-                window.isKeyboardPitchUp_a = false;
-                pitchUpA.classList.remove('active');
-                audioProcessor.resetPitch('a');
-                break;
-            case 'w':
                 const pitchDownA = document.getElementById('pitch-down-a');
                 window.isKeyboardPitchDown_a = false;
                 pitchDownA.classList.remove('active');
+                audioProcessor.resetPitch('a');
+                break;
+            case 'w':
+                const pitchUpA = document.getElementById('pitch-up-a');
+                window.isKeyboardPitchUp_a = false;
+                pitchUpA.classList.remove('active');
                 audioProcessor.resetPitch('a');
                 break;
 
@@ -1581,15 +1581,15 @@ function initializeMixer() {
                 isKeyboardCue = false;
                 break;
             case 'g':
-                const pitchUpB = document.getElementById('pitch-up-b');
-                window.isKeyboardPitchUp_b = false;
-                pitchUpB.classList.remove('active');
-                audioProcessor.resetPitch('b');
-                break;
-            case 'h':
                 const pitchDownB = document.getElementById('pitch-down-b');
                 window.isKeyboardPitchDown_b = false;
                 pitchDownB.classList.remove('active');
+                audioProcessor.resetPitch('b');
+                break;
+            case 'h':
+                const pitchUpB = document.getElementById('pitch-up-b');
+                window.isKeyboardPitchUp_b = false;
+                pitchUpB.classList.remove('active');
                 audioProcessor.resetPitch('b');
                 break;
         }
