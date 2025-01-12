@@ -246,12 +246,18 @@ window.addEventListener('load', async () => {
     // Initialize the mixer with the audio processor
     const mixer = initializeMixer(audioProcessor);
     
-    // Check if we're in a collection directory and load the collection
+    // Check if we're in a collection directory or have a collection parameter
     const path = window.location.pathname;
-    const match = path.match(/\/mixer\/([^\/]+)/);
-    if (match && match[1]) {
-        const collectionName = match[1].toLowerCase();
-        console.log('Loading collection from path:', collectionName);
+    const params = new URLSearchParams(window.location.search);
+    const collectionParam = params.get('collection');
+    const pathMatch = path.match(/\/mixer\/([^\/]+)/);
+    
+    // Get collection name from either path or query parameter
+    const collectionName = pathMatch ? pathMatch[1].toLowerCase() : 
+                          collectionParam ? collectionParam.toLowerCase() : null;
+    
+    if (collectionName) {
+        console.log('Loading collection:', collectionName);
         
         const config = await loadCollectionConfig(collectionName);
         if (config && config.tracks) {
