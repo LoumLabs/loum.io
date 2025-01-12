@@ -1,0 +1,8 @@
+permalink: pretty
+include: [mixer]
+
+defaults:
+  - scope:
+      path: "mixer"
+    values:
+      layout: default 
