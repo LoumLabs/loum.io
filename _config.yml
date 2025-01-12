@@ -1,8 +1,11 @@
 permalink: pretty
-include: [mixer]
 
 defaults:
   - scope:
-      path: "mixer"
+      path: ""
     values:
-      layout: default 
+      layout: default
+
+# Handle all paths under /mixer
+include: [mixer]
+exclude: [mixer/configs]  # Don't process JSON files as Jekyll pages 
