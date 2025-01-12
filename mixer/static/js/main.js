@@ -243,12 +243,25 @@ window.addEventListener('load', async () => {
     // Initialize the mixer with the audio processor
     const mixer = initializeMixer(audioProcessor);
     
-    // Check if we're loading a collection
-    const path = window.location.pathname;
-    const match = path.match(/\/mixer\/([^\/]+)/);
-    if (match && match[1] !== '') {
-        const collectionName = match[1].toLowerCase();  // Convert to lowercase immediately
+    // Check if we're loading a collection from the hash
+    const hash = window.location.hash.slice(1); // Remove the # symbol
+    if (hash) {
+        const collectionName = hash.toLowerCase();  // Convert to lowercase immediately
         console.log('Loading collection:', collectionName);
+        
+        const config = await loadCollectionConfig(collectionName);
+        if (config && config.tracks) {
+            await loadCollectionTracks(config.tracks, mixer.addTrackToList, mixer.loadTrackToDeck, audioProcessor);
+        }
+    }
+});
+
+// Also handle hash changes while the app is running
+window.addEventListener('hashchange', async () => {
+    const hash = window.location.hash.slice(1);
+    if (hash) {
+        const collectionName = hash.toLowerCase();
+        console.log('Loading collection from hash change:', collectionName);
         
         const config = await loadCollectionConfig(collectionName);
         if (config && config.tracks) {
