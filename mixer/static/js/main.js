@@ -246,31 +246,39 @@ window.addEventListener('load', async () => {
     // Initialize the mixer with the audio processor
     const mixer = initializeMixer(audioProcessor);
     
-    // Check if we're loading a collection from the hash
-    const hash = window.location.hash.slice(1).replace(/[\/]/g, ''); // Remove the # symbol and any slashes
-    if (hash) {
-        const collectionName = hash.toLowerCase();  // Convert to lowercase immediately
-        console.log('Loading collection:', collectionName);
+    // Check if we're in a collection directory and load the collection
+    const path = window.location.pathname;
+    const match = path.match(/\/mixer\/([^\/]+)/);
+    if (match && match[1]) {
+        const collectionName = match[1].toLowerCase();
+        console.log('Loading collection from path:', collectionName);
         
         const config = await loadCollectionConfig(collectionName);
         if (config && config.tracks) {
             await loadCollectionTracks(config.tracks, mixer.addTrackToList, mixer.loadTrackToDeck, audioProcessor);
         }
     }
-});
-
-// Also handle hash changes while the app is running
-window.addEventListener('hashchange', async () => {
-    const hash = window.location.hash.slice(1).replace(/[\/]/g, '');
-    if (hash) {
-        const collectionName = hash.toLowerCase();
-        console.log('Loading collection from hash change:', collectionName);
-        
-        const config = await loadCollectionConfig(collectionName);
-        if (config && config.tracks) {
-            await loadCollectionTracks(config.tracks, mixer.addTrackToList, mixer.loadTrackToDeck, audioProcessor);
-        }
+    
+    // Initialize audio context if needed
+    if (!audioProcessor.isInitialized) {
+        await audioProcessor.initialize();
     }
+    
+    // Set up file input handler
+    const fileInput = document.getElementById('track-file-input');
+    const addTracksBtn = document.getElementById('add-tracks');
+    
+    addTracksBtn.addEventListener('click', () => {
+        fileInput.click();
+    });
+    
+    fileInput.addEventListener('change', async (event) => {
+        const files = Array.from(event.target.files);
+        for (const file of files) {
+            await addTrackToList(file);
+        }
+        fileInput.value = '';
+    });
 });
 
 function initializeMixer(audioProcessor) {
