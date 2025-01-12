@@ -247,7 +247,7 @@ window.addEventListener('load', async () => {
     const mixer = initializeMixer(audioProcessor);
     
     // Check if we're loading a collection from the hash
-    const hash = window.location.hash.slice(1).replace(/^\//, ''); // Remove the # symbol and any leading slash
+    const hash = window.location.hash.slice(1).replace(/[\/]/g, ''); // Remove the # symbol and any slashes
     if (hash) {
         const collectionName = hash.toLowerCase();  // Convert to lowercase immediately
         console.log('Loading collection:', collectionName);
@@ -261,7 +261,7 @@ window.addEventListener('load', async () => {
 
 // Also handle hash changes while the app is running
 window.addEventListener('hashchange', async () => {
-    const hash = window.location.hash.slice(1).replace(/^\//, '');
+    const hash = window.location.hash.slice(1).replace(/[\/]/g, '');
     if (hash) {
         const collectionName = hash.toLowerCase();
         console.log('Loading collection from hash change:', collectionName);
