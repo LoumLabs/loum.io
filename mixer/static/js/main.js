@@ -65,7 +65,9 @@ function checkRequiredElements() {
 // Function to load collection config
 async function loadCollectionConfig(collectionName) {
     try {
-        const response = await fetch(`/mixer/configs/${collectionName}.json`);
+        // Convert collection name to lowercase for case-insensitive handling
+        const normalizedName = collectionName.toLowerCase();
+        const response = await fetch(`/mixer/configs/${normalizedName}.json`);
         if (!response.ok) {
             throw new Error(`Failed to load collection config: ${response.statusText}`);
         }
@@ -245,7 +247,7 @@ window.addEventListener('load', async () => {
     const path = window.location.pathname;
     const match = path.match(/\/mixer\/([^\/]+)/);
     if (match && match[1] !== '') {
-        const collectionName = match[1];
+        const collectionName = match[1].toLowerCase();  // Convert to lowercase immediately
         console.log('Loading collection:', collectionName);
         
         const config = await loadCollectionConfig(collectionName);
