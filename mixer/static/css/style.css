@@ -15,6 +15,7 @@ body {
     display: flex;
     flex-direction: column;
     position: relative;
+    box-sizing: border-box;
 }
 
 .container {
@@ -24,6 +25,7 @@ body {
     gap: 12px;
     flex: 1;
     background-color: #181818;
+    box-sizing: border-box;
 }
 
 .header-section {
@@ -299,6 +301,7 @@ canvas {
 }
 
 .mixer-section {
+    flex: 0 0 auto;
     display: flex;
     justify-content: center;
     align-items: stretch;
@@ -306,8 +309,8 @@ canvas {
     padding: 20px;
     border-radius: 4px;
     gap: 20px;
+    margin: 0;
     width: fit-content;
-    margin: 0 auto;
 }
 
 .channel {
@@ -1263,4 +1266,121 @@ canvas {
         z-index: 1;
         margin-top: 10px;
     }
+} 
+
+.lower-section {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-top: 0;
+    justify-content: center;
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0;
+}
+
+.collection-info {
+    flex: 1;
+    max-width: 280px;  /* Add max-width to prevent over-expansion */
+    background-color: #1e1e1e;
+    border-radius: 4px;
+    padding: 12px;
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    box-sizing: border-box;
+}
+
+.collection-info.visible {
+    display: flex;
+}
+
+/* Add invisible block on the right side */
+.collection-spacer {
+    flex: 1;
+    max-width: 280px;
+    visibility: hidden;
+    padding: 12px;
+    box-sizing: border-box;
+}
+
+/* When collection info is not visible, hide the spacer too */
+.collection-info:not(.visible) + .mixer-section + .collection-spacer {
+    display: none;
+}
+
+.collection-info::before {
+    content: 'Pre-loaded collection:';
+    font-size: 10px;
+    color: #666;
+    margin-bottom: 4px;
+}
+
+.collection-content {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    justify-content: space-between;
+}
+
+.collection-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.collection-title {
+    font-size: 14px;
+    margin: 0;
+    color: #e0e0e0;
+}
+
+.collection-artist {
+    font-size: 12px;
+    margin: 0;
+    color: #e0e0e0;
+}
+
+.collection-link {
+    font-size: 12px;
+    color: #4CAF50;
+    text-decoration: none;
+    margin-top: 5px;
+}
+
+.collection-link:hover {
+    color: #45a049;
+}
+
+.collection-artwork {
+    width: 70px;
+    height: 70px;
+    flex-shrink: 0;
+    overflow: hidden;
+    border-radius: 4px;
+    background-color: #111;
+    order: 1;  /* Move to the end */
+}
+
+.collection-artwork img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.mixer-section {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    background-color: #1e1e1e;
+    padding: 20px;
+    border-radius: 4px;
+    gap: 20px;
+    margin: 0;
+    width: fit-content;
 } 

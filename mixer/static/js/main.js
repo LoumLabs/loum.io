@@ -1,3 +1,13 @@
+// Utility function to format time
+const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
+// Track collection
+let tracks = [];
+
 // Function to check if all required elements are present
 function checkRequiredElements() {
     const requiredElements = {};
@@ -52,8 +62,169 @@ function checkRequiredElements() {
     };
 }
 
+// Function to load collection config
+async function loadCollectionConfig(collectionName) {
+    try {
+        const response = await fetch(`/mixer/configs/${collectionName}.json`);
+        if (!response.ok) {
+            throw new Error(`Failed to load collection config: ${response.statusText}`);
+        }
+        const config = await response.json();
+        
+        // Update collection info display
+        const collectionInfo = document.querySelector('.collection-info');
+        const collectionTitle = document.querySelector('.collection-title');
+        const collectionArtist = document.querySelector('.collection-artist');
+        const collectionArtwork = document.querySelector('.collection-artwork img');
+        const collectionLink = document.querySelector('.collection-link');
+        
+        if (config.collection_info) {
+            collectionTitle.textContent = config.collection_info.title;
+            collectionArtist.textContent = config.collection_info.artist;
+            if (config.collection_info.artwork) {
+                collectionArtwork.src = config.collection_info.artwork;
+                collectionArtwork.alt = `${config.collection_info.title} Artwork`;
+            }
+            if (config.collection_info.bandcamp_url) {
+                collectionLink.href = config.collection_info.bandcamp_url;
+            }
+            collectionInfo.classList.add('visible');
+        }
+        
+        return config;
+    } catch (error) {
+        console.error('Error loading collection config:', error);
+        return null;
+    }
+}
+
+// Function to load collection tracks
+async function loadCollectionTracks(trackConfigs, addTrackToList, loadTrackToDeck, audioProcessor) {
+    console.log('Loading collection tracks...');
+    const trackList = document.getElementById('track-list');
+    trackList.innerHTML = '<div class="track-item">Loading collection...</div>';
+    
+    // Clear existing tracks
+    tracks.length = 0;
+    
+    // Create an array to store tracks in their original order
+    const loadedTracks = new Array(trackConfigs.length).fill(null);
+    
+    // Load all tracks in parallel but maintain order
+    await Promise.all(trackConfigs.map(async (trackConfig, index) => {
+        try {
+            console.log('Fetching track:', trackConfig.title);
+            const response = await fetch(trackConfig.url);
+            if (!response.ok) throw new Error(`Failed to load track: ${trackConfig.title}`);
+            
+            const blob = await response.blob();
+            const file = new File([blob], trackConfig.title + '.mp3', { type: 'audio/mpeg' });
+            
+            // Initialize audio context if needed
+            if (!audioProcessor.isInitialized) {
+                await audioProcessor.initialize();
+            }
+
+            const arrayBuffer = await file.arrayBuffer();
+            const audioBuffer = await audioProcessor.audioContext.decodeAudioData(arrayBuffer);
+            
+            // Create track object with predefined BPM from config
+            const track = {
+                file,
+                title: trackConfig.title,
+                artist: 'Unknown',
+                bpm: trackConfig.bpm,
+                duration: audioBuffer.duration,
+                buffer: audioBuffer
+            };
+            
+            // Store track in its original position
+            loadedTracks[index] = track;
+            console.log('Track loaded:', track.title, 'BPM:', track.bpm);
+        } catch (error) {
+            console.error('Error loading track:', trackConfig.title, error);
+        }
+    }));
+    
+    // Add successfully loaded tracks to the tracks array in order
+    tracks.push(...loadedTracks.filter(track => track !== null));
+    
+    // Update track list after all tracks are loaded
+    trackList.innerHTML = '';
+    tracks.forEach((track, index) => {
+        const trackElement = document.createElement('div');
+        trackElement.className = 'track-item';
+        trackElement.draggable = true; // Make draggable
+        
+        const titleDiv = document.createElement('div');
+        titleDiv.textContent = track.title;
+        
+        const bpmDiv = document.createElement('div');
+        bpmDiv.textContent = track.bpm ? track.bpm.toFixed(1) : '--';
+        
+        const durationDiv = document.createElement('div');
+        durationDiv.textContent = formatTime(track.duration);
+        
+        trackElement.appendChild(titleDiv);
+        trackElement.appendChild(bpmDiv);
+        trackElement.appendChild(durationDiv);
+        
+        // Add drag and drop handlers
+        trackElement.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', index.toString());
+        });
+        
+        // Add double-click handler to load into first available deck
+        trackElement.addEventListener('dblclick', () => {
+            const deck = !audioProcessor.buffers.a ? 'a' : 
+                       !audioProcessor.buffers.b ? 'b' : null;
+            if (deck && loadTrackToDeck) loadTrackToDeck(track, deck);
+        });
+        
+        trackList.appendChild(trackElement);
+    });
+}
+
+// Track list functions
+const addTrackToList = async (file, predefinedBPM = null) => {
+    try {
+        // Initialize audio context if needed
+        if (!audioProcessor.isInitialized) {
+            await audioProcessor.initialize();
+        }
+
+        const arrayBuffer = await file.arrayBuffer();
+        const audioBuffer = await audioProcessor.audioContext.decodeAudioData(arrayBuffer);
+        
+        // Create track object with predefined BPM or detect if not provided
+        const track = {
+            file,
+            title: file.name.replace(/\.[^/.]+$/, ""),
+            artist: 'Unknown',
+            duration: audioBuffer.duration,
+            buffer: audioBuffer
+        };
+
+        // Only detect BPM if not predefined
+        if (predefinedBPM !== null) {
+            track.bpm = predefinedBPM;
+            // We'll set the audioProcessor BPM when loading to deck
+        } else {
+            track.bpm = await audioProcessor.detectBPM(audioBuffer);
+        }
+        
+        tracks.push(track);
+        updateTrackList();
+        return track;
+    } catch (error) {
+        console.error('Error adding track:', error);
+        alert('Error adding track. Please ensure it\'s a valid audio file.');
+        return null;
+    }
+};
+
 // Ensure DOM is fully loaded before running any code
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
     console.log('Initializing mixer...');
     
     // Check for required elements
@@ -64,19 +235,31 @@ window.addEventListener('load', () => {
         return;
     }
 
-    // Initialize the mixer
-    initializeMixer();
+    // Create audio processor instance
+    const audioProcessor = new AudioProcessor();
+    
+    // Initialize the mixer with the audio processor
+    const mixer = initializeMixer(audioProcessor);
+    
+    // Check if we're loading a collection
+    const path = window.location.pathname;
+    const match = path.match(/\/mixer\/([^\/]+)/);
+    if (match && match[1] !== '') {
+        const collectionName = match[1];
+        console.log('Loading collection:', collectionName);
+        
+        const config = await loadCollectionConfig(collectionName);
+        if (config && config.tracks) {
+            await loadCollectionTracks(config.tracks, mixer.addTrackToList, mixer.loadTrackToDeck, audioProcessor);
+        }
+    }
 });
 
-function initializeMixer() {
-    const audioProcessor = new AudioProcessor();
+function initializeMixer(audioProcessor) {
     const waveforms = {
         a: new Waveform('deck-a'),
         b: new Waveform('deck-b')
     };
-
-    // Track collection
-    let tracks = [];
 
     // Deck state variables
     const deckState = {
@@ -563,7 +746,7 @@ function initializeMixer() {
             trackElement.addEventListener('dblclick', () => {
                 const deck = !audioProcessor.buffers.a ? 'a' : 
                            !audioProcessor.buffers.b ? 'b' : null;
-                if (deck) loadTrackToDeck(track, deck);
+                if (deck && loadTrackToDeck) loadTrackToDeck(track, deck);
             });
             
             trackList.appendChild(trackElement);
@@ -626,23 +809,17 @@ function initializeMixer() {
             // Reset tempo and BPM display
             deckElements.tempoValue.textContent = '100%';
             window[`tempo_${deck}`] = 100;  // Reset tempo to 100%
-            window[`originalBPM_${deck}`] = 0;  // Reset originalBPM
             
-            // If track has a stored BPM, use it and update the audioProcessor
-            if (track.bpm && !isNaN(track.bpm) && track.bpm > 0) {
+            // Set BPM in audioProcessor and display
+            if (track.bpm && !isNaN(track.bpm)) {
                 audioProcessor.bpm[deck] = track.bpm;
                 audioProcessor.beatLength[deck] = 60 / track.bpm;
+                window[`originalBPM_${deck}`] = track.bpm;
                 if (deckElements.bpmDisplay) {
                     deckElements.bpmDisplay.textContent = track.bpm.toFixed(1);
                 }
-            } else if (audioProcessor.bpm[deck] > 0) {
-                // If no stored BPM but detection worked, use detected BPM
-                track.bpm = audioProcessor.bpm[deck];
-                if (deckElements.bpmDisplay) {
-                    deckElements.bpmDisplay.textContent = audioProcessor.bpm[deck].toFixed(1);
-                }
             } else {
-                // If no valid BPM available
+                window[`originalBPM_${deck}`] = 0;
                 if (deckElements.bpmDisplay) {
                     deckElements.bpmDisplay.textContent = '--';
                 }
@@ -1618,4 +1795,11 @@ function initializeMixer() {
                 break;
         }
     });
+
+    // Return necessary functions for track management
+    return {
+        addTrackToList,
+        loadTrackToDeck,
+        tracks
+    };
 } 

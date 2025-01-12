@@ -105,129 +105,144 @@
                 </div>
             </div>
 
-            <div class="mixer-section">
-                <div class="channel" id="channel-a">
-                    <div class="channel-strip">
-                        <div class="controls-section">
-                            <div class="trim-control">
-                                <div class="dial-container">
-                                    <div class="dial" id="trim-a">
-                                        <div class="dial-knob"></div>
-                                        <div class="dial-value">0</div>
-                                    </div>
-                                    <label>TRIM</label>
-                                </div>
-                            </div>
-                            <div class="eq-section">
-                                <div class="eq-control">
-                                    <div class="dial-container">
-                                        <div class="dial" id="high-a">
-                                            <div class="dial-knob"></div>
-                                            <div class="dial-value">0</div>
-                                        </div>
-                                        <label>HI</label>
-                                    </div>
-                                </div>
-                                <div class="eq-control">
-                                    <div class="dial-container">
-                                        <div class="dial" id="mid-a">
-                                            <div class="dial-knob"></div>
-                                            <div class="dial-value">0</div>
-                                        </div>
-                                        <label>MID</label>
-                                    </div>
-                                </div>
-                                <div class="eq-control">
-                                    <div class="dial-container">
-                                        <div class="dial" id="low-a">
-                                            <div class="dial-knob"></div>
-                                            <div class="dial-value">0</div>
-                                        </div>
-                                        <label>LOW</label>
-                                    </div>
-                                </div>
-                            </div>
+            <div class="lower-section">
+                <div class="collection-info">
+                    <div class="collection-content">
+                        <div class="collection-details">
+                            <h2 class="collection-title"></h2>
+                            <p class="collection-artist"></p>
+                            <a href="https://innamindrecordings.bandcamp.com/album/imrv033-foamplate" target="_blank" class="collection-link">Buy on Bandcamp</a>
                         </div>
-                        <div class="channel-fader">
-                            <input type="range" class="fader" id="fader-a" min="0" max="127" value="0" orient="vertical">
+                        <div class="collection-artwork">
+                            <img src="" alt="Collection Artwork">
                         </div>
                     </div>
                 </div>
+                <div class="mixer-section">
+                    <div class="channel" id="channel-a">
+                        <div class="channel-strip">
+                            <div class="controls-section">
+                                <div class="trim-control">
+                                    <div class="dial-container">
+                                        <div class="dial" id="trim-a">
+                                            <div class="dial-knob"></div>
+                                            <div class="dial-value">0</div>
+                                        </div>
+                                        <label>TRIM</label>
+                                    </div>
+                                </div>
+                                <div class="eq-section">
+                                    <div class="eq-control">
+                                        <div class="dial-container">
+                                            <div class="dial" id="high-a">
+                                                <div class="dial-knob"></div>
+                                                <div class="dial-value">0</div>
+                                            </div>
+                                            <label>HI</label>
+                                        </div>
+                                    </div>
+                                    <div class="eq-control">
+                                        <div class="dial-container">
+                                            <div class="dial" id="mid-a">
+                                                <div class="dial-knob"></div>
+                                                <div class="dial-value">0</div>
+                                            </div>
+                                            <label>MID</label>
+                                        </div>
+                                    </div>
+                                    <div class="eq-control">
+                                        <div class="dial-container">
+                                            <div class="dial" id="low-a">
+                                                <div class="dial-knob"></div>
+                                                <div class="dial-value">0</div>
+                                            </div>
+                                            <label>LOW</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="channel-fader">
+                                <input type="range" class="fader" id="fader-a" min="0" max="127" value="0" orient="vertical">
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="mixer-controls">
-                    <div class="meters-section">
-                        <div class="channel-meters">
-                            <div class="led-meter" id="meter-a-l"></div>
-                            <div class="led-meter" id="meter-a-r"></div>
+                    <div class="mixer-controls">
+                        <div class="meters-section">
+                            <div class="channel-meters">
+                                <div class="led-meter" id="meter-a-l"></div>
+                                <div class="led-meter" id="meter-a-r"></div>
+                            </div>
+                            <div class="master-meters">
+                                <div class="led-meter" id="meter-master-l"></div>
+                                <div class="led-meter" id="meter-master-r"></div>
+                            </div>
+                            <div class="channel-meters">
+                                <div class="led-meter" id="meter-b-l"></div>
+                                <div class="led-meter" id="meter-b-r"></div>
+                            </div>
                         </div>
-                        <div class="master-meters">
-                            <div class="led-meter" id="meter-master-l"></div>
-                            <div class="led-meter" id="meter-master-r"></div>
-                        </div>
-                        <div class="channel-meters">
-                            <div class="led-meter" id="meter-b-l"></div>
-                            <div class="led-meter" id="meter-b-r"></div>
+                        <div class="crossfader-section">
+                            <input type="range" id="crossfader" min="0" max="100" value="50">
+                            <div class="crossfader-value" id="crossfader-value">C</div>
+                            <div class="crossfader-curve">
+                                <select id="crossfader-curve">
+                                    <option value="smooth">Smooth</option>
+                                    <option value="sharp">Sharp</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
-                    <div class="crossfader-section">
-                        <input type="range" id="crossfader" min="0" max="100" value="50">
-                        <div class="crossfader-value" id="crossfader-value">C</div>
-                        <div class="crossfader-curve">
-                            <select id="crossfader-curve">
-                                <option value="smooth">Smooth</option>
-                                <option value="sharp">Sharp</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="channel" id="channel-b">
-                    <div class="channel-strip">
-                        <div class="channel-fader">
-                            <input type="range" class="fader" id="fader-b" min="0" max="127" value="0" orient="vertical">
-                        </div>
-                        <div class="controls-section">
-                            <div class="trim-control">
-                                <div class="dial-container">
-                                    <div class="dial" id="trim-b">
-                                        <div class="dial-knob"></div>
-                                        <div class="dial-value">0</div>
-                                    </div>
-                                    <label>TRIM</label>
-                                </div>
+                    <div class="channel" id="channel-b">
+                        <div class="channel-strip">
+                            <div class="channel-fader">
+                                <input type="range" class="fader" id="fader-b" min="0" max="127" value="0" orient="vertical">
                             </div>
-                            <div class="eq-section">
-                                <div class="eq-control">
+                            <div class="controls-section">
+                                <div class="trim-control">
                                     <div class="dial-container">
-                                        <div class="dial" id="high-b">
+                                        <div class="dial" id="trim-b">
                                             <div class="dial-knob"></div>
                                             <div class="dial-value">0</div>
                                         </div>
-                                        <label>HI</label>
+                                        <label>TRIM</label>
                                     </div>
                                 </div>
-                                <div class="eq-control">
-                                    <div class="dial-container">
-                                        <div class="dial" id="mid-b">
-                                            <div class="dial-knob"></div>
-                                            <div class="dial-value">0</div>
+                                <div class="eq-section">
+                                    <div class="eq-control">
+                                        <div class="dial-container">
+                                            <div class="dial" id="high-b">
+                                                <div class="dial-knob"></div>
+                                                <div class="dial-value">0</div>
+                                            </div>
+                                            <label>HI</label>
                                         </div>
-                                        <label>MID</label>
                                     </div>
-                                </div>
-                                <div class="eq-control">
-                                    <div class="dial-container">
-                                        <div class="dial" id="low-b">
-                                            <div class="dial-knob"></div>
-                                            <div class="dial-value">0</div>
+                                    <div class="eq-control">
+                                        <div class="dial-container">
+                                            <div class="dial" id="mid-b">
+                                                <div class="dial-knob"></div>
+                                                <div class="dial-value">0</div>
+                                            </div>
+                                            <label>MID</label>
                                         </div>
-                                        <label>LOW</label>
+                                    </div>
+                                    <div class="eq-control">
+                                        <div class="dial-container">
+                                            <div class="dial" id="low-b">
+                                                <div class="dial-knob"></div>
+                                                <div class="dial-value">0</div>
+                                            </div>
+                                            <label>LOW</label>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+                <div class="collection-spacer"></div>
             </div>
         </div>
     </div>
