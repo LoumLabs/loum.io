@@ -67,11 +67,14 @@ async function loadCollectionConfig(collectionName) {
     try {
         // Convert collection name to lowercase for case-insensitive handling
         const normalizedName = collectionName.toLowerCase();
+        console.log('Fetching collection config:', `/mixer/configs/${normalizedName}.json`);
         const response = await fetch(`/mixer/configs/${normalizedName}.json`);
         if (!response.ok) {
+            console.error('Failed to load collection config:', response.status, response.statusText);
             throw new Error(`Failed to load collection config: ${response.statusText}`);
         }
         const config = await response.json();
+        console.log('Loaded config:', config);
         
         // Update collection info display
         const collectionInfo = document.querySelector('.collection-info');
