@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mixer - Hungry Ghost EP</title>
+    <title>Mixer - loum.io</title>
     <style>
         body, html {
             margin: 0;
@@ -19,8 +19,19 @@
             border: none;
         }
     </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get the collection name from the URL path
+            const pathParts = window.location.pathname.split('/');
+            const collectionName = pathParts[pathParts.length - 2] || pathParts[pathParts.length - 1];
+            
+            // Set the iframe src with the collection name
+            const iframe = document.querySelector('iframe');
+            iframe.src = `/mixer?collection=${collectionName}`;
+        });
+    </script>
 </head>
 <body>
-    <iframe src="/mixer?collection=hungryghost" allow="autoplay"></iframe>
+    <iframe allow="autoplay"></iframe>
 </body>
 </html> 
