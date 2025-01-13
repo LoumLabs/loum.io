@@ -11,17 +11,26 @@ class MixerHandler(SimpleHTTPRequestHandler):
         
         # Check if this is a mixer route
         mixer_match = re.match(r'^/mixer/([^/]+)/?$', self.path)
-        config_match = re.match(r'^/configs/([^/]+)\.json$', self.path)
+        config_match = re.match(r'^/mixer/configs/([^/]+)\.json$', self.path)
         proxy_match = re.match(r'^/proxy/(.+)$', self.path)
         
         if mixer_match:
             print('Serving mixer app')
-            # Serve the mixer's index.html for any /mixer/* route
+            collection_name = mixer_match.group(1)
+            print(f'Collection name: {collection_name}')
+            
+            # Check if config exists
+            config_path = os.path.join('mixer', 'configs', f'{collection_name}.json')
+            if not os.path.exists(config_path):
+                print(f'Warning: Config file not found: {config_path}')
+            
+            # Serve the mixer's index.html
             self.path = '/mixer/index.html'
+            
         elif config_match:
             print('Serving config file')
             config_name = config_match.group(1)
-            config_path = os.path.join('configs', f'{config_name}.json')
+            config_path = os.path.join('mixer', 'configs', f'{config_name}.json')
             
             if os.path.exists(config_path):
                 print(f'Found config file: {config_path}')
@@ -36,10 +45,13 @@ class MixerHandler(SimpleHTTPRequestHandler):
                     return
                 except Exception as e:
                     print(f'Error reading config file: {e}')
+                    self.send_error(500, f'Error reading config file: {str(e)}')
+                    return
             else:
                 print(f'Config file not found: {config_path}')
                 self.send_error(404, f'Config file not found: {config_name}')
                 return
+                
         elif proxy_match:
             print('Proxying file request')
             encoded_url = proxy_match.group(1)

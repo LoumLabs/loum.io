@@ -65,7 +65,7 @@ class Waveform {
 
         // Draw waveform
         ctx.beginPath();
-        ctx.strokeStyle = '#4CAF50';
+        ctx.strokeStyle = '#484CBD';
         ctx.lineWidth = 1;
 
         for (let i = 0; i < width; i++) {
@@ -81,7 +81,7 @@ class Waveform {
             const y1 = amp + (min * amp * 0.95);
             const y2 = amp + (max * amp * 0.95);
 
-            ctx.fillStyle = 'rgba(76, 175, 80, 0.3)';
+            ctx.fillStyle = 'rgba(72, 76, 189, 0.8)';
             ctx.fillRect(i, y1, 1, y2 - y1);
         }
 
@@ -105,7 +105,7 @@ class Waveform {
             startX;
 
         // Draw loop start marker
-        ctx.fillStyle = '#4CAF50';
+        ctx.fillStyle = '#484CBD';
         ctx.fillRect(startX - 1, 0, 2, height);
 
         // Draw loop end marker if set
@@ -113,7 +113,7 @@ class Waveform {
             ctx.fillRect(endX - 1, 0, 2, height);
 
             // Draw loop region overlay
-            ctx.fillStyle = 'rgba(76, 175, 80, 0.15)';
+            ctx.fillStyle = 'rgba(72, 76, 189, 0.15)';
             ctx.fillRect(startX, 0, endX - startX, height);
         }
     }

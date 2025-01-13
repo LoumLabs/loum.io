@@ -1794,6 +1794,17 @@ function initializeMixer(audioProcessor) {
         });
     }
 
+    // Check if this is the first load
+    const path = window.location.pathname;
+    const collectionKey = `mixerLoaded_${path}`;
+    const hasLoaded = sessionStorage.getItem(collectionKey);
+    if (!hasLoaded) {
+        // Set the flag and reload once
+        sessionStorage.setItem(collectionKey, 'true');
+        window.location.reload();
+        return;
+    }
+
     return mixer;
 }
 
@@ -1811,11 +1822,6 @@ window.addEventListener('load', async () => {
 
     // Create audio processor instance
     const audioProcessor = new AudioProcessor();
-    
-    // Initialize audio context if needed
-    if (!audioProcessor.isInitialized) {
-        await audioProcessor.initialize();
-    }
     
     // Initialize the mixer with the audio processor
     const mixer = initializeMixer(audioProcessor);
