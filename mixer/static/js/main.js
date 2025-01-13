@@ -228,65 +228,6 @@ const addTrackToList = async (file, predefinedBPM = null) => {
     }
 };
 
-// Ensure DOM is fully loaded before running any code
-window.addEventListener('load', async () => {
-    console.log('Initializing mixer...');
-    
-    // Check for required elements
-    const elementCheck = checkRequiredElements();
-    
-    if (!elementCheck.success) {
-        console.error('Missing required elements:', elementCheck.missingElements);
-        return;
-    }
-
-    // Create audio processor instance
-    const audioProcessor = new AudioProcessor();
-    
-    // Initialize the mixer with the audio processor
-    const mixer = initializeMixer(audioProcessor);
-    
-    // Check if we're in a collection directory or have a collection parameter
-    const path = window.location.pathname;
-    const params = new URLSearchParams(window.location.search);
-    const collectionParam = params.get('collection');
-    const pathMatch = path.match(/\/mixer\/([^\/]+)/);
-    
-    // Get collection name from either path or query parameter
-    const collectionName = pathMatch ? pathMatch[1].toLowerCase() : 
-                          collectionParam ? collectionParam.toLowerCase() : null;
-    
-    if (collectionName) {
-        console.log('Loading collection:', collectionName);
-        
-        const config = await loadCollectionConfig(collectionName);
-        if (config && config.tracks) {
-            await loadCollectionTracks(config.tracks, mixer.addTrackToList, mixer.loadTrackToDeck, audioProcessor);
-        }
-    }
-    
-    // Initialize audio context if needed
-    if (!audioProcessor.isInitialized) {
-        await audioProcessor.initialize();
-    }
-    
-    // Set up file input handler
-    const fileInput = document.getElementById('track-file-input');
-    const addTracksBtn = document.getElementById('add-tracks');
-    
-    addTracksBtn.addEventListener('click', () => {
-        fileInput.click();
-    });
-    
-    fileInput.addEventListener('change', async (event) => {
-        const files = Array.from(event.target.files);
-        for (const file of files) {
-            await addTrackToList(file);
-        }
-        fileInput.value = '';
-    });
-});
-
 function initializeMixer(audioProcessor) {
     const waveforms = {
         a: new Waveform('deck-a'),
@@ -523,11 +464,6 @@ function initializeMixer(audioProcessor) {
             // Remove initialization listeners once initialized
             document.removeEventListener('click', initializeAudio);
             document.removeEventListener('touchstart', initializeAudio);
-            
-            // If this was triggered by the "Add Tracks" button, trigger the file input
-            if (e.target.id === 'add-tracks') {
-                document.getElementById('track-file-input').click();
-            }
         } catch (error) {
             console.error('Error initializing audio:', error);
         }
@@ -876,15 +812,6 @@ function initializeMixer(audioProcessor) {
             alert('Error loading track to deck. Please try again.');
         }
     };
-
-    // Add tracks button handler
-    document.getElementById('add-tracks').addEventListener('click', (e) => {
-        if (audioProcessor.isInitialized) {
-            const fileInput = document.getElementById('track-file-input');
-            fileInput.accept = 'audio/*,.json';  // Accept both audio and JSON files
-            fileInput.click();
-        }
-    });
 
     // Deck handlers
     ['a', 'b'].forEach(deck => {
@@ -1828,10 +1755,91 @@ function initializeMixer(audioProcessor) {
         }
     });
 
-    // Return necessary functions for track management
-    return {
-        addTrackToList,
-        loadTrackToDeck,
-        tracks
+    // Create mixer object with public methods
+    const mixer = {
+        addTrackToList: addTrackToList,
+        loadTrackToDeck: loadTrackToDeck,
+        updateTrackList: updateTrackList
     };
-} 
+
+    // Set up file input handler - SINGLE POINT OF CONTROL
+    const fileInput = document.getElementById('track-file-input');
+    const addTracksBtn = document.getElementById('add-tracks');
+    
+    if (addTracksBtn && fileInput) {
+        // Remove any existing listeners
+        const newFileInput = fileInput.cloneNode(true);
+        fileInput.parentNode.replaceChild(newFileInput, fileInput);
+        
+        addTracksBtn.addEventListener('click', () => {
+            if (!audioProcessor.isInitialized) {
+                audioProcessor.initialize().then(() => {
+                    newFileInput.click();
+                });
+            } else {
+                newFileInput.click();
+            }
+        });
+        
+        newFileInput.addEventListener('change', async (event) => {
+            if (event.target.files.length > 0) {
+                const files = Array.from(event.target.files);
+                for (const file of files) {
+                    if (file.type.startsWith('audio/')) {
+                        await mixer.addTrackToList(file);
+                    }
+                }
+                event.target.value = '';
+            }
+        });
+    }
+
+    return mixer;
+}
+
+// Ensure DOM is fully loaded before running any code
+window.addEventListener('load', async () => {
+    console.log('Initializing mixer...');
+    
+    // Check for required elements
+    const elementCheck = checkRequiredElements();
+    
+    if (!elementCheck.success) {
+        console.error('Missing required elements:', elementCheck.missingElements);
+        return;
+    }
+
+    // Create audio processor instance
+    const audioProcessor = new AudioProcessor();
+    
+    // Initialize audio context if needed
+    if (!audioProcessor.isInitialized) {
+        await audioProcessor.initialize();
+    }
+    
+    // Initialize the mixer with the audio processor
+    const mixer = initializeMixer(audioProcessor);
+    
+    // Check if we're in a collection directory or have a collection parameter
+    const path = window.location.pathname;
+    const params = new URLSearchParams(window.location.search);
+    const collectionParam = params.get('collection');
+    const pathMatch = path.match(/\/mixer\/([^\/]+)/);
+    
+    // Get collection name from either path or query parameter
+    const collectionName = pathMatch ? pathMatch[1].toLowerCase() : 
+                          collectionParam ? collectionParam.toLowerCase() : null;
+    
+    if (collectionName) {
+        console.log('Loading collection:', collectionName);
+        
+        try {
+            const config = await loadCollectionConfig(collectionName);
+            if (config && config.tracks) {
+                await loadCollectionTracks(config.tracks, mixer.addTrackToList, mixer.loadTrackToDeck, audioProcessor);
+            }
+        } catch (error) {
+            console.error('Error loading collection:', error);
+        }
+    }
+}); 
