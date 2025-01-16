@@ -181,6 +181,12 @@ body {
     background-color: #444;
 }
 
+.button-container {
+    display: flex;
+    justify-content: center;
+    padding-top: 20px;
+}
+
 /* Tab Container */
 .tab-container {
     background-color: #1e1e1e;
@@ -269,6 +275,10 @@ body {
     padding: 8px 12px;
     text-align: left;
     border-bottom: 1px solid #333;
+}
+
+.table-container th:not(:first-child) {
+    text-align: right;
 }
 
 .table-container td {
@@ -430,18 +440,14 @@ canvas#multiband-chart {
 
 #metadata-table th {
     background-color: #1e1e1e !important;
-    color: rgba(255, 255, 255, 0.8) !important;
+    color: #808080 !important;
     font-weight: normal !important;
-    padding: 10px !important;
+    padding: 8px 12px !important;
     text-align: left !important;
-    border-bottom: 1px solid #3c3f41 !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    font-size: 12px !important;
-    line-height: 1.4 !important;
+    border-bottom: 1px solid #333 !important;
+    font-size: 13px !important;
     font-family: monospace !important;
-    vertical-align: middle !important;
+    height: auto !important;
 }
 
 /* Data cell styles with reduced padding */
@@ -472,12 +478,12 @@ canvas#multiband-chart {
 
 /* Keep header padding consistent with other tables */
 #metadata-table th:first-child {
-    padding: 10px 12px !important;
+    padding: 8px 12px !important;
 }
 
 #metadata-table th:nth-child(2),
 #metadata-table th:last-child {
-    padding: 10px 20px !important;
+    padding: 8px 12px !important;
 }
 
 /* Style the input fields - adjust height to match more compact rows */
@@ -574,7 +580,7 @@ canvas#multiband-chart {
     background-color: #3c3f41;
     color: #a0a0a0;
     border: none;
-    padding: 8px 12px;
+    padding: 5px 12px;
     border-radius: 3px;
     cursor: pointer;
     transition: all 0.2s;
@@ -868,7 +874,7 @@ canvas#multiband-chart {
     color: #e0e0e0;
     border: none;
     width: 30px;
-    height: 30px;
+    height: 25px;
     border-radius: 3px;
     cursor: pointer;
     font-size: 16px;

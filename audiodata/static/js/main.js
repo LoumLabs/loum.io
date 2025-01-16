@@ -967,6 +967,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         }
                     }
+                },
+                animation: {
+                    duration: 0 // Set animation duration to 0 to disable it
                 }
             },
             plugins: [{
