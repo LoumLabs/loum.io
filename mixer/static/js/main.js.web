@@ -1810,36 +1810,42 @@ function initializeMixer(audioProcessor) {
 
 // Ensure DOM is fully loaded before running any code
 window.addEventListener('load', async () => {
-    // Initialize audio processor
-    audioProcessor = new AudioProcessor();
-    await audioProcessor.initialize();
+    console.log('Initializing mixer...');
+    
+    // Check for required elements
+    const elementCheck = checkRequiredElements();
+    
+    if (!elementCheck.success) {
+        console.error('Missing required elements:', elementCheck.missingElements);
+        return;
+    }
+
+    // Create audio processor instance
+    const audioProcessor = new AudioProcessor();
     
     // Initialize the mixer with the audio processor
     const mixer = initializeMixer(audioProcessor);
     
-    // Check if we're loading a collection from the hash
-    const hash = window.location.hash.slice(1); // Remove the # symbol
-    if (hash) {
-        const collectionName = hash.toLowerCase();  // Convert to lowercase immediately
+    // Check if we're in a collection directory or have a collection parameter
+    const path = window.location.pathname;
+    const params = new URLSearchParams(window.location.search);
+    const collectionParam = params.get('collection');
+    const pathMatch = path.match(/\/mixer\/([^\/]+)/);
+    
+    // Get collection name from either path or query parameter
+    const collectionName = pathMatch ? pathMatch[1].toLowerCase() : 
+                          collectionParam ? collectionParam.toLowerCase() : null;
+    
+    if (collectionName) {
         console.log('Loading collection:', collectionName);
         
-        const config = await loadCollectionConfig(collectionName);
-        if (config && config.tracks) {
-            await loadCollectionTracks(config.tracks, mixer.addTrackToList, mixer.loadTrackToDeck, audioProcessor);
-        }
-    }
-});
-
-// Also handle hash changes while the app is running
-window.addEventListener('hashchange', async () => {
-    const hash = window.location.hash.slice(1);
-    if (hash) {
-        const collectionName = hash.toLowerCase();
-        console.log('Loading collection from hash change:', collectionName);
-        
-        const config = await loadCollectionConfig(collectionName);
-        if (config && config.tracks) {
-            await loadCollectionTracks(config.tracks, mixer.addTrackToList, mixer.loadTrackToDeck, audioProcessor);
+        try {
+            const config = await loadCollectionConfig(collectionName);
+            if (config && config.tracks) {
+                await loadCollectionTracks(config.tracks, mixer.addTrackToList, mixer.loadTrackToDeck, audioProcessor);
+            }
+        } catch (error) {
+            console.error('Error loading collection:', error);
         }
     }
 }); 

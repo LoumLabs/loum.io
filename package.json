@@ -1,0 +1,16 @@
+{
+  "name": "loum-desktop",
+  "version": "1.0.0",
+  "description": "Loum Desktop App",
+  "main": "main.js",
+  "scripts": {
+    "start": "NODE_ENV=development electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "electron": "^28.1.0",
+    "electron-store": "^7.0.3"
+  }
+}
