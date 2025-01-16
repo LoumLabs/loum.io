@@ -1817,10 +1817,17 @@ window.addEventListener('load', async () => {
     // Initialize the mixer with the audio processor
     const mixer = initializeMixer(audioProcessor);
     
-    // Check if we're loading a collection from the hash
-    const hash = window.location.hash.slice(1); // Remove the # symbol
-    if (hash) {
-        const collectionName = hash.toLowerCase();  // Convert to lowercase immediately
+    // Check if we're in a collection directory or have a collection parameter
+    const path = window.location.pathname;
+    const params = new URLSearchParams(window.location.search);
+    const collectionParam = params.get('collection');
+    const pathMatch = path.match(/\/mixer\/([^\/]+)/);
+    
+    // Get collection name from either path or query parameter
+    const collectionName = pathMatch ? pathMatch[1].toLowerCase() : 
+                          collectionParam ? collectionParam.toLowerCase() : null;
+    
+    if (collectionName) {
         console.log('Loading collection:', collectionName);
         
         const config = await loadCollectionConfig(collectionName);
