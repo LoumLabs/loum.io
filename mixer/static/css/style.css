@@ -842,17 +842,15 @@ canvas {
     background: #333;
     border-radius: 2px;
     cursor: pointer;
+    direction: rtl;
+    transform: rotate(180deg);
 }
 
 .fader::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 20px;
-    height: 8px;
-    background: #666;
-    border-radius: 2px;
-    cursor: pointer;
-    border: 1px solid #444;
+    transform: rotate(180deg);
 }
 
 /* For Firefox */
