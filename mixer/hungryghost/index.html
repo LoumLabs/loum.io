@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="0.5">
     <title>Mixer - loum.io</title>
     <style>
         body, html {
@@ -28,6 +29,12 @@
             // Set the iframe src to load this collection
             const iframe = document.querySelector('iframe');
             iframe.src = `/mixer?collection=${collectionName}`;
+
+            // Remove the refresh meta tag after first load
+            setTimeout(() => {
+                const metaRefresh = document.querySelector('meta[http-equiv="refresh"]');
+                if (metaRefresh) metaRefresh.remove();
+            }, 750);
         });
     </script>
 </head>
