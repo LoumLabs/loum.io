@@ -8,6 +8,24 @@ body {
     overflow-y: auto;  /* Ensure body is scrollable */
 }
 
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #444;
+}
+
 .container {
     max-width: 800px;
     margin: 0 auto;
