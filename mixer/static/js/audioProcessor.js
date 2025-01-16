@@ -885,14 +885,15 @@ class AudioProcessor {
     setVolume(deck, value) {
         if (!this.gainNodes[deck]) return;
         
-        // Invert the value so top position is full volume
-        // value of 0 = silence, value of 127 = full volume
-        const gain = 1 - (value / 127);
+        // Convert 0-127 range to gain (0-1)
+        // value of 127 = full volume (1.0)
+        // value of 0 = silence (0.0)
+        const gain = value / 127;
         
         // Store the fader value for metering
         this.channelFaderValues[deck] = gain;
         
-        // Apply with a small amount of smoothing
+        // Apply gain with smoothing
         this.gainNodes[deck].gain.setTargetAtTime(gain, this.audioContext.currentTime, 0.005);
     }
 
