@@ -11,124 +11,130 @@
 </head>
 <body>
     <div class="app-container">
-        <a href="/" class="home-link">loum.io</a>
-        <!-- Track Upload Section -->
-        <div class="upload-panel">
-            <h1>A/B</h1>
-            <div class="track-upload-container">
-                <div class="track-upload" id="track-a">
-                    <h2>Track A</h2>
-                    <div class="upload-zone" id="upload-zone-a">
-                        <div class="upload-content">
-                            <p>Drag & drop audio file here</p>
-                            <p class="upload-hint">Supported formats: .wav, .mp3, .aac, .m4a, .ogg, .flac</p>
-                            <p class="upload-hint">Files are processed locally</p>
-                        </div>
-                        <button class="clear-button" id="clear-a">×</button>
-                    </div>
-                    <button class="upload-button">Choose File</button>
-                    <input type="file" class="file-input" accept=".wav,.mp3,.aac,.m4a,.ogg,.flac" style="display: none;">
-                </div>
-                <div class="track-upload" id="track-b">
-                    <h2>Track B</h2>
-                    <div class="upload-zone" id="upload-zone-b">
-                        <div class="upload-content">
-                            <p>Drag & drop audio file here</p>
-                            <p class="upload-hint">Supported formats: .wav, .mp3, .aac, .m4a, .ogg, .flac</p>
-                            <p class="upload-hint">Files are processed locally</p>
-                        </div>
-                        <button class="clear-button" id="clear-b">×</button>
-                    </div>
-                    <button class="upload-button">Choose File</button>
-                    <input type="file" class="file-input" accept=".wav,.mp3,.aac,.m4a,.ogg,.flac" style="display: none;">
-                </div>
+        <div class="container">
+            <div class="header-section">
+                <a href="/" class="home-link" target="_top">loum.io</a>
+                <h1>A/B</h1>
+                <div class="header-spacer"></div>
             </div>
-        </div>
 
-        <!-- Loudness Matching Section -->
-        <div class="loudness-panel">
-            <div class="loudness-buttons">
-                <button id="match-loudness" class="control-button" disabled>Match Loudness</button>
-                <button id="reset-loudness" class="control-button" disabled>Reset</button>
-            </div>
-            <div class="loudness-controls">
-                <div class="track-info">
-                    <div class="track-loudness">
-                        <span>Track A: </span>
-                        <span id="track-a-loudness">--</span> LUFS-S Max
-                    </div>
-                    <div class="gain-control">
-                        <span>Gain: </span>
-                        <span id="track-a-gain">0.0</span> dB
-                        <div class="gain-adjust">
-                            <button class="gain-button" data-track="a" data-adjust="-0.1">-0.1</button>
-                            <button class="gain-button" data-track="a" data-adjust="+0.1">+0.1</button>
+            <!-- Track Upload Section -->
+            <div class="upload-panel">
+                <div class="track-upload-container">
+                    <div class="track-upload" id="track-a">
+                        <h2>Track A</h2>
+                        <div class="upload-zone" id="upload-zone-a">
+                            <div class="upload-content">
+                                <p>Drag & drop audio file here</p>
+                                <p class="upload-hint">Supported formats: .wav, .mp3, .aac, .m4a, .ogg, .flac</p>
+                                <p class="upload-hint">Files are processed locally</p>
+                            </div>
+                            <button class="clear-button" id="clear-a">×</button>
                         </div>
+                        <button class="upload-button">Choose File</button>
+                        <input type="file" class="file-input" accept=".wav,.mp3,.aac,.m4a,.ogg,.flac" style="display: none;">
                     </div>
-                    <div class="delay-control">
-                        <span>Delay: </span>
-                        <span id="track-a-delay">0</span> ms
-                        <div class="delay-adjust">
-                            <button class="delay-button" data-track="a" data-adjust="-1">-1</button>
-                            <button class="delay-button" data-track="a" data-adjust="+1">+1</button>
+                    <div class="track-upload" id="track-b">
+                        <h2>Track B</h2>
+                        <div class="upload-zone" id="upload-zone-b">
+                            <div class="upload-content">
+                                <p>Drag & drop audio file here</p>
+                                <p class="upload-hint">Supported formats: .wav, .mp3, .aac, .m4a, .ogg, .flac</p>
+                                <p class="upload-hint">Files are processed locally</p>
+                            </div>
+                            <button class="clear-button" id="clear-b">×</button>
                         </div>
-                    </div>
-                </div>
-                <div class="track-info">
-                    <div class="track-loudness">
-                        <span>Track B: </span>
-                        <span id="track-b-loudness">--</span> LUFS-S Max
-                    </div>
-                    <div class="gain-control">
-                        <span>Gain: </span>
-                        <span id="track-b-gain">0.0</span> dB
-                        <div class="gain-adjust">
-                            <button class="gain-button" data-track="b" data-adjust="-0.1">-0.1</button>
-                            <button class="gain-button" data-track="b" data-adjust="+0.1">+0.1</button>
-                        </div>
-                    </div>
-                    <div class="delay-control">
-                        <span>Delay: </span>
-                        <span id="track-b-delay">0</span> ms
-                        <div class="delay-adjust">
-                            <button class="delay-button" data-track="b" data-adjust="-1">-1</button>
-                            <button class="delay-button" data-track="b" data-adjust="+1">+1</button>
-                        </div>
+                        <button class="upload-button">Choose File</button>
+                        <input type="file" class="file-input" accept=".wav,.mp3,.aac,.m4a,.ogg,.flac" style="display: none;">
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Playback Section -->
-        <div class="playback-panel">
-            <div class="waveform-container">
-                <div id="waveform-a" class="waveform"></div>
-                <div id="waveform-b" class="waveform"></div>
+            <!-- Loudness Matching Section -->
+            <div class="loudness-panel">
+                <div class="loudness-buttons">
+                    <button id="match-loudness" class="control-button" disabled>Match Loudness</button>
+                    <button id="reset-loudness" class="control-button" disabled>Reset</button>
+                </div>
+                <div class="loudness-controls">
+                    <div class="track-info">
+                        <div class="track-loudness">
+                            <span>Track A: </span>
+                            <span id="track-a-loudness">--</span> LUFS-S Max
+                        </div>
+                        <div class="gain-control">
+                            <span>Gain: </span>
+                            <span id="track-a-gain">0.0</span> dB
+                            <div class="gain-adjust">
+                                <button class="gain-button" data-track="a" data-adjust="-0.1">-0.1</button>
+                                <button class="gain-button" data-track="a" data-adjust="+0.1">+0.1</button>
+                            </div>
+                        </div>
+                        <div class="delay-control">
+                            <span>Delay: </span>
+                            <span id="track-a-delay">0</span> ms
+                            <div class="delay-adjust">
+                                <button class="delay-button" data-track="a" data-adjust="-1">-1</button>
+                                <button class="delay-button" data-track="a" data-adjust="+1">+1</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="track-info">
+                        <div class="track-loudness">
+                            <span>Track B: </span>
+                            <span id="track-b-loudness">--</span> LUFS-S Max
+                        </div>
+                        <div class="gain-control">
+                            <span>Gain: </span>
+                            <span id="track-b-gain">0.0</span> dB
+                            <div class="gain-adjust">
+                                <button class="gain-button" data-track="b" data-adjust="-0.1">-0.1</button>
+                                <button class="gain-button" data-track="b" data-adjust="+0.1">+0.1</button>
+                            </div>
+                        </div>
+                        <div class="delay-control">
+                            <span>Delay: </span>
+                            <span id="track-b-delay">0</span> ms
+                            <div class="delay-adjust">
+                                <button class="delay-button" data-track="b" data-adjust="-1">-1</button>
+                                <button class="delay-button" data-track="b" data-adjust="+1">+1</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="playback-controls">
-                <div class="transport-controls">
-                    <button id="play-pause" class="control-button" disabled>Play</button>
-                    <button id="stop" class="control-button" disabled>Stop</button>
+
+            <!-- Playback Section -->
+            <div class="playback-panel">
+                <div class="waveform-container">
+                    <div id="waveform-a" class="waveform"></div>
+                    <div id="waveform-b" class="waveform"></div>
                 </div>
-                <div class="ab-controls">
-                    <div class="track-state"><span id="current-track-display">A</span></div>
-                    <button id="ab-toggle" class="control-button large" disabled>Switch Track</button>
-                    <label class="blind-test">
-                        <input type="checkbox" id="blind-test-toggle">
-                        Blind Test Mode
-                    </label>
+                <div class="playback-controls">
+                    <div class="transport-controls">
+                        <button id="play-pause" class="control-button" disabled>Play</button>
+                        <button id="stop" class="control-button" disabled>Stop</button>
+                    </div>
+                    <div class="ab-controls">
+                        <div class="track-state"><span id="current-track-display">A</span></div>
+                        <button id="ab-toggle" class="control-button large" disabled>Switch Track</button>
+                        <label class="blind-test">
+                            <input type="checkbox" id="blind-test-toggle">
+                            Blind Test Mode
+                        </label>
+                    </div>
+                    <div class="volume-control">
+                        <label for="volume">Volume</label>
+                        <input type="range" id="volume" min="0" max="100" value="100">
+                    </div>
                 </div>
-                <div class="volume-control">
-                    <label for="volume">Volume</label>
-                    <input type="range" id="volume" min="0" max="100" value="100">
-                </div>
-            </div>
-            <div class="progress-container">
-                <div class="time-display">
-                    <span id="current-time">0:00</span> / <span id="total-time">0:00</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill"></div>
+                <div class="progress-container">
+                    <div class="time-display">
+                        <span id="current-time">0:00</span> / <span id="total-time">0:00</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
                 </div>
             </div>
         </div>

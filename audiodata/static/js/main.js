@@ -339,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateFileList();
 
             // Stage 1: Get file info and metadata for all files
-            showProcessingStatus('', 'Stage 1/4: Reading file info and metadata...');
+            showProcessingStatus('', 'Stage 1/3: Reading file info and metadata...');
             const fileInfoResults = [];
             for (const file of files) {
                 try {
@@ -359,7 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateFileInfoTable(fileInfoResults);
 
             // Stage 2: Process loudness for all files
-            showProcessingStatus('', 'Stage 2/4: Analyzing loudness...');
+            showProcessingStatus('', 'Stage 2/3: Analyzing loudness...');
             const loudnessResults = [];
             for (const file of files) {
                 try {
@@ -381,7 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Stage 3: Process multiband for all files
-            showProcessingStatus('', 'Stage 3/4: Analyzing frequency bands...');
+            showProcessingStatus('', 'Stage 3/3: Analyzing frequency bands...');
             const multibandResults = [];
             for (const file of files) {
                 try {

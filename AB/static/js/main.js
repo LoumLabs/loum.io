@@ -210,67 +210,50 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function drawWaveform(audioBuffer, ctx, color) {
-        const dpr = window.devicePixelRatio || 1;
-        const width = ctx.canvas.width / dpr;
-        const height = ctx.canvas.height / dpr;
-        
-        const maxDuration = Math.max(
-            trackA?.buffer?.duration || 0,
-            trackB?.buffer?.duration || 0
-        );
-        
-        const pixelsPerSecond = width / maxDuration;
-        const bufferWidth = Math.floor(audioBuffer.duration * pixelsPerSecond);
-        
+    function drawWaveform(canvas, audioBuffer) {
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
         const data = audioBuffer.getChannelData(0);
-        // Use a smaller step size for more detail
-        const step = Math.max(1, Math.floor(data.length / (bufferWidth * 2)));
+        const step = Math.ceil(data.length / width);
         const amp = height / 2;
 
-        ctx.fillStyle = WAVE_BG;
+        ctx.clearRect(0, 0, width, height);
+
+        // Draw background
+        ctx.fillStyle = '#111';
         ctx.fillRect(0, 0, width, height);
 
+        // Draw center line
         ctx.beginPath();
-        ctx.strokeStyle = color;
+        ctx.strokeStyle = '#222';
+        ctx.moveTo(0, amp);
+        ctx.lineTo(width, amp);
+        ctx.stroke();
+
+        // Draw waveform
+        ctx.beginPath();
+        ctx.strokeStyle = '#484CBD';
         ctx.lineWidth = 1;
 
-        let x = 0;
-        let lastY = height / 2;
-
-        for (let i = 0; i < data.length; i += step) {
-            const segmentLength = Math.min(step, data.length - i);
+        for (let i = 0; i < width; i++) {
             let min = 1.0;
             let max = -1.0;
-            
-            // Find min/max in this segment
-            for (let j = 0; j < segmentLength; j++) {
-                const datum = data[i + j];
+
+            for (let j = 0; j < step; j++) {
+                const datum = data[(i * step) + j];
                 if (datum < min) min = datum;
                 if (datum > max) max = datum;
             }
 
-            // Calculate x position with higher precision
-            x = (i / data.length) * width;
-            
-            // Draw only if there's a significant change
-            const y1 = (height / 2) + (min * amp);
-            const y2 = (height / 2) + (max * amp);
-            
-            if (Math.abs(y1 - lastY) > 0.5 || Math.abs(y2 - lastY) > 0.5) {
-                ctx.moveTo(x, y1);
-                ctx.lineTo(x, y2);
-                lastY = (y1 + y2) / 2;
-            }
+            // Calculate y coordinates to show full range
+            const y1 = amp - (min * amp * 0.95);  // Negative values go down from center
+            const y2 = amp - (max * amp * 0.95);  // Positive values go up from center
+
+            ctx.fillStyle = 'rgba(72, 76, 189, 0.8)';
+            ctx.fillRect(i, Math.min(y1, y2), 1, Math.abs(y2 - y1));
         }
 
-        ctx.stroke();
-
-        // Draw center line
-        ctx.beginPath();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.moveTo(0, height / 2);
-        ctx.lineTo(width, height / 2);
         ctx.stroke();
     }
 
@@ -337,12 +320,18 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.clearRect(0, 0, width, height);
 
             // Draw playhead line with anti-aliasing
-        ctx.beginPath();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
-        ctx.moveTo(position, 0);
+            ctx.beginPath();
+            ctx.strokeStyle = '#ff5722';
+            ctx.lineWidth = 2;
+            ctx.moveTo(position, 0);
             ctx.lineTo(position, height);
-        ctx.stroke();
+            ctx.stroke();
+
+            // Add glow effect
+            ctx.shadowColor = 'rgba(255, 87, 34, 0.5)';
+            ctx.shadowBlur = 4;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
         });
 
         if (isPlaying) {
@@ -436,10 +425,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update drawWaveforms to only draw waveforms
     function drawWaveforms() {
         if (trackA?.buffer) {
-            drawWaveform(trackA.buffer, waveformContexts.A, WAVE_COLOR_A);
+            drawWaveform(canvasA, trackA.buffer);
         }
         if (trackB?.buffer) {
-            drawWaveform(trackB.buffer, waveformContexts.B, WAVE_COLOR_B);
+            drawWaveform(canvasB, trackB.buffer);
         }
     }
 
@@ -496,12 +485,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isTrackA) {
                 trackA = newTrack;
                 updateTrackDisplay('A', file.name);
-                drawWaveform(audioBuffer, ctxA, WAVE_COLOR_A);
+                drawWaveform(canvasA, audioBuffer);
                 document.getElementById('upload-zone-a').classList.add('has-file');
             } else {
                 trackB = newTrack;
                 updateTrackDisplay('B', file.name);
-                drawWaveform(audioBuffer, ctxB, WAVE_COLOR_B);
+                drawWaveform(canvasB, audioBuffer);
                 document.getElementById('upload-zone-b').classList.add('has-file');
             }
 
@@ -1326,8 +1315,15 @@ document.addEventListener('DOMContentLoaded', () => {
             updateTrackDisplay('A', '<p>Drag & drop audio file here</p><p class="upload-hint">Supported formats: .wav, .mp3, .aac, .m4a, .ogg, .flac</p><p class="upload-hint">Files are processed locally</p>');
             document.getElementById('upload-zone-a').classList.remove('has-file');
             if (ctxA) {
-                ctxA.fillStyle = WAVE_BG;
+                // Draw black background
+                ctxA.fillStyle = '#111';
                 ctxA.fillRect(0, 0, canvasA.width, canvasA.height);
+                // Draw center line
+                ctxA.beginPath();
+                ctxA.strokeStyle = '#222';
+                ctxA.moveTo(0, canvasA.height / 2);
+                ctxA.lineTo(canvasA.width, canvasA.height / 2);
+                ctxA.stroke();
             }
         } else {
             if (trackB?.gainNode) {
@@ -1337,8 +1333,15 @@ document.addEventListener('DOMContentLoaded', () => {
             updateTrackDisplay('B', '<p>Drag & drop audio file here</p><p class="upload-hint">Supported formats: .wav, .mp3, .aac, .m4a, .ogg, .flac</p><p class="upload-hint">Files are processed locally</p>');
             document.getElementById('upload-zone-b').classList.remove('has-file');
             if (ctxB) {
-                ctxB.fillStyle = WAVE_BG;
+                // Draw black background
+                ctxB.fillStyle = '#111';
                 ctxB.fillRect(0, 0, canvasB.width, canvasB.height);
+                // Draw center line
+                ctxB.beginPath();
+                ctxB.strokeStyle = '#222';
+                ctxB.moveTo(0, canvasB.height / 2);
+                ctxB.lineTo(canvasB.width, canvasB.height / 2);
+                ctxB.stroke();
             }
         }
 
@@ -1595,10 +1598,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add helper function to redraw both waveforms
     function drawWaveforms() {
         if (trackA?.buffer) {
-            drawWaveform(trackA.buffer, waveformContexts.A, WAVE_COLOR_A);
+            drawWaveform(canvasA, trackA.buffer);
         }
         if (trackB?.buffer) {
-            drawWaveform(trackB.buffer, waveformContexts.B, WAVE_COLOR_B);
+            drawWaveform(canvasB, trackB.buffer);
         }
     }
 
