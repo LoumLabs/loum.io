@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="refresh" content="0.5">
     <title>Mixer - loum.io</title>
     <style>
         body, html {
@@ -11,7 +10,6 @@
             padding: 0;
             width: 100%;
             height: 100%;
-            overflow: hidden;
             background: #181818;
         }
         iframe {
@@ -21,24 +19,29 @@
         }
     </style>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Get collection name from the current directory name
+        document.addEventListener('DOMContentLoaded', () => {
+            // Extract collection name from URL path
             const pathParts = window.location.pathname.split('/');
-            const collectionName = pathParts[pathParts.length - 2] || pathParts[pathParts.length - 1];
-            
+            const collectionName = pathParts[pathParts.length - 1];
+
             // Set the iframe src to load this collection
             const iframe = document.querySelector('iframe');
             iframe.src = `/mixer?collection=${collectionName}`;
 
-            // Remove the refresh meta tag after first load
-            setTimeout(() => {
-                const metaRefresh = document.querySelector('meta[http-equiv="refresh"]');
-                if (metaRefresh) metaRefresh.remove();
-            }, 750);
+            // One-time refresh after iframe loads
+            let hasRefreshed = false;
+            iframe.onload = () => {
+                if (!hasRefreshed) {
+                    hasRefreshed = true;
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500);
+                }
+            };
         });
     </script>
 </head>
 <body>
-    <iframe allow="autoplay"></iframe>
+    <iframe></iframe>
 </body>
 </html> 
