@@ -21,12 +21,18 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Get the collection name from the URL path
-            const pathParts = window.location.pathname.split('/');
-            const collectionName = pathParts[pathParts.length - 2] || pathParts[pathParts.length - 1];
+            const path = window.location.pathname;
+            const match = path.match(/\/mixer\/([^\/]+)/);
+            const collectionName = match ? match[1] : null;
             
-            // Set the iframe src with the collection name
-            const iframe = document.querySelector('iframe');
-            iframe.src = `/mixer?collection=${collectionName}`;
+            if (collectionName) {
+                // Set the iframe src with the collection name
+                const iframe = document.querySelector('iframe');
+                iframe.src = `/mixer?collection=${collectionName}`;
+            } else {
+                // If no collection name found, go to home
+                window.location.href = '/';
+            }
         });
     </script>
 </head>

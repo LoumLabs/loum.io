@@ -10,18 +10,9 @@
         const match = path.match(/^\/mixer\/([^\/]+)\/?$/);
         
         if (match) {
-            // This is a mixer collection URL, load the template
-            fetch('/mixer/template.html')
-                .then(response => response.text())
-                .then(html => {
-                    document.open();
-                    document.write(html);
-                    document.close();
-                })
-                .catch(error => {
-                    console.error('Error loading template:', error);
-                    window.location.href = '/';
-                });
+            // This is a mixer collection URL, redirect to mixer with collection parameter
+            const collectionName = match[1];
+            window.location.href = `/mixer?collection=${collectionName}`;
         } else {
             // Not a mixer collection URL, redirect to home
             window.location.href = '/';
