@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mixer - loum.io</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: #181818;
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check if this is a mixer route
+            const mixerMatch = window.location.pathname.match(/^\/mixer\/([^/]+)\/?$/);
+            if (mixerMatch) {
+                const collectionName = mixerMatch[1];
+                // Redirect to mixer with collection parameter
+                window.location.href = `/mixer?collection=${collectionName}`;
+            } else {
+                // For non-mixer routes, redirect to home
+                window.location.href = '/';
+            }
+        });
+    </script>
+</head>
+<body>
+</body>
+</html> 
