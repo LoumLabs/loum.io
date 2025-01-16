@@ -1332,6 +1332,7 @@ function initializeMixer(audioProcessor) {
         });
 
         // Initialize fader position and volume
+        fader.value = 127;  // Start at top position (full volume)
         const initialValue = parseInt(fader.value);
         audioProcessor.setVolume(deck, initialValue);
     });
