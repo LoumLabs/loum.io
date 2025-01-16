@@ -62,6 +62,20 @@ function checkRequiredElements() {
     };
 }
 
+// Function to get collection name from URL
+function getCollectionName() {
+    // First check hash
+    const hash = window.location.hash.slice(1);
+    if (hash) return hash;
+    
+    // Then check query parameters
+    const params = new URLSearchParams(window.location.search);
+    const collection = params.get('collection');
+    if (collection) return collection;
+    
+    return null;
+}
+
 // Function to load collection config
 async function loadCollectionConfig(collectionName) {
     try {
@@ -1817,19 +1831,10 @@ window.addEventListener('load', async () => {
     // Initialize the mixer with the audio processor
     const mixer = initializeMixer(audioProcessor);
     
-    // Check if we're in a collection directory or have a collection parameter
-    const path = window.location.pathname;
-    const params = new URLSearchParams(window.location.search);
-    const collectionParam = params.get('collection');
-    const pathMatch = path.match(/\/mixer\/([^\/]+)/);
-    
-    // Get collection name from either path or query parameter
-    const collectionName = pathMatch ? pathMatch[1].toLowerCase() : 
-                          collectionParam ? collectionParam.toLowerCase() : null;
-    
+    // Check for collection in URL
+    const collectionName = getCollectionName();
     if (collectionName) {
         console.log('Loading collection:', collectionName);
-        
         const config = await loadCollectionConfig(collectionName);
         if (config && config.tracks) {
             await loadCollectionTracks(config.tracks, mixer.addTrackToList, mixer.loadTrackToDeck, audioProcessor);

@@ -25,9 +25,9 @@
             const pathParts = window.location.pathname.split('/');
             const collectionName = pathParts[pathParts.length - 2] || pathParts[pathParts.length - 1];
             
-            // Set the iframe src to load this collection using full URL
+            // Set the iframe src to load this collection
             const iframe = document.querySelector('iframe');
-            iframe.src = `https://loum.io/mixer/#${collectionName}`;
+            iframe.src = `/mixer?collection=${collectionName}`;
         });
     </script>
 </head>
