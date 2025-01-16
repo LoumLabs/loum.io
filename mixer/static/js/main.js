@@ -1331,8 +1331,9 @@ function initializeMixer(audioProcessor) {
             audioProcessor.setVolume(deck, value);
         });
 
-        // Initialize fader position
-        audioProcessor.setVolume(deck, 100); // Start at full volume
+        // Initialize fader position and volume
+        const initialValue = parseInt(fader.value);
+        audioProcessor.setVolume(deck, initialValue);
     });
 
     // Master gain control
