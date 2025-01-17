@@ -212,10 +212,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function drawWaveform(canvas, audioBuffer) {
         const ctx = canvas.getContext('2d');
-        const width = canvas.width;
-        const height = canvas.height;
+        const dpr = window.devicePixelRatio || 1;
+        const width = canvas.width / dpr;
+        const height = canvas.height / dpr;
         const data = audioBuffer.getChannelData(0);
-        const step = Math.ceil(data.length / width);
+        const step = Math.max(1, Math.floor(data.length / width));
         const amp = height / 2;
 
         ctx.clearRect(0, 0, width, height);
@@ -239,9 +240,11 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 0; i < width; i++) {
             let min = 1.0;
             let max = -1.0;
+            const startIndex = i * step;
+            const endIndex = Math.min(startIndex + step, data.length);
 
-            for (let j = 0; j < step; j++) {
-                const datum = data[(i * step) + j];
+            for (let j = startIndex; j < endIndex; j++) {
+                const datum = data[j];
                 if (datum < min) min = datum;
                 if (datum > max) max = datum;
             }

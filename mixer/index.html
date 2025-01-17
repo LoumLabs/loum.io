@@ -6,6 +6,16 @@
     <title>Mixer - loum.io</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="static/css/style.css">
+    <script>
+        // Get collection from URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const collection = urlParams.get('collection');
+        if (collection) {
+            console.log('Loading collection:', collection);
+            // Store collection name for main.js to use
+            window.mixerCollection = collection;
+        }
+    </script>
 </head>
 <body>
    

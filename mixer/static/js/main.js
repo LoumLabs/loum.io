@@ -62,16 +62,18 @@ function checkRequiredElements() {
     };
 }
 
-// Function to get collection name from URL
+// Function to get collection name from URL or window variable
 function getCollectionName() {
-    // First check hash
-    const hash = window.location.hash.slice(1);
-    if (hash) return hash;
+    // Check for collection in window variable (set by index.html)
+    if (window.mixerCollection) {
+        return window.mixerCollection;
+    }
     
-    // Then check query parameters
-    const params = new URLSearchParams(window.location.search);
-    const collection = params.get('collection');
-    if (collection) return collection;
+    // Check URL hash (legacy method)
+    const hash = window.location.hash.slice(1);
+    if (hash) {
+        return hash;
+    }
     
     return null;
 }
@@ -79,10 +81,14 @@ function getCollectionName() {
 // Function to load collection config
 async function loadCollectionConfig(collectionName) {
     try {
+        if (!collectionName) return null;
+        
         // Convert collection name to lowercase for case-insensitive handling
         const normalizedName = collectionName.toLowerCase();
-        console.log('Fetching collection config:', `/mixer/configs/${normalizedName}.json`);
-        const response = await fetch(`/mixer/configs/${normalizedName}.json`);
+        const configPath = `configs/${normalizedName}.json`;
+            
+        console.log('Fetching collection config:', configPath);
+        const response = await fetch(configPath);
         if (!response.ok) {
             console.error('Failed to load collection config:', response.status, response.statusText);
             throw new Error(`Failed to load collection config: ${response.statusText}`);
