@@ -268,6 +268,7 @@ h1 {
     overflow: hidden;
     user-select: none;
     margin-bottom: 8px;
+    display: flex;
 }
 
 .waveform-container.drag-over {
@@ -297,14 +298,106 @@ canvas {
 }
 
 .seek-indicator {
+    display: none !important;
+}
+
+.overview-section .seek-indicator {
     position: absolute;
     top: 0;
-    width: 1px;
+    width: 2px;
     height: 100%;
     background-color: rgba(255, 255, 255, 0.3);
     pointer-events: none;
-    transition: left 0.05s ease-out;
     z-index: 2;
+    display: none !important;
+}
+
+.overview-section:hover .seek-indicator {
+    display: block !important;
+}
+
+.detail-section {
+    position: relative;
+    height: 75%;
+    cursor: grab;
+    overflow: hidden;
+    user-select: none;
+}
+
+.detail-section.dragging {
+    cursor: grabbing;
+}
+
+.detail-scroll-container {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    will-change: transform;
+    pointer-events: none;
+}
+
+.detail-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    display: block;
+    pointer-events: none;
+}
+
+/* Ensure seek indicator never appears in detail section */
+.detail-section .seek-indicator {
+    display: none !important;
+}
+
+/* Ensure detail section elements don't interfere with drag */
+.detail-section * {
+    pointer-events: none;
+}
+
+.detail-section {
+    pointer-events: all;
+}
+
+/* Overview playhead */
+.overview-playhead {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background-color: white;
+    pointer-events: none;
+    z-index: 2;
+    box-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
+}
+
+/* Overview visible section indicator */
+.overview-section-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background-color: rgba(72, 76, 189, 0.2);
+    border: 1px solid rgba(72, 76, 189, 0.4);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Detail section center playhead */
+.center-playhead {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 2px;
+    height: 100%;
+    background-color: red;
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* Remove old playhead styles */
+.playhead {
+    display: none;
 }
 
 .mixer-section {
@@ -960,11 +1053,12 @@ canvas {
 .seek-indicator {
     position: absolute;
     top: 0;
-    width: 1px;
+    width: 2px;
     height: 100%;
     background-color: rgba(255, 255, 255, 0.3);
     pointer-events: none;
-    transition: left 0.05s ease-out;
+    z-index: 2;
+    display: none;
 }
 
 .deck-indicator {
@@ -1373,4 +1467,123 @@ canvas {
     gap: 20px;
     margin: 0;
     width: fit-content;
+} 
+
+.waveform-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.overview-section {
+    position: relative;
+    height: 25%;
+    width: 100%;
+    background-color: #111;
+    border-bottom: 1px solid #222;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.overview-section .seek-indicator {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.3);
+    pointer-events: none;
+    z-index: 2;
+    display: none !important;
+}
+
+.overview-section:hover .seek-indicator {
+    display: block !important;
+}
+
+.detail-section {
+    position: relative;
+    height: 75%;
+    cursor: grab;
+    overflow: hidden;
+    user-select: none;
+}
+
+.detail-section.dragging {
+    cursor: grabbing;
+}
+
+.detail-scroll-container {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    will-change: transform;
+    pointer-events: none;
+}
+
+.detail-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    display: block;
+    pointer-events: none;
+}
+
+/* Ensure seek indicator never appears in detail section */
+.detail-section .seek-indicator {
+    display: none !important;
+}
+
+/* Ensure detail section elements don't interfere with drag */
+.detail-section * {
+    pointer-events: none;
+}
+
+.detail-section {
+    pointer-events: all;
+}
+
+/* Overview playhead */
+.overview-playhead {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background-color: white;
+    pointer-events: none;
+    z-index: 2;
+    box-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
+}
+
+/* Overview visible section indicator */
+.overview-section-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background-color: rgba(72, 76, 189, 0.2);
+    border: 1px solid rgba(72, 76, 189, 0.4);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Detail section center playhead */
+.center-playhead {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 2px;
+    height: 100%;
+    background-color: red;
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* Remove old playhead styles */
+.playhead {
+    display: none;
 } 

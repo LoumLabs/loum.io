@@ -515,6 +515,11 @@ function initializeMixer(audioProcessor) {
             const playhead = document.getElementById(`playhead-${deck}`);
             const position = (currentTime / duration) * 100;
             playhead.style.left = `${position}%`;
+
+            // Update detail view position
+            if (waveforms[deck]) {
+                waveforms[deck].updateDetailPosition(currentTime / duration);
+            }
         });
         requestAnimationFrame(updateTimes);
     };
