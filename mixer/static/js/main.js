@@ -800,8 +800,8 @@ function initializeMixer(audioProcessor) {
             deckElements.playPauseButton.textContent = 'Play';
             
             // Reset tempo and BPM display
-            deckElements.tempoValue.textContent = '100%';
-            window[`tempo_${deck}`] = 100;  // Reset tempo to 100%
+            deckElements.tempoValue.textContent = '0.0%';  // Show as 0.0% initially
+            window[`tempo_${deck}`] = 100;  // Keep internal tempo at 100%
             
             // Set BPM in audioProcessor and display
             if (track.bpm && !isNaN(track.bpm)) {
@@ -871,7 +871,7 @@ function initializeMixer(audioProcessor) {
         }
 
         let seekPosition = 0;
-        let tempo = 100;
+        let tempo = 100;  // Base tempo is still 100 internally
         let originalBPM = 0;
         let isKeyboardCue = false;
 
@@ -879,12 +879,16 @@ function initializeMixer(audioProcessor) {
         window[`tempo_${deck}`] = tempo;
         window[`originalBPM_${deck}`] = originalBPM;
 
+        // Initialize tempo display as 0.0%
+        elements.tempoValue.textContent = '0.0%';
+
         // Add tempo adjustment handlers
         elements.tempoMinus.addEventListener('click', () => {
             const newTempo = Math.max(window[`tempo_${deck}`] - 0.5, 50); // Decrease by 0.5%, minimum 50%
             window[`tempo_${deck}`] = Math.round(newTempo * 10) / 10; // Round to 1 decimal place
             audioProcessor.setTempo(deck, window[`tempo_${deck}`]);
-            elements.tempoValue.textContent = `${window[`tempo_${deck}`].toFixed(1)}%`;
+            const diff = window[`tempo_${deck}`] - 100;
+            elements.tempoValue.textContent = `${diff > 0 ? '+' : ''}${diff.toFixed(1)}%`;
             updateBPMDisplay();
         });
 
@@ -892,7 +896,8 @@ function initializeMixer(audioProcessor) {
             const newTempo = Math.min(window[`tempo_${deck}`] + 0.5, 150); // Increase by 0.5%, maximum 150%
             window[`tempo_${deck}`] = Math.round(newTempo * 10) / 10; // Round to 1 decimal place
             audioProcessor.setTempo(deck, window[`tempo_${deck}`]);
-            elements.tempoValue.textContent = `${window[`tempo_${deck}`].toFixed(1)}%`;
+            const diff = window[`tempo_${deck}`] - 100;
+            elements.tempoValue.textContent = `${diff > 0 ? '+' : ''}${diff.toFixed(1)}%`;
             updateBPMDisplay();
         });
 
@@ -901,7 +906,7 @@ function initializeMixer(audioProcessor) {
             window[`tempo_${deck}`] = 100;
             window[`originalBPM_${deck}`] = 0;  // Reset originalBPM when resetting tempo
             audioProcessor.resetTempo(deck);
-            elements.tempoValue.textContent = '100%';
+            elements.tempoValue.textContent = '0.0%';  // Show as 0.0% when reset
             updateBPMDisplay();
         });
 
@@ -910,7 +915,8 @@ function initializeMixer(audioProcessor) {
             const result = audioProcessor.syncToDeck(deck);
             if (result.success) {
                 window[`tempo_${deck}`] = result.tempoAdjustment;
-                elements.tempoValue.textContent = `${Math.round(window[`tempo_${deck}`])}%`;
+                const diff = result.tempoAdjustment - 100;
+                elements.tempoValue.textContent = `${diff > 0 ? '+' : ''}${diff.toFixed(1)}%`;
                 window[`originalBPM_${deck}`] = result.currentBPM;
                 const bpmDisplay = document.getElementById(`bpm-${deck}`);
                 if (bpmDisplay) {

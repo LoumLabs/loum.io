@@ -240,12 +240,11 @@ h1 {
     justify-content: flex-end;
     align-items: center;
     margin-bottom: 8px;
-    padding: 0 5px;
+    padding: 0 5px !important;
     flex-shrink: 0;
     height: 24px;
     gap: 10px;
     position: relative;
-    padding-right: 40px;
 }
 
 .track-name {
@@ -684,7 +683,7 @@ canvas {
 }
 
 .tempo-value {
-    min-width: 36px;
+    min-width: 32px;
     text-align: center;
     font-size: 10px;
     color: #666;
@@ -692,6 +691,7 @@ canvas {
     display: flex;
     align-items: center;
     justify-content: center;
+    margin: 0;
 }
 
 .sync-btn {
@@ -733,7 +733,7 @@ canvas {
 .tempo-control {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 2px;
     margin-left: auto;
 }
 
@@ -770,7 +770,7 @@ canvas {
 }
 
 .tempo-value {
-    min-width: 36px;
+    min-width: 32px;
     text-align: center;
     font-size: 10px;
     color: #666;
@@ -778,6 +778,7 @@ canvas {
     display: flex;
     align-items: center;
     justify-content: center;
+    margin: 0;
 }
 
 .bpm-display {
@@ -973,7 +974,7 @@ canvas {
 .tempo-controls {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     margin-left: auto;
 }
 
@@ -994,6 +995,18 @@ canvas {
     justify-content: center;
 }
 
+.tempo-value {
+    min-width: 32px;
+    text-align: center;
+    font-size: 10px;
+    color: #666;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+}
+
 .tempo-btn:hover {
     background-color: #444;
     color: #aaa;
@@ -1010,7 +1023,7 @@ canvas {
 }
 
 .tempo-value {
-    min-width: 36px;
+    min-width: 32px;
     text-align: center;
     font-size: 10px;
     color: #666;
