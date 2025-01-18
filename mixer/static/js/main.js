@@ -1031,6 +1031,86 @@ function initializeMixer(audioProcessor) {
 
         // Set up waveform container event listeners
         if (elements.container) {
+            // Add event listener for getting play state
+            elements.container.addEventListener('getPlayState', (e) => {
+                const deck = e.detail.deck;
+                e.detail.isPlaying = deckState[deck].isPlaying;
+            });
+
+            // Add event listener for pause event from waveform scrubbing
+            elements.container.addEventListener('pause', (e) => {
+                const deck = e.detail.deck;
+                if (audioProcessor.buffers[deck]) {
+                    // Store current play state
+                    deckState[deck].wasPlaying = e.detail.wasPlaying;
+                    
+                    // Update state and UI
+                    deckState[deck].isPlaying = false;
+                    deckState[deck].isPaused = true;
+                    elements.playPauseButton.classList.remove('active');
+                    elements.playPauseButton.textContent = 'Play';
+                    
+                    audioProcessor.pause(deck);
+                }
+            });
+
+            // Add event listener for resume after scrubbing
+            elements.container.addEventListener('resume', (e) => {
+                const deck = e.detail.deck;
+                if (audioProcessor.buffers[deck]) {
+                    // Resume playback from current position
+                    const currentPosition = audioProcessor.getCurrentTime(deck) / audioProcessor.buffers[deck].duration;
+                    
+                    // Only resume playback if it was playing before
+                    if (e.detail.wasPlaying) {
+                        audioProcessor.seekTo(deck, currentPosition, true);
+                        deckState[deck].isPlaying = true;
+                        deckState[deck].isPaused = false;
+                        elements.playPauseButton.classList.add('active');
+                        elements.playPauseButton.textContent = 'Pause';
+                    } else {
+                        audioProcessor.seekTo(deck, currentPosition, false);
+                        deckState[deck].isPlaying = false;
+                        deckState[deck].isPaused = true;
+                        elements.playPauseButton.classList.remove('active');
+                        elements.playPauseButton.textContent = 'Play';
+                    }
+                }
+            });
+
+            // Update seek event listener to handle scrubbing
+            elements.container.addEventListener('seek', (e) => {
+                const deck = e.detail.deck;
+                const position = e.detail.position;
+                const isPlayback = e.detail.isPlayback;
+                const scrub = e.detail.scrub;
+                const scrubSpeed = e.detail.scrubSpeed || 0;
+                const scrubOnly = e.detail.scrubOnly || false;
+
+                if (audioProcessor.buffers[deck]) {
+                    // Update pause position first
+                    audioProcessor.pausePosition[deck] = position * audioProcessor.buffers[deck].duration;
+                    
+                    if (scrubOnly) {
+                        // For scrubbing, use larger buffer for smoother sound
+                        const bufferSize = 0.2; // 200ms buffer for smoother audio
+                        audioProcessor.scrub(deck, position, bufferSize);
+                    } else if (isPlayback) {
+                        // Normal playback
+                        audioProcessor.seekTo(deck, position, true);
+                        if (deckState[deck].wasPlaying) {
+                            deckState[deck].isPlaying = true;
+                            deckState[deck].isPaused = false;
+                            elements.playPauseButton.classList.add('active');
+                            elements.playPauseButton.textContent = 'Pause';
+                        }
+                    } else {
+                        // Just update position without playback
+                        audioProcessor.seekTo(deck, position, false);
+                    }
+                }
+            });
+
             elements.container.addEventListener('mousedown', (e) => {
                 // Prevent if not left click
                 if (e.button !== 0) return;
@@ -1041,12 +1121,12 @@ function initializeMixer(audioProcessor) {
                 
                 if (audioProcessor.buffers[deck]) {
                     // Store current play state
-                    const wasPlaying = deckState[deck].isPlaying;
+                    deckState[deck].wasPlaying = deckState[deck].isPlaying;
                     
                     // Update pause position first
                     audioProcessor.pausePosition[deck] = position * audioProcessor.buffers[deck].duration;
                     
-                    if (wasPlaying) {
+                    if (deckState[deck].wasPlaying) {
                         // If playing, seek with immediate playback
                         audioProcessor.seekTo(deck, position, true);
                         deckState[deck].isPlaying = true;

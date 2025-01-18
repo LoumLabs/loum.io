@@ -130,8 +130,30 @@ class Waveform {
         
         const touch = e.touches ? e.touches[0] : e;
         this.isDragging = true;
-        this.lastX = touch.clientX;
         this.detailSection.classList.add('dragging');
+
+        // Store initial mouse position and current scroll position
+        const rect = this.detailSection.getBoundingClientRect();
+        this.dragStartX = touch.clientX - rect.left;
+        this.dragStartScrollPosition = this.getCurrentScrollPosition();
+        this.lastScrubTime = Date.now();
+
+        // Get current play state
+        const wasPlayingEvent = new CustomEvent('getPlayState', {
+            detail: { deck: this.container.id.split('-')[1] }
+        });
+        this.container.dispatchEvent(wasPlayingEvent);
+        this.wasPlaying = wasPlayingEvent.detail.isPlaying;
+
+        // Always pause while dragging
+        const pauseEvent = new CustomEvent('pause', { 
+            detail: { 
+                deck: this.container.id.split('-')[1],
+                temporary: true,
+                wasPlaying: this.wasPlaying
+            }
+        });
+        this.container.dispatchEvent(pauseEvent);
     }
 
     handleDragMove(e) {
@@ -141,23 +163,26 @@ class Waveform {
         e.stopPropagation();
         
         const touch = e.touches ? e.touches[0] : e;
-        const deltaX = this.lastX - touch.clientX;
-        this.lastX = touch.clientX;
+        const rect = this.detailSection.getBoundingClientRect();
+        const currentX = touch.clientX - rect.left;
         
-        // Get current position and calculate new position
-        const currentX = this.getCurrentScrollPosition();
-        const newX = currentX + deltaX;
+        // Calculate the movement as a percentage of the visible section
+        const movePercentage = -(currentX - this.dragStartX) / this.width;
         
         // Calculate bounds
         const detailWidth = this.detailCanvas.width / (window.devicePixelRatio || 1);
         const maxScroll = detailWidth - this.width;
-        const boundedX = Math.max(0, Math.min(newX, maxScroll));
+        
+        // Scale the movement by the ratio of visible width to total width
+        const scaleRatio = this.width / detailWidth;
+        const scaledMove = movePercentage * scaleRatio;
+        const position = Math.max(0, Math.min(1, this.getCurrentPosition() + scaledMove));
+        const boundedX = position * maxScroll;
         
         // Update transform
         this.detailScrollContainer.style.transform = `translate3d(${-boundedX}px, 0, 0)`;
         
-        // Calculate and update overview position
-        const position = boundedX / maxScroll;
+        // Update overview playhead
         this.overviewPlayhead.style.left = `${position * 100}%`;
         
         // Update section indicator
@@ -166,9 +191,25 @@ class Waveform {
         this.sectionIndicator.style.width = `${sectionWidth}%`;
         this.sectionIndicator.style.left = `${sectionPosition}%`;
         
-        // Dispatch seek event
+        // Reset drag start position for continuous movement
+        this.dragStartX = currentX;
+
+        // Calculate scrub speed for audio quality
+        const now = Date.now();
+        const timeDelta = now - (this.lastScrubTime || now);
+        this.lastScrubTime = now;
+        const scrubSpeed = Math.abs(scaledMove) / (timeDelta / 1000); // Moves per second
+
+        // Dispatch seek event for scrubbing audio only
         const seekEvent = new CustomEvent('seek', { 
-            detail: { position }
+            detail: { 
+                position,
+                isPlayback: false,
+                deck: this.container.id.split('-')[1],
+                scrub: true,
+                scrubSpeed: scrubSpeed,
+                scrubOnly: true // New flag to indicate we only want scrub audio
+            }
         });
         this.container.dispatchEvent(seekEvent);
     }
@@ -181,6 +222,71 @@ class Waveform {
         
         this.isDragging = false;
         this.detailSection.classList.remove('dragging');
+
+        const deck = this.container.id.split('-')[1];
+
+        // Only resume if it was playing before drag started
+        if (this.wasPlaying) {
+            const resumeEvent = new CustomEvent('resume', {
+                detail: { 
+                    deck,
+                    wasPlaying: this.wasPlaying
+                }
+            });
+            this.container.dispatchEvent(resumeEvent);
+        } else {
+            // If it wasn't playing, make sure it stays paused
+            const pauseEvent = new CustomEvent('pause', {
+                detail: {
+                    deck,
+                    temporary: false,
+                    wasPlaying: false
+                }
+            });
+            this.container.dispatchEvent(pauseEvent);
+        }
+    }
+
+    startDeceleration(initialVelocity) {
+        const friction = 0.95; // Adjust for different deceleration rates
+        let velocity = initialVelocity;
+        let lastTime = Date.now();
+
+        const animate = () => {
+            if (Math.abs(velocity) < 10) return; // Stop when velocity is very low
+
+            const now = Date.now();
+            const dt = (now - lastTime) / 1000;
+            lastTime = now;
+
+            // Apply friction
+            velocity *= friction;
+
+            // Calculate position change
+            const pixelMove = velocity * dt;
+            const percentMove = -pixelMove / this.width;
+
+            // Calculate new position
+            const detailWidth = this.detailCanvas.width / (window.devicePixelRatio || 1);
+            const scaleRatio = this.width / detailWidth;
+            const scaledMove = percentMove * scaleRatio;
+            const newPosition = Math.max(0, Math.min(1, this.getCurrentPosition() + scaledMove));
+
+            // Update position
+            const seekEvent = new CustomEvent('seek', {
+                detail: {
+                    position: newPosition,
+                    isPlayback: false,
+                    deck: this.container.id.split('-')[1],
+                    scrub: true
+                }
+            });
+            this.container.dispatchEvent(seekEvent);
+
+            requestAnimationFrame(animate);
+        };
+
+        requestAnimationFrame(animate);
     }
 
     getCurrentScrollPosition() {
