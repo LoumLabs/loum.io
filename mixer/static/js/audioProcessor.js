@@ -573,26 +573,16 @@ class AudioProcessor {
     }
 
     getCurrentTime(deck) {
-        // Ensure we have valid state
-        if (this.startTime[deck] === undefined) this.startTime[deck] = 0;
-        if (this.pausePosition[deck] === undefined) this.pausePosition[deck] = 0;
-        if (this.playbackRate[deck] === undefined) this.playbackRate[deck] = 1;
-
-        // If we have an active source and startTime, calculate current position
-        if (this.sources[deck] && this.startTime[deck] !== null) {
-            const elapsed = this.audioContext.currentTime - this.startTime[deck];
-            const position = elapsed * this.playbackRate[deck];
-            // Ensure we don't return a position beyond the track duration
-            return Math.min(position, this.buffers[deck]?.duration || 0);
-        }
+        if (!this.buffers[deck]) return 0;
         
-        // If paused, return pause position
-        if (this.pausePosition[deck] !== undefined) {
+        if (this.sources[deck]) {
+            // If playing, calculate current time with playback rate adjustment
+            const elapsedTime = this.audioContext.currentTime - this.startTime[deck];
+            return elapsedTime * this.playbackRate[deck];
+        } else {
+            // If paused, return stored pause position
             return this.pausePosition[deck];
         }
-        
-        // If stopped or no state, return 0
-        return 0;
     }
 
     getDuration(deck) {
@@ -921,8 +911,8 @@ class AudioProcessor {
             // Create new source and start playback
             this.sources[deck] = this.createSource(deck);
             if (this.sources[deck]) {
-                this.startTime[deck] = this.audioContext.currentTime - 
-                    (startOffset / this.playbackRate[deck]);
+                // Account for playback rate when calculating start time
+                this.startTime[deck] = this.audioContext.currentTime - (startOffset / this.playbackRate[deck]);
                 this.sources[deck].start(0, startOffset);
                 
                 // Restore loop handler if needed

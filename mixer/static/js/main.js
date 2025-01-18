@@ -748,6 +748,9 @@ function initializeMixer(audioProcessor) {
 
     const loadTrackToDeck = async (track, deck) => {
         try {
+            // Clear existing waveform first
+            waveforms[deck].clear();
+            
             const audioBuffer = await audioProcessor.loadAudio(deck, track.file);
             waveforms[deck].drawWaveform(audioBuffer);
             
@@ -1785,6 +1788,102 @@ function initializeMixer(audioProcessor) {
                 clearInterval(window.pitchIntervalUpB);
                 audioProcessor.resetPitch('b');
                 break;
+        }
+    });
+
+    // Add keyboard + mouse control for faders
+    let activeKey = null;
+    let mouseStartY = null;
+    let mouseStartX = null;
+    let initialFaderValue = null;
+    let initialCrossfaderValue = null;
+    
+    // Add double-tap detection for crossfader centering
+    let lastCKeyTime = 0;
+    let lastCKeyWasHold = false;
+    const doubleTapThreshold = 300; // milliseconds
+
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'c' && !e.repeat && !activeKey) {
+            const now = Date.now();
+            if (now - lastCKeyTime < doubleTapThreshold && !lastCKeyWasHold) {
+                // Double tap detected - center the crossfader
+                const crossfader = document.getElementById('crossfader');
+                if (crossfader) {
+                    crossfader.value = 50; // Center position
+                    crossfader.dispatchEvent(new Event('input'));
+                }
+                lastCKeyTime = 0; // Reset timer
+                lastCKeyWasHold = false;
+            } else {
+                lastCKeyTime = now;
+            }
+        }
+        
+        // Only trigger if no other key is being held
+        if (!activeKey) {
+            if (e.key === '1' || e.key === '2' || e.key === 'c') {
+                activeKey = e.key;
+                mouseStartY = null;
+                mouseStartX = null;
+                document.body.style.cursor = e.key === 'c' ? 'ew-resize' : 'ns-resize';
+                if (e.key === 'c') lastCKeyWasHold = true;
+                e.preventDefault();
+            }
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        if (e.key === activeKey) {
+            activeKey = null;
+            mouseStartY = null;
+            mouseStartX = null;
+            initialFaderValue = null;
+            initialCrossfaderValue = null;
+            document.body.style.cursor = 'default';
+            if (e.key === 'c') {
+                setTimeout(() => {
+                    lastCKeyWasHold = false;
+                }, 50);
+            }
+        }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!activeKey) return;
+
+        if (activeKey === 'c') {
+            // Crossfader control
+            const crossfader = document.getElementById('crossfader');
+            if (!crossfader) return;
+
+            if (mouseStartX === null) {
+                mouseStartX = e.clientX;
+                initialCrossfaderValue = parseFloat(crossfader.value);
+            }
+
+            const deltaX = e.clientX - mouseStartX;
+            const newValue = Math.max(0, Math.min(100, initialCrossfaderValue + (deltaX * 0.5)));
+            
+            crossfader.value = newValue;
+            crossfader.dispatchEvent(new Event('input'));
+        } else {
+            // Channel fader control
+            const deck = activeKey === '1' ? 'a' : 'b';
+            const fader = document.getElementById(`fader-${deck}`);
+            if (!fader) return;
+
+            if (mouseStartY === null) {
+                mouseStartY = e.clientY;
+                initialFaderValue = parseFloat(fader.value);
+            }
+
+            const deltaY = mouseStartY - e.clientY;
+            // Scale the movement and invert it since the fader's range is 0-127
+            const newValue = Math.max(0, Math.min(127, initialFaderValue + (deltaY * 0.5)));
+            
+            fader.value = newValue;
+            fader.dispatchEvent(new Event('input'));
         }
     });
 

@@ -261,7 +261,7 @@ h1 {
     position: relative;
     flex: 1;
     min-height: 60px;
-    max-height: calc(100% - 70px);
+    height: 100%;
     background-color: #111 !important;
     border-radius: 3px;
     overflow: hidden;
@@ -1193,12 +1193,13 @@ canvas {
     position: relative;
     flex: 1;
     min-height: 60px;
-    max-height: calc(100% - 70px);
+    height: 100%;
     background-color: #111 !important;
     border-radius: 3px;
     overflow: hidden;
     user-select: none;
     margin-bottom: 8px;
+    display: flex;
 }
 
 /* Show clear button when track is loaded */

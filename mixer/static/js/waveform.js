@@ -210,26 +210,37 @@ class Waveform {
         this.width = rect.width;
         this.height = rect.height;
         
+        // Calculate section heights (25% for overview, 75% for detail)
+        const overviewHeight = Math.floor(this.height * 0.25);
+        const detailHeight = this.height - overviewHeight;
+        
         // Set overview canvas size
         this.overviewCanvas.width = this.width * dpr;
-        this.overviewCanvas.height = (this.height * 0.25) * dpr;
+        this.overviewCanvas.height = overviewHeight * dpr;
         this.overviewCanvas.style.width = `${this.width}px`;
-        this.overviewCanvas.style.height = `${this.height * 0.25}px`;
+        this.overviewCanvas.style.height = `${overviewHeight}px`;
         this.overviewCtx.scale(dpr, dpr);
         
         // Set initial detail canvas size (will be adjusted based on audio duration)
         const initialDetailWidth = this.width * 6;
         this.detailCanvas.width = initialDetailWidth * dpr;
-        this.detailCanvas.height = (this.height * 0.75) * dpr;
+        this.detailCanvas.height = detailHeight * dpr;
         this.detailCanvas.style.width = `${initialDetailWidth}px`;
-        this.detailCanvas.style.height = `${this.height * 0.75}px`;
+        this.detailCanvas.style.height = `${detailHeight}px`;
         this.detailCtx.scale(dpr, dpr);
+
+        // Set section container heights
+        this.overviewSection.style.height = `${overviewHeight}px`;
+        this.detailSection.style.height = `${detailHeight}px`;
     }
 
     drawWaveform(audioBuffer) {
         if (!audioBuffer) return;  // Guard against null audioBuffer
         
         this.audioBuffer = audioBuffer;
+        
+        // Reset canvas setup before drawing
+        this.setupCanvas();
         
         // Pre-calculate waveform data for both views
         this.preCalculateWaveformData();
@@ -400,16 +411,19 @@ class Waveform {
         const detailWidth = this.detailCanvas.width / (window.devicePixelRatio || 1);
         const visibleWidth = this.width;
         const startOffset = visibleWidth / 2;
-        const scrollPosition = (position * detailWidth) - startOffset;
+        
+        // Calculate new scroll position
+        const newScrollPosition = (position * detailWidth) - startOffset;
+        
+        // Always use instant update with no transition
+        this.detailScrollContainer.style.transition = 'none';
+        this.detailScrollContainer.style.transform = `translate3d(${-newScrollPosition}px, 0, 0)`;
         
         // Update section indicator in overview
         const sectionWidth = (visibleWidth / detailWidth) * 100;
         const sectionPosition = (position * 100) - (sectionWidth / 2);
         this.sectionIndicator.style.width = `${sectionWidth}%`;
         this.sectionIndicator.style.left = `${sectionPosition}%`;
-        
-        // Apply transform with hardware acceleration
-        this.detailScrollContainer.style.transform = `translate3d(${-scrollPosition}px, 0, 0)`;
     }
 
     drawLoopRegion() {
@@ -464,13 +478,38 @@ class Waveform {
     }
 
     clear() {
+        // Reset canvas contexts
+        const dpr = window.devicePixelRatio || 1;
+        
+        // Reset overview canvas
+        this.overviewCtx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
         this.overviewCtx.clearRect(0, 0, this.overviewCanvas.width, this.overviewCanvas.height);
+        this.overviewCtx.fillStyle = '#111';
+        this.overviewCtx.fillRect(0, 0, this.overviewCanvas.width, this.overviewCanvas.height);
+        this.overviewCtx.scale(dpr, dpr);
+
+        // Reset detail canvas
+        this.detailCtx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
         this.detailCtx.clearRect(0, 0, this.detailCanvas.width, this.detailCanvas.height);
+        this.detailCtx.fillStyle = '#111';
+        this.detailCtx.fillRect(0, 0, this.detailCanvas.width, this.detailCanvas.height);
+        this.detailCtx.scale(dpr, dpr);
+
+        // Reset state
         this.audioBuffer = null;
+        this.overviewData = null;
+        this.detailData = null;
         this.loopStart = null;
         this.loopEnd = null;
+
+        // Reset positions and transforms
         this.detailScrollContainer.style.transform = 'translate3d(0, 0, 0)';
         this.overviewPlayhead.style.left = '0';
         this.sectionIndicator.style.left = '0';
+        this.sectionIndicator.style.width = '0';
+
+        // Hide canvases
+        this.overviewCanvas.style.display = 'none';
+        this.detailCanvas.style.display = 'none';
     }
 } 
