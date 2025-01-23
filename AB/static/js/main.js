@@ -518,50 +518,56 @@ document.addEventListener('DOMContentLoaded', () => {
 
         sourceA = audioContext.createBufferSource();
         sourceB = audioContext.createBufferSource();
-        
-        sourceA.buffer = trackA.buffer;
-        sourceB.buffer = trackB.buffer;
 
-        // Set up looping if selection exists
+        // Create dedicated loop buffers if needed
         if (selectionStart !== null && selectionEnd !== null) {
-            sourceA.loop = true;
-            sourceB.loop = true;
             const loopStart = Math.min(selectionStart, selectionEnd);
             const loopEnd = Math.max(selectionStart, selectionEnd);
-            sourceA.loopStart = loopStart;
-            sourceA.loopEnd = loopEnd;
-            sourceB.loopStart = loopStart;
-            sourceB.loopEnd = loopEnd;
-            // Force playback to start at loop start
-            offset = loopStart;
-            startTime = audioContext.currentTime - offset;
+            const loopLength = Math.floor((loopEnd - loopStart) * audioContext.sampleRate);
+            
+            // Create loop buffers for both tracks
+            const loopBufferA = createLoopBuffer(trackA.buffer, loopStart, loopEnd);
+            const loopBufferB = createLoopBuffer(trackB.buffer, loopStart, loopEnd);
+            
+            sourceA.buffer = loopBufferA;
+            sourceB.buffer = loopBufferB;
+            sourceA.loop = true;
+            sourceB.loop = true;
+            
+            offset = 0; // Start from beginning of loop buffer
         } else {
+            sourceA.buffer = trackA.buffer;
+            sourceB.buffer = trackB.buffer;
             sourceA.loop = false;
             sourceB.loop = false;
         }
 
-        // Connect nodes in series
+        // Create a stable audio graph
+        const currentTime = audioContext.currentTime;
+
+        // Connect the audio graph directly
         sourceA.connect(trackA.delayNode);
         sourceB.connect(trackB.delayNode);
 
-        // Set initial gain values based on stored gain adjustments
+        // Set gain values
         const trackAGain = Math.pow(10, (trackA.gainAdjustment || 0) / 20);
         const trackBGain = Math.pow(10, (trackB.gainAdjustment || 0) / 20);
-
-        // Set level adjustments
-        trackA.gainNode.gain.setValueAtTime(trackAGain, audioContext.currentTime);
-        trackB.gainNode.gain.setValueAtTime(trackBGain, audioContext.currentTime);
-
+        
+        // Clear any scheduled values
+        trackA.gainNode.gain.cancelScheduledValues(currentTime);
+        trackB.gainNode.gain.cancelScheduledValues(currentTime);
+        trackA.switchNode.gain.cancelScheduledValues(currentTime);
+        trackB.switchNode.gain.cancelScheduledValues(currentTime);
+        
+        // Set the gain values
+        trackA.gainNode.gain.setValueAtTime(trackAGain, currentTime);
+        trackB.gainNode.gain.setValueAtTime(trackBGain, currentTime);
+        
         // Set switch states
-        trackA.switchNode.gain.setValueAtTime(
-            currentTrack === 'A' ? 1 : 0, 
-            audioContext.currentTime
-        );
-        trackB.switchNode.gain.setValueAtTime(
-            currentTrack === 'B' ? 1 : 0, 
-            audioContext.currentTime
-        );
+        trackA.switchNode.gain.setValueAtTime(currentTrack === 'A' ? 1 : 0, currentTime);
+        trackB.switchNode.gain.setValueAtTime(currentTrack === 'B' ? 1 : 0, currentTime);
 
+        // Start playback
         sourceA.start(0, offset);
         sourceB.start(0, offset);
 
@@ -573,6 +579,46 @@ document.addEventListener('DOMContentLoaded', () => {
             requestAnimationFrame(updateProgress);
             requestAnimationFrame(drawPlayhead);
         }, 32);
+    }
+
+    // Helper function to create a loop buffer
+    function createLoopBuffer(sourceBuffer, startTime, endTime) {
+        const sampleRate = sourceBuffer.sampleRate;
+        const startSample = Math.floor(startTime * sampleRate);
+        const endSample = Math.floor(endTime * sampleRate);
+        const loopLength = endSample - startSample;
+        
+        const loopBuffer = audioContext.createBuffer(
+            sourceBuffer.numberOfChannels,
+            loopLength,
+            sampleRate
+        );
+        
+        // Copy the loop region for each channel
+        for (let channel = 0; channel < sourceBuffer.numberOfChannels; channel++) {
+            const sourceData = sourceBuffer.getChannelData(channel);
+            const loopData = loopBuffer.getChannelData(channel);
+            
+            // Copy samples with a small crossfade at the loop points
+            const fadeLength = Math.min(2048, Math.floor(loopLength * 0.1));
+            
+            for (let i = 0; i < loopLength; i++) {
+                if (i < fadeLength) {
+                    // Apply fade-in at start
+                    const fadeGain = i / fadeLength;
+                    loopData[i] = sourceData[startSample + i] * fadeGain;
+                } else if (i > loopLength - fadeLength) {
+                    // Apply fade-out at end
+                    const fadeGain = (loopLength - i) / fadeLength;
+                    loopData[i] = sourceData[startSample + i] * fadeGain;
+                } else {
+                    // Normal copy
+                    loopData[i] = sourceData[startSample + i];
+                }
+            }
+        }
+        
+        return loopBuffer;
     }
 
     function pausePlayback() {
@@ -1001,18 +1047,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize loudness analyzer
     const loudnessAnalyzer = new LoudnessAnalyzer();
 
-    // Modify analyzeLoudness to handle selection
+    // Modify analyzeLoudness to handle selection properly
     async function analyzeLoudness(track, isTrackA) {
         try {
+            let buffer = track.buffer;
             let lufs;
+
+            // If there's a selection, analyze only that portion
             if (selectionStart !== null && selectionEnd !== null) {
-                // Analyze only the selected portion for LUFS
-                const selectionBuffer = extractBufferRegion(track.buffer, selectionStart, selectionEnd);
-                lufs = await loudnessAnalyzer.analyzeLoudness(selectionBuffer);
-            } else {
-                // Analyze full track if no selection
-                lufs = await loudnessAnalyzer.analyzeLoudness(track.buffer);
+                const start = Math.min(selectionStart, selectionEnd);
+                const end = Math.max(selectionStart, selectionEnd);
+                buffer = extractBufferRegion(track.buffer, start, end);
             }
+
+            lufs = await loudnessAnalyzer.analyzeLoudness(buffer);
             
             const trackLetter = isTrackA ? 'a' : 'b';
             const loudnessDisplay = document.getElementById(`track-${trackLetter}-loudness`);
@@ -1056,7 +1104,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return newBuffer;
     }
 
-    // Modify matchLoudness to preserve selection
+    // Update matchLoudness button handler to work with selection
     matchLoudnessButton.addEventListener('click', async () => {
         if (!trackA?.buffer || !trackB?.buffer) return;
 
@@ -1069,82 +1117,83 @@ document.addEventListener('DOMContentLoaded', () => {
         const savedSelectionStart = selectionStart;
         const savedSelectionEnd = selectionEnd;
 
-        const currentTime = audioContext.currentTime;
-        
-        // Step 1: Match LUFS-S Max based on selection or full track
-        let targetLoudness;
-        let loudnessA, loudnessB;
-        
-        if (savedSelectionStart !== null && savedSelectionEnd !== null) {
-            // Analyze selected portions for LUFS matching
-            const selectionBufferA = extractBufferRegion(
-                trackA.buffer, 
-                Math.min(savedSelectionStart, savedSelectionEnd),
-                Math.max(savedSelectionStart, savedSelectionEnd)
-            );
-            const selectionBufferB = extractBufferRegion(
-                trackB.buffer,
-                Math.min(savedSelectionStart, savedSelectionEnd),
-                Math.max(savedSelectionStart, savedSelectionEnd)
-            );
-            loudnessA = await loudnessAnalyzer.analyzeLoudness(selectionBufferA);
-            loudnessB = await loudnessAnalyzer.analyzeLoudness(selectionBufferB);
-        } else {
-            // Use full track loudness values
-            loudnessA = trackA.loudness;
-            loudnessB = trackB.loudness;
-        }
-        
-        targetLoudness = Math.min(loudnessA, loudnessB);
-        
-        // Calculate initial gain adjustments to match LUFS
-        let gainAdjustA = 0;
-        let gainAdjustB = 0;
-        
-        if (loudnessA > targetLoudness) {
-            gainAdjustA = targetLoudness - loudnessA;
-        }
-        if (loudnessB > targetLoudness) {
-            gainAdjustB = targetLoudness - loudnessB;
-        }
-        
-        // Step 2: Find the highest peak after LUFS matching
-        const peakA = findPeak(trackA.buffer) * Math.pow(10, gainAdjustA / 20);
-        const peakB = findPeak(trackB.buffer) * Math.pow(10, gainAdjustB / 20);
-        const highestPeak = Math.max(peakA, peakB);
-        
-        // Step 3: Calculate additional gain needed to bring highest peak to -2dB
-        const TARGET_PEAK_DB = -2;
-        const additionalGain = TARGET_PEAK_DB - 20 * Math.log10(highestPeak);
-        
-        // Apply combined gain adjustments
-        trackA.gainAdjustment = gainAdjustA + additionalGain;
-        trackB.gainAdjustment = gainAdjustB + additionalGain;
-        
-        // Apply gains to audio nodes
-        const gainValueA = Math.pow(10, trackA.gainAdjustment / 20);
-        const gainValueB = Math.pow(10, trackB.gainAdjustment / 20);
-        
-        trackA.gainNode.gain.cancelScheduledValues(currentTime);
-            trackB.gainNode.gain.cancelScheduledValues(currentTime);
-        
-        trackA.gainNode.gain.setValueAtTime(trackA.gainNode.gain.value, currentTime);
-            trackB.gainNode.gain.setValueAtTime(trackB.gainNode.gain.value, currentTime);
+        try {
+            // Step 1: Analyze and match LUFS-S Max
+            let bufferA = trackA.buffer;
+            let bufferB = trackB.buffer;
             
-        trackA.gainNode.gain.linearRampToValueAtTime(gainValueA, currentTime + 0.01);
-        trackB.gainNode.gain.linearRampToValueAtTime(gainValueB, currentTime + 0.01);
-        
-        // Update displays
-        updateGainDisplay('A');
-            updateGainDisplay('B');
-        
-        const newLoudnessA = loudnessA + trackA.gainAdjustment;
-        const newLoudnessB = loudnessB + trackB.gainAdjustment;
-        
-        document.getElementById('track-a-loudness').textContent = newLoudnessA.toFixed(1);
-        document.getElementById('track-b-loudness').textContent = newLoudnessB.toFixed(1);
+            // If there's a selection, use only that portion
+            if (savedSelectionStart !== null && savedSelectionEnd !== null) {
+                const start = Math.min(savedSelectionStart, savedSelectionEnd);
+                const end = Math.max(savedSelectionStart, savedSelectionEnd);
+                bufferA = extractBufferRegion(trackA.buffer, start, end);
+                bufferB = extractBufferRegion(trackB.buffer, start, end);
+            }
+            
+            // Get LUFS-S Max values
+            const loudnessA = await loudnessAnalyzer.analyzeLoudness(bufferA);
+            const loudnessB = await loudnessAnalyzer.analyzeLoudness(bufferB);
+            
+            // Store original loudness values
+            trackA.loudness = loudnessA;
+            trackB.loudness = loudnessB;
+            
+            // Match to the quieter track
+            const targetLoudness = Math.min(loudnessA, loudnessB);
+            
+            // Calculate initial gain adjustments to match LUFS
+            let gainAdjustA = 0;
+            let gainAdjustB = 0;
+            
+            if (loudnessA > targetLoudness) {
+                gainAdjustA = targetLoudness - loudnessA;
+            }
+            if (loudnessB > targetLoudness) {
+                gainAdjustB = targetLoudness - loudnessB;
+            }
 
-        // Restore selection state and redraw selection
+            // Step 2: Find the highest peak after LUFS matching
+            const peakA = findPeak(bufferA) * Math.pow(10, gainAdjustA / 20);
+            const peakB = findPeak(bufferB) * Math.pow(10, gainAdjustB / 20);
+            const highestPeak = Math.max(peakA, peakB);
+            
+            // Step 3: Calculate additional gain to normalize to -0.5 dB
+            const TARGET_PEAK_DB = -0.5;
+            const additionalGain = TARGET_PEAK_DB - 20 * Math.log10(highestPeak);
+            
+            // Apply combined gain adjustments
+            trackA.gainAdjustment = gainAdjustA + additionalGain;
+            trackB.gainAdjustment = gainAdjustB + additionalGain;
+            
+            // Apply gains with proper scheduling
+            const currentTime = audioContext.currentTime;
+            const gainValueA = Math.pow(10, trackA.gainAdjustment / 20);
+            const gainValueB = Math.pow(10, trackB.gainAdjustment / 20);
+            
+            // Clear any scheduled values
+            trackA.gainNode.gain.cancelScheduledValues(currentTime);
+            trackB.gainNode.gain.cancelScheduledValues(currentTime);
+            
+            // Set the new gain values
+            trackA.gainNode.gain.setValueAtTime(gainValueA, currentTime);
+            trackB.gainNode.gain.setValueAtTime(gainValueB, currentTime);
+            
+            // Update displays
+            updateGainDisplay('A');
+            updateGainDisplay('B');
+            
+            // Calculate and display final LUFS values
+            const finalLoudnessA = loudnessA + trackA.gainAdjustment;
+            const finalLoudnessB = loudnessB + trackB.gainAdjustment;
+            
+            document.getElementById('track-a-loudness').textContent = finalLoudnessA.toFixed(1);
+            document.getElementById('track-b-loudness').textContent = finalLoudnessB.toFixed(1);
+
+        } catch (error) {
+            console.error('Error in loudness matching:', error);
+        }
+
+        // Restore selection state
         selectionStart = savedSelectionStart;
         selectionEnd = savedSelectionEnd;
         drawSelection();
