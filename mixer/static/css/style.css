@@ -847,6 +847,9 @@ canvas {
     padding: 4px 8px;
     border-radius: 3px;
     margin-top: 3px;
+    font-family: monospace;
+    font-size: 12px;
+    cursor: pointer;
 }
 
 .crossfader-curve select:hover {
