@@ -842,7 +842,7 @@ canvas {
 .crossfader-curve select {
     width: 100px;
     background: #333;
-    color: #e0e0e0;
+    color: #808080;
     border: none;
     padding: 4px 8px;
     border-radius: 3px;
@@ -861,6 +861,7 @@ canvas {
 
 .crossfader-curve select:hover {
     background: #444;
+    color: #e0e0e0;
 }
 
 .crossfader-curve select:focus {
