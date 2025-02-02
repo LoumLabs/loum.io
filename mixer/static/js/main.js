@@ -269,7 +269,12 @@ function initializeMixer(audioProcessor) {
         let startValue;
         let lastValue;  // Track last value for calculating actual change
         let currentValue = 50; // Start at center
-        let sensitivity = 0.5; // Reduced sensitivity for finer control
+        let sensitivity = 0.5; // Default sensitivity
+        if (element.id.startsWith('high-') || 
+            element.id.startsWith('mid-') || 
+            element.id.startsWith('low-')) {
+            sensitivity = 0.7; // Increased sensitivity for EQ controls
+        }
 
         const setRotation = (value) => {
             const knob = element.querySelector('.dial-knob');
@@ -1841,8 +1846,8 @@ function initializeMixer(audioProcessor) {
                 const knob = eqControl.querySelector('.dial-knob');
                 const currentRotation = knob ? parseFloat(knob.style.transform.match(/-?\d+(\.\d+)?/g)[1] || 0) : 0;
                 
-                // Calculate new rotation based on mouse movement
-                const moveAmount = -e.movementY * 0.5;
+                // Calculate new rotation based on mouse movement with increased sensitivity
+                const moveAmount = -e.movementY * 0.7; // Increased from 0.5 to 0.7
                 const newRotation = Math.min(150, Math.max(-150, currentRotation + moveAmount));
                 
                 // Convert rotation (-150 to 150 degrees) to EQ value (-12 to +12 dB)
