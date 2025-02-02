@@ -5,6 +5,7 @@ body {
     background-color: #181818;
     color: #e0e0e0;
     min-height: 100vh;
+    position: relative;
 }
 
 .app-container {
@@ -16,6 +17,7 @@ body {
     flex-direction: column;
     position: relative;
     box-sizing: border-box;
+    z-index: 1;
 }
 
 .container {
@@ -1247,12 +1249,12 @@ canvas {
 
 .master-gain-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 10px;
-    height: 10px;
+    width: 12px;
+    height: 12px;
     background: #666;
     border-radius: 50%;
     cursor: pointer;
-    border: 1px solid #444;
+    border: none;
     transition: all 0.2s;
 }
 
@@ -1262,14 +1264,6 @@ canvas {
 
 .master-gain-slider::-webkit-slider-thumb:active {
     background: #aaa;
-}
-
-.master-gain-value {
-    color: #808080;
-    font-size: 11px;
-    min-width: 50px;
-    text-align: right;
-    font-family: monospace;
 }
 
 .master-gain-value {
@@ -1600,4 +1594,162 @@ canvas {
 /* Remove old playhead styles */
 .playhead {
     display: none;
+}
+
+/* Header Controls */
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+}
+
+.header-button {
+    background: none;
+    border: 1px solid #444;
+    color: #808080;
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.header-button:hover {
+    background-color: #333;
+    color: #fff;
+    border-color: #555;
+}
+
+/* Master Volume in Header */
+.master-volume {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.master-volume label {
+    color: #808080;
+    font-size: 12px;
+}
+
+/* Keyboard Shortcuts Overlay */
+#keyboard-shortcuts {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+#keyboard-shortcuts.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.shortcuts-content {
+    background-color: #1e1e1e;
+    padding: 30px;
+    border-radius: 8px;
+    max-width: 800px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    border: 1px solid #333;
+}
+
+.shortcuts-content h3 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #fff;
+    font-size: 18px;
+}
+
+.shortcuts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.shortcuts-section {
+    padding: 15px;
+}
+
+.shortcuts-section h4 {
+    margin-bottom: 10px;
+    color: #808080;
+    font-size: 14px;
+}
+
+.shortcuts-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.shortcuts-section ul li.note {
+    color: #808080;
+    font-size: 12px;
+    font-style: italic;
+    margin-bottom: 16px;
+    margin-top: -4px;
+}
+
+/* Add empty space using pseudo-elements for consistent gaps */
+.shortcuts-section ul li:nth-child(5) {  /* after note */
+    margin-bottom: 16px;
+}
+
+.shortcuts-section ul li:nth-child(8) {  /* after stop */
+    margin-bottom: 16px;
+}
+
+/* Remove any other margin styles */
+.shortcuts-section li {
+    margin: 0;
+    color: #e0e0e0;
+    font-size: 13px;
+}
+
+.shortcuts-section .key {
+    background-color: #333;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    border: 1px solid #444;
+    color: #fff;
+    font-size: 12px;
+}
+
+#close-shortcuts {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: #808080;
+    cursor: pointer;
+    font-size: 20px;
+    transition: color 0.2s ease;
+}
+
+#close-shortcuts:hover {
+    color: #fff;
 } 

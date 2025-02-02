@@ -1533,17 +1533,69 @@ function initializeMixer(audioProcessor) {
         
         const key = e.key.toLowerCase();
         
-        // Fader controls (1, 2, c)
-        if ((key === '1' || key === '2' || key === 'c') && !activeKey) {
+        // Handle double-tap detection for all controls
+        if (key in lastKeyTimes) {
+            const now = Date.now();
+            if (now - lastKeyTimes[key] < 300) {
+                // Double tap detected - reset control to default
+                if (key === '1' || key === '2') {
+                    // Reset channel fader
+                    const faderId = key === '1' ? 'fader-a' : 'fader-b';
+                    const fader = document.getElementById(faderId);
+                    fader.value = 127; // Max value
+                    fader.dispatchEvent(new Event('input'));
+                } else {
+                    // Reset EQ control
+                    let deck = (key === 'q' || key === 'a' || key === 'z') ? 'a' : 'b';
+                    let control;
+                    switch (key) {
+                        case 'q':
+                        case 'w':
+                            control = 'high';
+                            break;
+                        case 'a':
+                        case 's':
+                            control = 'mid';
+                            break;
+                        case 'z':
+                        case 'x':
+                            control = 'low';
+                            break;
+                    }
+                    const eqControl = document.getElementById(`${control}-${deck}`);
+                    if (eqControl) {
+                        // Reset knob rotation
+                        const knob = eqControl.querySelector('.dial-knob');
+                        if (knob) {
+                            knob.style.transform = 'translateX(-50%) rotate(0deg)';
+                        }
+                        // Reset value display
+                        const valueDisplay = eqControl.querySelector('.dial-value');
+                        if (valueDisplay) {
+                            valueDisplay.textContent = '0.0';
+                        }
+                        // Reset audio processor
+                        audioProcessor.setEQ(deck, control, 0);
+                    }
+                }
+                activeKey = null;
+                document.body.style.cursor = 'default';
+                return;
+            }
+            lastKeyTimes[key] = now;
+        }
+        
+        // Fader controls (1, 2, space)
+        if ((key === '1' || key === '2' || key === ' ') && !activeKey) {
             e.preventDefault();
             activeKey = key;
             
             // Set cursor style based on control type
-            document.body.style.cursor = key === 'c' ? 'ew-resize' : 'ns-resize';
+            document.body.style.cursor = key === ' ' ? 'ew-resize' : 'ns-resize';
             
-            if (key === 'c') {
+            if (key === ' ') {
                 const now = Date.now();
-                if (now - lastCKeyTime < 300) {
+                if (now - lastSpaceKeyTime < 300) {
                     // Double tap detected - reset crossfader to center
                     const crossfader = document.getElementById('crossfader');
                     crossfader.value = 50;
@@ -1551,7 +1603,7 @@ function initializeMixer(audioProcessor) {
                     activeKey = null;
                     return;
                 }
-                lastCKeyTime = now;
+                lastSpaceKeyTime = now;
             }
             return;
         }
@@ -1559,7 +1611,7 @@ function initializeMixer(audioProcessor) {
         // Other keyboard controls
         switch (key) {
             // Deck A controls
-            case 'a':
+            case 'd':
                 if (!audioProcessor.buffers.a) return;
                 const cueButtonA = document.getElementById('cue-a');
                 const playPauseButtonA = document.getElementById('play-pause-a');
@@ -1574,41 +1626,50 @@ function initializeMixer(audioProcessor) {
                 audioProcessor.cue('a');
                 isKeyboardCue = true;
                 break;
-            case 's':
+            case 'f':
                 if (!audioProcessor.buffers.a) return;
                 const playPauseA = document.getElementById('play-pause-a');
                 playPauseA.click();
                 break;
-            case 'd':
+            case 'g':
                 if (!audioProcessor.buffers.a) return;
                 const stopA = document.getElementById('stop-a');
                 stopA.dispatchEvent(new MouseEvent('mousedown'));
                 break;
-            case 'q':
+            case 'h':
                 const pitchDownA = document.getElementById('pitch-down-a');
                 window.isKeyboardPitchDown_a = true;
                 pitchDownA.classList.add('active');
                 // Start with a small pitch change and gradually increase
                 let pitchValueA = 0.98;
                 window.pitchIntervalA = setInterval(() => {
-                    pitchValueA = Math.max(0.92, pitchValueA - 0.005);
+                    pitchValueA = Math.max(0.85, pitchValueA - 0.005);
                     audioProcessor.setPitch('a', pitchValueA);
                 }, 30);
                 break;
-            case 'w':
+            case 'j':
                 const pitchUpA = document.getElementById('pitch-up-a');
                 window.isKeyboardPitchUp_a = true;
                 pitchUpA.classList.add('active');
                 // Start with a small pitch change and gradually increase
                 let pitchValueUpA = 1.02;
                 window.pitchIntervalUpA = setInterval(() => {
-                    pitchValueUpA = Math.min(1.08, pitchValueUpA + 0.005);
+                    pitchValueUpA = Math.min(1.15, pitchValueUpA + 0.005);
                     audioProcessor.setPitch('a', pitchValueUpA);
                 }, 30);
                 break;
+            case 'q':
+            case 'a':
+            case 'z':
+                if (!activeKey) {
+                    e.preventDefault();
+                    activeKey = key;
+                    document.body.style.cursor = 'ns-resize';
+                }
+                break;
 
             // Deck B controls
-            case 'b':
+            case 'c':
                 if (!audioProcessor.buffers.b) return;
                 const cueButtonB = document.getElementById('cue-b');
                 const playPauseButtonB = document.getElementById('play-pause-b');
@@ -1623,37 +1684,46 @@ function initializeMixer(audioProcessor) {
                 audioProcessor.cue('b');
                 isKeyboardCue = true;
                 break;
-            case 'n':
+            case 'v':
                 if (!audioProcessor.buffers.b) return;
                 const playPauseB = document.getElementById('play-pause-b');
                 playPauseB.click();
                 break;
-            case 'm':
+            case 'b':
                 if (!audioProcessor.buffers.b) return;
                 const stopB = document.getElementById('stop-b');
                 stopB.dispatchEvent(new MouseEvent('mousedown'));
                 break;
-            case 'g':
+            case 'n':
                 const pitchDownB = document.getElementById('pitch-down-b');
                 window.isKeyboardPitchDown_b = true;
                 pitchDownB.classList.add('active');
                 // Start with a small pitch change and gradually increase
                 let pitchValueB = 0.98;
                 window.pitchIntervalB = setInterval(() => {
-                    pitchValueB = Math.max(0.92, pitchValueB - 0.005);
+                    pitchValueB = Math.max(0.85, pitchValueB - 0.005);
                     audioProcessor.setPitch('b', pitchValueB);
                 }, 30);
                 break;
-            case 'h':
+            case 'm':
                 const pitchUpB = document.getElementById('pitch-up-b');
                 window.isKeyboardPitchUp_b = true;
                 pitchUpB.classList.add('active');
                 // Start with a small pitch change and gradually increase
                 let pitchValueUpB = 1.02;
                 window.pitchIntervalUpB = setInterval(() => {
-                    pitchValueUpB = Math.min(1.08, pitchValueUpB + 0.005);
+                    pitchValueUpB = Math.min(1.15, pitchValueUpB + 0.005);
                     audioProcessor.setPitch('b', pitchValueUpB);
                 }, 30);
+                break;
+            case 'w':
+            case 's':
+            case 'x':
+                if (!activeKey) {
+                    e.preventDefault();
+                    activeKey = key;
+                    document.body.style.cursor = 'ns-resize';
+                }
                 break;
         }
     });
@@ -1671,7 +1741,7 @@ function initializeMixer(audioProcessor) {
         // Other controls release
         switch (key) {
             // Deck A controls
-            case 'a':
+            case 'd':
                 if (!audioProcessor.buffers.a) return;
                 const cueButtonA = document.getElementById('cue-a');
                 cueButtonA.classList.remove('active');
@@ -1680,14 +1750,14 @@ function initializeMixer(audioProcessor) {
                 deckState.a.isPaused = true;
                 isKeyboardCue = false;
                 break;
-            case 'q':
+            case 'h':
                 const pitchDownA = document.getElementById('pitch-down-a');
                 window.isKeyboardPitchDown_a = false;
                 pitchDownA.classList.remove('active');
                 clearInterval(window.pitchIntervalA);
                 audioProcessor.resetPitch('a');
                 break;
-            case 'w':
+            case 'j':
                 const pitchUpA = document.getElementById('pitch-up-a');
                 window.isKeyboardPitchUp_a = false;
                 pitchUpA.classList.remove('active');
@@ -1696,7 +1766,7 @@ function initializeMixer(audioProcessor) {
                 break;
 
             // Deck B controls
-            case 'b':
+            case 'c':
                 if (!audioProcessor.buffers.b) return;
                 const cueButtonB = document.getElementById('cue-b');
                 cueButtonB.classList.remove('active');
@@ -1705,14 +1775,14 @@ function initializeMixer(audioProcessor) {
                 deckState.b.isPaused = true;
                 isKeyboardCue = false;
                 break;
-            case 'g':
+            case 'n':
                 const pitchDownB = document.getElementById('pitch-down-b');
                 window.isKeyboardPitchDown_b = false;
                 pitchDownB.classList.remove('active');
                 clearInterval(window.pitchIntervalB);
                 audioProcessor.resetPitch('b');
                 break;
-            case 'h':
+            case 'm':
                 const pitchUpB = document.getElementById('pitch-up-b');
                 window.isKeyboardPitchUp_b = false;
                 pitchUpB.classList.remove('active');
@@ -1724,12 +1794,18 @@ function initializeMixer(audioProcessor) {
 
     // Add keyboard and mouse control for faders
     let activeKey = null;
-    let lastCKeyTime = 0;
+    let lastSpaceKeyTime = 0;
+    let lastKeyTimes = {
+        '1': 0, '2': 0,
+        'q': 0, 'w': 0,
+        'a': 0, 's': 0,
+        'z': 0, 'x': 0
+    };
 
     document.addEventListener('mousemove', (e) => {
         if (!activeKey) return;
         
-        if (activeKey === 'c') {
+        if (activeKey === ' ') {
             // Crossfader: move left/right
             const crossfader = document.getElementById('crossfader');
             const currentValue = parseInt(crossfader.value);
@@ -1737,7 +1813,7 @@ function initializeMixer(audioProcessor) {
             const newValue = Math.min(100, Math.max(0, currentValue + moveAmount));
             crossfader.value = newValue;
             crossfader.dispatchEvent(new Event('input'));
-        } else {
+        } else if (activeKey === '1' || activeKey === '2') {
             // Channel faders: move up/down
             const faderId = activeKey === '1' ? 'fader-a' : 'fader-b';
             const fader = document.getElementById(faderId);
@@ -1746,6 +1822,46 @@ function initializeMixer(audioProcessor) {
             const newValue = Math.min(127, Math.max(0, currentValue + moveAmount));
             fader.value = newValue;
             fader.dispatchEvent(new Event('input'));
+        } else {
+            // EQ controls
+            let deck, control;
+            switch (activeKey) {
+                case 'q': deck = 'a'; control = 'high'; break;
+                case 'a': deck = 'a'; control = 'mid'; break;
+                case 'z': deck = 'a'; control = 'low'; break;
+                case 'w': deck = 'b'; control = 'high'; break;
+                case 's': deck = 'b'; control = 'mid'; break;
+                case 'x': deck = 'b'; control = 'low'; break;
+                default: return;
+            }
+            
+            const eqControl = document.getElementById(`${control}-${deck}`);
+            if (eqControl) {
+                // Get the current rotation value from the knob
+                const knob = eqControl.querySelector('.dial-knob');
+                const currentRotation = knob ? parseFloat(knob.style.transform.match(/-?\d+(\.\d+)?/g)[1] || 0) : 0;
+                
+                // Calculate new rotation based on mouse movement
+                const moveAmount = -e.movementY * 0.5;
+                const newRotation = Math.min(150, Math.max(-150, currentRotation + moveAmount));
+                
+                // Convert rotation (-150 to 150 degrees) to EQ value (-12 to +12 dB)
+                const eqValue = (newRotation + 150) / 300 * 24 - 12;
+                
+                // Update knob rotation
+                if (knob) {
+                    knob.style.transform = `translateX(-50%) rotate(${newRotation}deg)`;
+                }
+                
+                // Update value display
+                const valueDisplay = eqControl.querySelector('.dial-value');
+                if (valueDisplay) {
+                    valueDisplay.textContent = `${eqValue > 0 ? '+' : ''}${eqValue.toFixed(1)}`;
+                }
+                
+                // Update audio processor
+                audioProcessor.setEQ(deck, control, eqValue);
+            }
         }
     });
 
@@ -1990,6 +2106,33 @@ function initializeMixer(audioProcessor) {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    });
+
+    // Initialize help button and keyboard shortcuts
+    const helpButton = document.getElementById('help-button');
+    const keyboardShortcuts = document.getElementById('keyboard-shortcuts');
+    const closeShortcuts = document.getElementById('close-shortcuts');
+
+    helpButton.addEventListener('click', () => {
+        keyboardShortcuts.classList.remove('hidden');
+    });
+
+    closeShortcuts.addEventListener('click', () => {
+        keyboardShortcuts.classList.add('hidden');
+    });
+
+    // Close shortcuts when clicking outside the content
+    keyboardShortcuts.addEventListener('click', (e) => {
+        if (e.target === keyboardShortcuts) {
+            keyboardShortcuts.classList.add('hidden');
+        }
+    });
+
+    // Close shortcuts with Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !keyboardShortcuts.classList.contains('hidden')) {
+            keyboardShortcuts.classList.add('hidden');
+        }
     });
 
     return mixer;

@@ -1,35 +1,111 @@
-                    <div class="transport-controls">
-                        <button id="play-pause-a" class="transport-button">
-                            <i class="fas fa-play"></i>
-                        </button>
-                        <button id="stop-a" class="transport-button">
-                            <i class="fas fa-stop"></i>
-                        </button>
-                        <button id="cue-a" class="transport-button">
-                            <i class="fas fa-flag"></i>
-                        </button>
-                        <button id="loop-a" class="transport-button">Loop In</button>
-                        <button id="sync-a" class="transport-button">Sync</button>
-                        <div class="tempo-controls">
-                            // ... existing code ...
-                        </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mixer</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <div class="header-section">
+            <a href="/" class="home-link">← Home</a>
+            <h1>Mixer</h1>
+            <!-- Add help button here -->
+            <div class="header-controls">
+                <button id="help-button" class="header-button" title="Keyboard Shortcuts">?</button>
+                <div class="master-volume">
+                    <label for="master-gain">Main Out</label>
+                    <input type="range" id="master-gain" min="0" max="127" value="127">
+                </div>
+            </div>
+        </div>
+
+        <!-- Move keyboard shortcuts overlay here -->
+        <div id="keyboard-shortcuts" class="hidden">
+            <div class="shortcuts-content">
+                <h3>Keyboard Shortcuts</h3>
+                <div class="shortcuts-grid">
+                    <div class="shortcuts-section">
+                        <h4>Deck A</h4>
+                        <ul>
+                            <li><span class="key">1</span> + mouse: Level (double-tap to reset)</li>
+                            <li><span class="key">q</span> + mouse: High EQ (double-tap to reset)</li>
+                            <li><span class="key">a</span> + mouse: Mid EQ (double-tap to reset)</li>
+                            <li><span class="key">z</span> + mouse: Low EQ (double-tap to reset)</li>
+                            <li><span class="key">d</span>: Cue</li>
+                            <li><span class="key">f</span>: Play/Pause</li>
+                            <li><span class="key">g</span>: Stop</li>
+                            <li><span class="key">h</span>: Pitch Down</li>
+                            <li><span class="key">j</span>: Pitch Up</li>
+                        </ul>
                     </div>
+                    <div class="shortcuts-section">
+                        <h4>Deck B</h4>
+                        <ul>
+                            <li><span class="key">2</span> + mouse: Level (double-tap to reset)</li>
+                            <li><span class="key">w</span> + mouse: High EQ (double-tap to reset)</li>
+                            <li><span class="key">s</span> + mouse: Mid EQ (double-tap to reset)</li>
+                            <li><span class="key">x</span> + mouse: Low EQ (double-tap to reset)</li>
+                            <li><span class="key">c</span>: Cue</li>
+                            <li><span class="key">v</span>: Play/Pause</li>
+                            <li><span class="key">b</span>: Stop</li>
+                            <li><span class="key">n</span>: Pitch Down</li>
+                            <li><span class="key">m</span>: Pitch Up</li>
+                        </ul>
+                    </div>
+                    <div class="shortcuts-section">
+                        <h4>Crossfader</h4>
+                        <ul>
+                            <li><span class="key">space</span> + mouse: Adjust</li>
+                            <li>Double-tap <span class="key">space</span>: Center</li>
+                        </ul>
+                    </div>
+                </div>
+                <button id="close-shortcuts">Close</button>
+            </div>
+        </div>
 
-                    // ... other deck code ...
+        <div class="transport-controls">
+            <button id="play-pause-a" class="transport-button">
+                <i class="fas fa-play"></i>
+            </button>
+            <button id="stop-a" class="transport-button">
+                <i class="fas fa-stop"></i>
+            </button>
+            <button id="cue-a" class="transport-button">
+                <i class="fas fa-flag"></i>
+            </button>
+            <button id="loop-a" class="transport-button">Loop In</button>
+            <button id="sync-a" class="transport-button">Sync</button>
+            <div class="tempo-controls">
+                // ... existing code ...
+            </div>
+        </div>
 
-                    <div class="transport-controls">
-                        <button id="play-pause-b" class="transport-button">
-                            <i class="fas fa-play"></i>
-                        </button>
-                        <button id="stop-b" class="transport-button">
-                            <i class="fas fa-stop"></i>
-                        </button>
-                        <button id="cue-b" class="transport-button">
-                            <i class="fas fa-flag"></i>
-                        </button>
-                        <button id="loop-b" class="transport-button">Loop In</button>
-                        <button id="sync-b" class="transport-button">Sync</button>
-                        <div class="tempo-controls">
-                            // ... existing code ...
-                        </div>
-                    </div> 
+        // ... other deck code ...
+
+        <div class="transport-controls">
+            <button id="play-pause-b" class="transport-button">
+                <i class="fas fa-play"></i>
+            </button>
+            <button id="stop-b" class="transport-button">
+                <i class="fas fa-stop"></i>
+            </button>
+            <button id="cue-b" class="transport-button">
+                <i class="fas fa-flag"></i>
+            </button>
+            <button id="loop-b" class="transport-button">Loop In</button>
+            <button id="sync-b" class="transport-button">Sync</button>
+            <div class="tempo-controls">
+                // ... existing code ...
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/audioProcessor.js"></script>
+    <script src="/static/js/waveform.js"></script>
+    <script src="/static/js/main.js"></script>
+</body>
+</html> 
