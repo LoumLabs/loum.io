@@ -644,8 +644,8 @@ function initializeMixer(audioProcessor) {
             trackElement.className = 'track-item';
             
             // Check if track is loaded in any deck
-            const deckA = audioProcessor.currentTrack.a === track.file ? 'A' : '';
-            const deckB = audioProcessor.currentTrack.b === track.file ? 'B' : '';
+            const deckA = audioProcessor.currentTrack.a === track.file ? '1' : '';
+            const deckB = audioProcessor.currentTrack.b === track.file ? '2' : '';
             const deckIndicator = deckA || deckB;
             
             // Ensure BPM is a number and has a valid value
