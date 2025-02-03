@@ -20,7 +20,6 @@ function checkRequiredElements() {
             playPauseButton: document.getElementById(`play-pause-${deck}`),
             stopButton: document.getElementById(`stop-${deck}`),
             cueButton: document.getElementById(`cue-${deck}`),
-            loopButton: document.getElementById(`loop-${deck}`),
             tempoMinus: document.getElementById(`tempo-minus-${deck}`),
             tempoPlus: document.getElementById(`tempo-plus-${deck}`),
             tempoValue: document.getElementById(`tempo-value-${deck}`),
@@ -770,8 +769,6 @@ function initializeMixer(audioProcessor) {
             audioProcessor.pausePosition[deck] = 0;
             audioProcessor.cuePoints[deck] = 0;
             audioProcessor.playbackRate[deck] = 1;
-            audioProcessor.isLooping[deck] = false;
-            audioProcessor.loopPoints[deck] = { start: null, end: null };
             
             // Load the new audio
             const audioBuffer = await audioProcessor.loadAudio(deck, track.file);
@@ -788,8 +785,7 @@ function initializeMixer(audioProcessor) {
                 stopButton: document.getElementById(`stop-${deck}`),
                 tempoValue: document.getElementById(`tempo-value-${deck}`),
                 bpmDisplay: document.getElementById(`bpm-${deck}`),
-                playhead: document.getElementById(`playhead-${deck}`),
-                loopButton: document.getElementById(`loop-${deck}`)
+                playhead: document.getElementById(`playhead-${deck}`)
             };
 
             // Check if all required elements exist
@@ -850,12 +846,6 @@ function initializeMixer(audioProcessor) {
             
             // Reset playhead position
             deckElements.playhead.style.left = '0%';
-            
-            // Reset loop state if exists
-            if (deckElements.loopButton) {
-                deckElements.loopButton.textContent = 'Loop In';
-                deckElements.loopButton.classList.remove('active');
-            }
 
             // Store the track reference for BPM calculations
             audioProcessor.currentTrack[deck] = track.file;
@@ -876,7 +866,6 @@ function initializeMixer(audioProcessor) {
             playPauseButton: document.getElementById(`play-pause-${deck}`),
             stopButton: document.getElementById(`stop-${deck}`),
             cueButton: document.getElementById(`cue-${deck}`),
-            loopButton: document.getElementById(`loop-${deck}`),
             tempoMinus: document.getElementById(`tempo-minus-${deck}`),
             tempoPlus: document.getElementById(`tempo-plus-${deck}`),
             tempoValue: document.getElementById(`tempo-value-${deck}`),
@@ -895,7 +884,7 @@ function initializeMixer(audioProcessor) {
 
         // Check if required elements exist before setting up event listeners
         if (!elements.container || !elements.playPauseButton || !elements.stopButton || 
-            !elements.cueButton || !elements.loopButton) {
+            !elements.cueButton) {
             console.warn(`Required elements for deck ${deck} not found`);
             return;
         }
@@ -1178,34 +1167,6 @@ function initializeMixer(audioProcessor) {
             });
         }
 
-        // Loop control
-        let loopState = 'in'; // States: 'in', 'out', 'active'
-        elements.loopButton.textContent = 'Loop In';
-        
-        elements.loopButton.addEventListener('click', () => {
-            if (!audioProcessor.buffers[deck]) return;
-            
-            switch (loopState) {
-                case 'in':
-                    audioProcessor.setLoopIn(deck);
-                    elements.loopButton.textContent = 'Loop Out';
-                    loopState = 'out';
-                    break;
-                case 'out':
-                    audioProcessor.setLoopOut(deck);
-                    elements.loopButton.textContent = 'Loop';
-                    elements.loopButton.classList.add('active');
-                    loopState = 'active';
-                    break;
-                case 'active':
-                    audioProcessor.clearLoop(deck);
-                    elements.loopButton.textContent = 'Loop In';
-                    elements.loopButton.classList.remove('active');
-                    loopState = 'in';
-                    break;
-            }
-        });
-
         // Handle cue button
         elements.cueButton.addEventListener('mousedown', () => {
             if (!audioProcessor.buffers[deck]) return;
@@ -1261,11 +1222,6 @@ function initializeMixer(audioProcessor) {
                             elements.cueButton._mousePressed = false;
                             isKeyboardCue = false;
                         }
-                    } else if (loopState === 'active' && !deckState[deck].isPlaying) {
-                        // If we have an active loop and we're not playing, start from loop start
-                        audioProcessor.startTime[deck] = audioProcessor.audioContext.currentTime;
-                        audioProcessor.pausePosition[deck] = audioProcessor.loopPoints[deck].start;
-                        await audioProcessor.play(deck);
                     } else {
                         // Normal play from current position
                         await audioProcessor.play(deck);
@@ -1303,33 +1259,10 @@ function initializeMixer(audioProcessor) {
             elements.playPauseButton.classList.remove('active');
             elements.playPauseButton.textContent = 'Play';
             
-            // Force playhead to appropriate position
+            // Force playhead to start position
             const playhead = document.getElementById(`playhead-${deck}`);
-
-            // If we have an active loop
-            if (loopState === 'active') {
-                // If we're already stopped at loop start, clear the loop
-                if (Math.abs(audioProcessor.pausePosition[deck] - audioProcessor.loopPoints[deck].start) < 0.01) {
-                    // Reset loop UI state
-                    loopState = 'in';
-                    elements.loopButton.textContent = 'Loop In';
-                    elements.loopButton.classList.remove('active');
-                    waveforms[deck].clearLoop();
-                    audioProcessor.clearLoop(deck);
-                    // Reset to track start
-                    audioProcessor.pausePosition[deck] = 0;
-                    playhead.style.left = '0%';
-                } else {
-                    // First stop: move to loop start
-                    audioProcessor.pausePosition[deck] = audioProcessor.loopPoints[deck].start;
-                    const loopStartPercent = (audioProcessor.loopPoints[deck].start / audioProcessor.buffers[deck].duration) * 100;
-                    playhead.style.left = `${loopStartPercent}%`;
-                }
-            } else {
-                // No loop: reset to track start
-                audioProcessor.pausePosition[deck] = 0;
-                playhead.style.left = '0%';
-            }
+            audioProcessor.pausePosition[deck] = 0;
+            playhead.style.left = '0%';
 
             // Remove active class after a short delay
             setTimeout(() => elements.stopButton.classList.remove('active'), 100);
@@ -1493,9 +1426,7 @@ function initializeMixer(audioProcessor) {
             audioProcessor.pausePosition[deck] = 0;
             audioProcessor.cuePoints[deck] = 0;
             audioProcessor.playbackRate[deck] = 1;
-            audioProcessor.isLooping[deck] = false;
-            audioProcessor.loopPoints[deck] = { start: null, end: null };
-
+            
             // Clear waveform display
             waveforms[deck].clear();
 
@@ -1511,23 +1442,40 @@ function initializeMixer(audioProcessor) {
 
             // Reset transport button states
             const playPauseButton = document.getElementById(`play-pause-${deck}`);
-            const loopButton = document.getElementById(`loop-${deck}`);
-            
             playPauseButton.classList.remove('active');
+            playPauseButton.textContent = 'Play';
             
-            // Reset loop state if exists
-            if (loopButton) {
-                loopButton.textContent = 'Loop In';
-                loopButton.classList.remove('active');
-            }
-
-            // Reset tempo display
+            // Reset tempo and BPM display
             const tempoValue = document.getElementById(`tempo-value-${deck}`);
             const bpmDisplay = document.getElementById(`bpm-${deck}`);
-            if (tempoValue) tempoValue.textContent = '100%';
-            if (bpmDisplay) bpmDisplay.textContent = '--';
+            if (tempoValue) tempoValue.textContent = '0.0%';
+            window[`tempo_${deck}`] = 100;
+            
+            // Set BPM in audioProcessor and display
+            if (track.bpm && !isNaN(track.bpm)) {
+                audioProcessor.bpm[deck] = track.bpm;
+                audioProcessor.beatLength[deck] = 60 / track.bpm;
+                window[`originalBPM_${deck}`] = track.bpm;
+                if (bpmDisplay) {
+                    bpmDisplay.textContent = track.bpm.toFixed(1);
+                }
+            } else {
+                window[`originalBPM_${deck}`] = 0;
+                if (bpmDisplay) {
+                    bpmDisplay.textContent = '--';
+                }
+            }
+            
+            // Reset playhead position
+            const playhead = document.getElementById(`playhead-${deck}`);
+            if (playhead) {
+                playhead.style.left = '0%';
+            }
 
-            // Update track list to remove deck indicator
+            // Store the track reference for BPM calculations
+            audioProcessor.currentTrack[deck] = track.file;
+            
+            // Update track list to show deck indicators
             updateTrackList();
         });
     });

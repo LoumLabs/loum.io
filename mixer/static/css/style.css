@@ -663,7 +663,7 @@ canvas {
     box-sizing: border-box;
 }
 
-.play-btn, .loop-btn, .cue-btn, .stop-btn, .pause-btn, .tempo-btn {
+.play-btn, .cue-btn, .stop-btn, .pause-btn, .tempo-btn {
     background-color: #333;
     color: #808080;
     border: none;
@@ -680,7 +680,7 @@ canvas {
     justify-content: center;
 }
 
-.play-btn, .loop-btn, .cue-btn, .stop-btn, .pause-btn {
+.play-btn, .cue-btn, .stop-btn, .pause-btn {
     min-width: 40px;
 }
 
@@ -701,7 +701,7 @@ canvas {
     background-color: #2a2a2a;
 }
 
-.play-btn:hover, .loop-btn:hover, .cue-btn:hover, .stop-btn:hover, .pause-btn:hover {
+.play-btn:hover, .cue-btn:hover, .stop-btn:hover, .pause-btn:hover {
     background-color: #444;
     color: #aaa;
 }
@@ -713,11 +713,6 @@ canvas {
 }
 
 .play-btn.active, .pause-btn.active {
-    background-color: #4CAF50;
-    color: white;
-}
-
-.loop-btn.active {
     background-color: #4CAF50;
     color: white;
 }

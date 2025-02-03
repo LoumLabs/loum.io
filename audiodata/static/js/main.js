@@ -367,11 +367,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const results = await audioProcessor.loudnessAnalyzer.analyzeLoudness(audioBuffer);
                     loudnessResults.push({
                         filename: file.name,
-                        lufs_i: results.integratedLoudness.toFixed(1),
-                        lufs_s_max: results.shortTermMax.toFixed(1),
-                        lra: results.loudnessRange.toFixed(1),
-                        sample_peak: results.samplePeak.toFixed(1),
-                        true_peak: results.truePeak.toFixed(1)
+                        lufs_i: results.integratedLoudness.toFixed(2),
+                        lufs_s_max: results.shortTermMax.toFixed(2),
+                        lra: results.loudnessRange.toFixed(2),
+                        sample_peak: results.samplePeak.toFixed(2),
+                        true_peak: results.truePeak.toFixed(2)
                     });
                     updateLoudnessTable(loudnessResults);
                 } catch (error) {
@@ -525,9 +525,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Update RMS table
             const rmsRowContent = `
                 <td>${result.filename}</td>
-                <td>${result.low.toFixed(1)}</td>
-                <td>${result.mid.toFixed(1)}</td>
-                <td>${result.high.toFixed(1)}</td>
+                <td>${result.low.toFixed(2)}</td>
+                <td>${result.mid.toFixed(2)}</td>
+                <td>${result.high.toFixed(2)}</td>
             `;
 
             updateTableRow(rmsTableBody, result.filename, rmsRowContent);
@@ -837,7 +837,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 return context[0].label;  // Show frequency band
                             },
                             label: function(context) {
-                                return `${context.dataset.label}: ${context.parsed.y.toFixed(1)} dB`;
+                                return `${context.dataset.label}: ${context.parsed.y.toFixed(2)} dB`;
                             }
                         }
                     },
@@ -1005,7 +1005,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Draw dB range label
                         const startDb = yAxis.getValueForPixel(boxTop);
                         const endDb = yAxis.getValueForPixel(boxTop + boxHeight);
-                        const dbRange = Math.abs(startDb - endDb).toFixed(1);
+                        const dbRange = Math.abs(startDb - endDb).toFixed(2);
                         
                         ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
                         ctx.font = '12px monospace';

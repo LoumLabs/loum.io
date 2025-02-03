@@ -6,10 +6,8 @@ class AudioProcessor {
         this.buffers = { a: null, b: null };
         this.startTime = { a: 0, b: 0 };
         this.playbackRate = { a: 1, b: 1 };
-        this.isLooping = { a: false, b: false };
         this.pausePosition = { a: undefined, b: undefined };
         this.cuePoints = { a: 0, b: 0 };
-        this.loopPoints = { a: { start: null, end: null }, b: { start: null, end: null } };
         
         // Create nodes after context is initialized
         this.gainNodes = { a: null, b: null };  // Channel faders
@@ -200,8 +198,6 @@ class AudioProcessor {
             this.pausePosition[deck] = 0;
             this.cuePoints[deck] = 0;
             this.playbackRate[deck] = 1;
-            this.isLooping[deck] = false;
-            this.loopPoints[deck] = { start: null, end: null };
 
             // Get fresh ArrayBuffer from file
             const arrayBuffer = await file.arrayBuffer();
@@ -273,17 +269,6 @@ class AudioProcessor {
             source.playbackRate.value = rate;
         }
 
-        // Only set loop points if isLooping is true AND we have valid points
-        if (this.isLooping[deck] && 
-            this.loopPoints[deck].start !== null && 
-            this.loopPoints[deck].end !== null) {
-            source.loop = true;
-            source.loopStart = this.loopPoints[deck].start;
-            source.loopEnd = this.loopPoints[deck].end;
-        } else {
-            source.loop = false;
-        }
-
         // Connect source to trim node (rest of chain is connected in connectEQChain)
         source.connect(this.trimNodes[deck]);
         
@@ -304,9 +289,6 @@ class AudioProcessor {
         if (this.sources[deck]?._isCuePreview) {
             // If coming from cue preview, use cue point
             startPosition = this.cuePoints[deck];
-        } else if (this.isLooping[deck] && this.loopPoints[deck].start !== null) {
-            // If we have an active loop, use loop start point
-            startPosition = this.loopPoints[deck].start;
         } else if (this.pausePosition[deck] !== 0) {
             // If paused, use pause position
             startPosition = this.pausePosition[deck];
@@ -339,11 +321,6 @@ class AudioProcessor {
         
         // Store the current position for future retriggering
         this.pausePosition[deck] = safePosition;
-
-        // If we have both loop points and looping is active, start monitoring
-        if (this.isLooping[deck] && this.loopPoints[deck].start !== null && this.loopPoints[deck].end !== null) {
-            this.monitorLoop(deck);
-        }
     }
 
     pause(deck) {
@@ -376,10 +353,6 @@ class AudioProcessor {
         this.startTime[deck] = 0;
         this.pausePosition[deck] = 0;
         this.cuePoints[deck] = 0;  // Reset cue point to start
-        
-        // Clear any loop state
-        this.isLooping[deck] = false;
-        this.loopPoints[deck] = { start: null, end: null };
     }
 
     cue(deck) {
@@ -522,54 +495,6 @@ class AudioProcessor {
             // Apply the new tempo adjustment
             this.bpm[deck] = originalBPM * (tempoPercentage / 100);
         }
-    }
-
-    toggleLoop(deck) {
-        if (!this.loopPoints[deck].start || !this.loopPoints[deck].end) return 'in';
-        
-        // Toggle loop state
-        this.isLooping[deck] = !this.isLooping[deck];
-        
-        // If we're disabling the loop
-        if (!this.isLooping[deck]) {
-            // Clear loop points first
-            const currentTime = this.getCurrentTime(deck);
-            this.loopPoints[deck] = { start: null, end: null };
-
-            // If currently playing, recreate source without loop
-            if (this.sources[deck]) {
-                try {
-                    this.sources[deck].stop();
-                } catch (e) {}
-                this.sources[deck] = null;
-
-                // Create new source without loop
-                this.sources[deck] = this.createSource(deck);
-                if (this.sources[deck]) {
-                    this.startTime[deck] = this.audioContext.currentTime - (currentTime / this.playbackRate[deck]);
-                    this.sources[deck].start(0, currentTime);
-                }
-            }
-            return 'in';
-        }
-        
-        // If we're enabling the loop
-        if (this.sources[deck]) {
-            const currentTime = this.getCurrentTime(deck);
-            try {
-                this.sources[deck].stop();
-            } catch (e) {}
-            this.sources[deck] = null;
-
-            // Create new source with loop enabled
-            this.sources[deck] = this.createSource(deck);
-            if (this.sources[deck]) {
-                this.startTime[deck] = this.audioContext.currentTime - (currentTime / this.playbackRate[deck]);
-                this.sources[deck].start(0, currentTime);
-                this.monitorLoop(deck);
-            }
-        }
-        return 'active';
     }
 
     getCurrentTime(deck) {
@@ -914,15 +839,6 @@ class AudioProcessor {
                 // Account for playback rate when calculating start time
                 this.startTime[deck] = this.audioContext.currentTime - (startOffset / this.playbackRate[deck]);
                 this.sources[deck].start(0, startOffset);
-                
-                // Restore loop handler if needed
-                if (this.isLooping[deck]) {
-                    this.sources[deck].onended = () => {
-                        if (this.isLooping[deck]) {
-                            this.startLoop(deck);
-                        }
-                    };
-                }
             }
         } else {
             // Just update the pause position without starting playback
@@ -977,190 +893,6 @@ class AudioProcessor {
             delete this.sources[deck]._originalRate;
             delete this.sources[deck]._rampTimeout;
         }, duration * 1000);
-    }
-
-    setLoopIn(deck) {
-        const currentTime = this.getCurrentTime(deck);
-        this.loopPoints[deck].start = currentTime;
-        this.loopPoints[deck].end = null;
-        this.isLooping[deck] = false;
-    }
-
-    setLoopOut(deck) {
-        if (this.loopPoints[deck].start === null) return;
-        const currentTime = this.getCurrentTime(deck);
-        this.loopPoints[deck].end = currentTime;
-        this.isLooping[deck] = true;
-
-        // If currently playing, restart playback with loop enabled
-        if (this.sources[deck]) {
-            try {
-                this.sources[deck].stop();
-            } catch (e) {}
-            this.sources[deck] = null;
-
-            // Create new source with loop enabled
-            this.sources[deck] = this.createSource(deck);
-            if (this.sources[deck]) {
-                this.startTime[deck] = this.audioContext.currentTime - (currentTime / this.playbackRate[deck]);
-                this.sources[deck].start(0, currentTime);
-                this.monitorLoop(deck);
-            }
-        } else {
-            // If not playing, just set the pause position to loop start
-            this.pausePosition[deck] = this.loopPoints[deck].start;
-        }
-    }
-
-    monitorLoop(deck) {
-        if (!this.isLooping[deck] || !this.sources[deck]) return;
-
-        const currentTime = this.getCurrentTime(deck);
-        if (currentTime >= this.loopPoints[deck].end) {
-            // Jump back to loop start
-            const startOffset = this.loopPoints[deck].start;
-            
-            // Stop current source
-            try {
-                this.sources[deck].stop();
-            } catch (e) {}
-            this.sources[deck] = null;
-
-            // Create and start new source from loop start
-            this.sources[deck] = this.createSource(deck);
-            if (this.sources[deck]) {
-                this.startTime[deck] = this.audioContext.currentTime - (startOffset / this.playbackRate[deck]);
-                this.sources[deck].start(0, startOffset);
-            }
-        }
-
-        // Continue monitoring if still looping
-        if (this.isLooping[deck]) {
-            requestAnimationFrame(() => this.monitorLoop(deck));
-        }
-    }
-
-    startLoop(deck) {
-        if (!this.sources[deck] || !this.loopPoints[deck].start || !this.loopPoints[deck].end) return;
-        
-        const currentTime = this.getCurrentTime(deck);
-        
-        // Check if we need to loop back
-        if (currentTime >= this.loopPoints[deck].end) {
-            const startOffset = this.loopPoints[deck].start;
-            const loopDuration = this.loopPoints[deck].end - this.loopPoints[deck].start;
-            
-            // Stop current playback
-            if (this.sources[deck]) {
-                this.sources[deck].stop();
-                this.sources[deck] = null;
-            }
-            
-            // Create new source at loop start
-            this.sources[deck] = this.createSource(deck);
-            if (this.sources[deck]) {
-                // Calculate new startTime to maintain visual position
-                const elapsedInLoop = currentTime - this.loopPoints[deck].end;
-                this.startTime[deck] = this.audioContext.currentTime - 
-                    ((startOffset + elapsedInLoop) / this.playbackRate[deck]);
-                this.sources[deck].start(0, startOffset);
-            }
-        }
-        
-        // Continue monitoring if looping is active
-        if (this.isLooping[deck]) {
-            requestAnimationFrame(() => this.startLoop(deck));
-        }
-    }
-
-    clearLoop(deck) {
-        this.isLooping[deck] = false;
-        this.loopPoints[deck].start = null;
-        this.loopPoints[deck].end = null;
-    }
-
-    syncToDeck(deck) {
-        const otherDeck = deck === 'a' ? 'b' : 'a';
-        
-        if (!this.buffers[otherDeck] || !this.buffers[deck]) {
-            return { success: false };
-        }
-
-        // Get current actual BPM values (including any tempo adjustments)
-        const targetBPM = this.bpm[otherDeck];
-        const currentBPM = this.bpm[deck];
-        
-        // Safety checks for valid BPM values
-        if (!targetBPM || !currentBPM || isNaN(targetBPM) || isNaN(currentBPM) || 
-            targetBPM <= 0 || currentBPM <= 0) {
-            console.log('Invalid BPM values:', { targetBPM, currentBPM });
-            return { success: false };
-        }
-        
-        // Calculate tempo adjustment needed (as a percentage)
-        const tempoAdjustment = Math.round((targetBPM / currentBPM) * 100);
-        
-        // Safety check for tempo adjustment
-        if (isNaN(tempoAdjustment) || !isFinite(tempoAdjustment) || 
-            tempoAdjustment < 50 || tempoAdjustment > 150) {
-            console.log('Invalid tempo adjustment:', tempoAdjustment);
-            return { success: false };
-        }
-        
-        // Apply tempo change
-        this.setTempo(deck, tempoAdjustment);
-
-        // Try to align the beats if both decks are playing
-        if (this.sources[deck] && this.sources[otherDeck]) {
-            const currentBeat = this.getCurrentBeat(deck);
-            const targetBeat = this.getCurrentBeat(otherDeck);
-            
-            if (currentBeat && targetBeat && 
-                !isNaN(currentBeat.phase) && !isNaN(targetBeat.phase) && 
-                !isNaN(currentBeat.beatLength)) {
-                const beatDiff = (targetBeat.phase - currentBeat.phase) * currentBeat.beatLength;
-                const currentTime = this.getCurrentTime(deck);
-                
-                // Safety check for seek position
-                if (!isNaN(currentTime) && !isNaN(beatDiff) && 
-                    this.buffers[deck] && this.buffers[deck].duration) {
-                    const seekPosition = (currentTime + beatDiff) / this.buffers[deck].duration;
-                    if (seekPosition >= 0 && seekPosition <= 1) {
-                        // Only seek if already playing, don't auto-start playback
-                        this.seekTo(deck, seekPosition, this.sources[deck] !== null);
-                    }
-                }
-            }
-        }
-
-        return {
-            success: true,
-            tempoAdjustment,
-            targetBPM,
-            currentBPM
-        };
-    }
-
-    // Helper method to get current beat position
-    getCurrentBeat(deck) {
-        if (!this.buffers[deck] || !this.beatLength[deck]) return null;
-        
-        const currentTime = this.getCurrentTime(deck);
-        const beatLength = this.beatLength[deck];
-        const offset = this.beatGridOffset[deck] || 0;
-        
-        // Safety checks
-        if (isNaN(currentTime) || isNaN(beatLength) || beatLength <= 0) {
-            return null;
-        }
-        
-        const beatPosition = (currentTime - offset) / beatLength;
-        
-        return {
-            number: Math.floor(beatPosition),
-            phase: beatPosition % 1,
-            beatLength
-        };
     }
 
     resetTempo(deck) {
