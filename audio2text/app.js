@@ -102,16 +102,25 @@ function handleFileUpload(event) {
 async function handleTranscribe() {
   if (!audioBlob) return;
 
-  const formData = new FormData();
-  formData.append('audio', audioBlob);
-
   try {
-    const response = await fetch('/api/transcribe', {
+    const formData = new FormData();
+    formData.append('audio', audioBlob);
+
+    console.log('Sending file for transcription:', audioBlob);
+
+    const response = await fetch('/.netlify/functions/transcribe', {
       method: 'POST',
-      body: formData,
+      body: audioBlob,
+      headers: {
+        'Content-Type': audioBlob.type || 'audio/wav'
+      }
     });
 
-    if (!response.ok) throw new Error('Transcription failed');
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Server error:', errorText);
+      throw new Error('Failed to transcribe audio');
+    }
 
     const data = await response.json();
     const transcription = {
@@ -123,7 +132,7 @@ async function handleTranscribe() {
     transcriptions.unshift(transcription);
     updateTranscriptionsList();
   } catch (error) {
-    console.error('Error transcribing:', error);
+    console.error('Transcription error:', error);
     alert('Error transcribing audio. Please try again.');
   }
 }
