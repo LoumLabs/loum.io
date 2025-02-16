@@ -2,14 +2,14 @@
   base = "src/audio2text"
   command = "npm install && npm run build"
   publish = ".next"
-  environment = { NODE_VERSION = "18.x" }
+
+[build.environment]
+  NODE_VERSION = "18.x"
+  NEXT_TELEMETRY_DISABLED = "1"
+  NEXT_PUBLIC_API_URL = "/.netlify/functions"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
-
-[build.environment]
-  NEXT_TELEMETRY_DISABLED = "1"
-  NEXT_PUBLIC_API_URL = "/.netlify/functions"
 
 [[redirects]]
   from = "/api/*"
