@@ -1,0 +1,25 @@
+@import 'https://cdn.jsdelivr.net/npm/tailwindcss@2/dist/tailwind.min.css';
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-gray-900 text-white min-h-screen;
+}
+
+.dark {
+  @apply bg-gray-900 text-white;
+}
+
+.dark .dark\:bg-gray-800 {
+  @apply bg-gray-800;
+}
+
+.dark .dark\:text-gray-300 {
+  @apply text-gray-300;
+}
+
+.dark .dark\:border-gray-700 {
+  @apply border-gray-700;
+}

@@ -4,87 +4,135 @@ import re
 import json
 import urllib.request
 import urllib.parse
+import io
+import uuid
+import tempfile
+import shutil
+import logging
+import asyncio
 
-class MixerHandler(SimpleHTTPRequestHandler):
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+class AudioTranscriptionHandler(SimpleHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        self.temp_dir = tempfile.mkdtemp()
+        super().__init__(*args, **kwargs)
+
     def do_GET(self):
-        print(f'Handling request for: {self.path}')
+        logger.info(f'Handling GET request for: {self.path}')
         
-        # Check if this is a mixer route
-        mixer_match = re.match(r'^/mixer/([^/]+)/?$', self.path)
-        config_match = re.match(r'^/mixer/configs/([^/]+)\.json$', self.path)
-        proxy_match = re.match(r'^/proxy/(.+)$', self.path)
-        
-        if mixer_match:
-            print('Serving mixer app')
-            collection_name = mixer_match.group(1)
-            print(f'Collection name: {collection_name}')
-            
-            # Check if config exists
-            config_path = os.path.join('mixer', 'configs', f'{collection_name}.json')
-            if not os.path.exists(config_path):
-                print(f'Warning: Config file not found: {config_path}')
-            
-            # Serve the mixer's index.html
-            self.path = '/mixer/index.html'
-            
-        elif config_match:
-            print('Serving config file')
-            config_name = config_match.group(1)
-            config_path = os.path.join('mixer', 'configs', f'{config_name}.json')
-            
-            if os.path.exists(config_path):
-                print(f'Found config file: {config_path}')
-                try:
-                    with open(config_path, 'rb') as f:
-                        content = f.read()
-                    self.send_response(200)
-                    self.send_header('Content-Type', 'application/json')
-                    self.send_header('Content-Length', len(content))
-                    self.end_headers()
-                    self.wfile.write(content)
-                    return
-                except Exception as e:
-                    print(f'Error reading config file: {e}')
-                    self.send_error(500, f'Error reading config file: {str(e)}')
-                    return
+        # Check if this is a request for a temporary audio file
+        audio_match = re.match(r'^/temp/audio/([^/]+)$', self.path)
+        if audio_match:
+            file_id = audio_match.group(1)
+            file_path = os.path.join(self.temp_dir, file_id)
+            if os.path.exists(file_path):
+                self.send_response(200)
+                self.send_header('Content-Type', 'audio/wav')
+                self.send_header('Content-Length', os.path.getsize(file_path))
+                self.end_headers()
+                with open(file_path, 'rb') as f:
+                    shutil.copyfileobj(f, self.wfile)
+                return
             else:
-                print(f'Config file not found: {config_path}')
-                self.send_error(404, f'Config file not found: {config_name}')
+                self.send_error(404, 'Audio file not found')
                 return
                 
-        elif proxy_match:
-            print('Proxying file request')
-            encoded_url = proxy_match.group(1)
-            url = urllib.parse.unquote(encoded_url)
-            
-            try:
-                # Create request with headers to handle redirects
-                req = urllib.request.Request(
-                    url,
-                    headers={
-                        'User-Agent': 'Mozilla/5.0',
-                        'Accept': '*/*'
-                    }
-                )
-                
-                # Open URL and follow redirects
-                with urllib.request.urlopen(req) as response:
-                    content = response.read()
-                    content_type = response.getheader('Content-Type')
-                    
-                    self.send_response(200)
-                    self.send_header('Content-Type', content_type)
-                    self.send_header('Content-Length', len(content))
-                    self.end_headers()
-                    self.wfile.write(content)
-                    return
-            except Exception as e:
-                print(f'Error proxying file: {e}')
-                self.send_error(500, f'Error proxying file: {str(e)}')
-                return
-        
-        # Handle the request normally (serve static files)
         return SimpleHTTPRequestHandler.do_GET(self)
+
+    async def transcribe_with_deepgram(self, audio_content, content_type):
+        api_key = os.getenv('DEEPGRAM_API_KEY')
+        if not api_key:
+            raise ValueError('Deepgram API key not found in environment')
+
+        url = 'https://api.deepgram.com/v1/listen?smart_format=true&model=general&language=en-US'
+        
+        headers = {
+            'Authorization': f'Token {api_key}',
+            'Content-Type': content_type
+        }
+        
+        try:
+            req = urllib.request.Request(
+                url,
+                data=audio_content,
+                headers=headers,
+                method='POST'
+            )
+            
+            with urllib.request.urlopen(req) as response:
+                response_data = json.loads(response.read().decode())
+                
+                if 'results' in response_data and 'channels' in response_data['results']:
+                    transcript = response_data['results']['channels'][0]['alternatives'][0]
+                    return {
+                        'text': transcript['transcript'],
+                        'confidence': transcript['confidence']
+                    }
+                else:
+                    raise ValueError('Unexpected response format from Deepgram')
+                    
+        except Exception as e:
+            logger.error(f'Error calling Deepgram API: {e}')
+            raise
+
+    def do_POST(self):
+        logger.info(f'Handling POST request for: {self.path}')
+        
+        if self.path == '/api/transcribe' or self.path == '/audio2text/api/transcribe':
+            try:
+                # Get headers
+                content_type = self.headers.get('Content-Type', '')
+                content_length = int(self.headers.get('Content-Length', 0))
+                
+                logger.info(f'Headers received:')
+                for header, value in self.headers.items():
+                    logger.info(f'{header}: {value}')
+                
+                # Read the raw data
+                audio_content = self.rfile.read(content_length)
+                
+                # Extract the actual audio data from the multipart form
+                if b'Content-Type: audio/' in audio_content:
+                    # Find the audio content boundary
+                    start = audio_content.find(b'\r\n\r\n') + 4
+                    end = audio_content.rfind(b'\r\n--')
+                    if start > 0 and end > 0:
+                        audio_content = audio_content[start:end]
+                
+                # Save the audio file temporarily
+                file_id = str(uuid.uuid4())
+                file_path = os.path.join(self.temp_dir, file_id)
+                with open(file_path, 'wb') as f:
+                    f.write(audio_content)
+                
+                # Get the actual content type (audio/wav, audio/mp3, etc.)
+                audio_type = 'audio/wav'  # Default to wav if not found
+                if b'Content-Type: audio/' in audio_content:
+                    type_match = re.search(b'Content-Type: (audio/[^\r\n]+)', audio_content)
+                    if type_match:
+                        audio_type = type_match.group(1).decode()
+
+                # Transcribe the audio
+                response_data = asyncio.run(self.transcribe_with_deepgram(audio_content, audio_type))
+                
+                # Add the audio file URL to the response
+                response_data['audioUrl'] = f'/temp/audio/{file_id}'
+
+                # Send the response
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps(response_data).encode())
+                
+            except Exception as e:
+                logger.error(f'Error handling transcription: {e}')
+                self.send_error(500, f'Internal server error: {str(e)}')
+                return
+        else:
+            self.send_error(404, 'Endpoint not found')
 
     def end_headers(self):
         # Add CORS headers
@@ -93,8 +141,13 @@ class MixerHandler(SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Headers', '*')
         SimpleHTTPRequestHandler.end_headers(self)
 
+    def do_OPTIONS(self):
+        # Handle preflight requests
+        self.send_response(200)
+        self.end_headers()
+
 if __name__ == '__main__':
     port = 8000
-    server = HTTPServer(('', port), MixerHandler)
-    print(f'Starting server on port {port}...')
-    server.serve_forever() 
+    server = HTTPServer(('', port), AudioTranscriptionHandler)
+    logger.info(f'Starting server on port {port}...')
+    server.serve_forever()
