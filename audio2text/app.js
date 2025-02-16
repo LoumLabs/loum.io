@@ -110,27 +110,40 @@ async function handleTranscribe() {
     reader.onload = async () => {
       try {
         const base64Data = reader.result.split(',')[1]; // Remove the data URL prefix
+        const endpoint = '/.netlify/functions/transcribe';
         
-        console.log('Sending file for transcription:', {
-          name: 'recording.wav',
-          type: audioBlob.type,
-          size: (audioBlob.size / (1024 * 1024)).toFixed(2) + 'MB'
+        console.log('Preparing transcription request:', {
+          endpoint,
+          audioType: audioBlob.type,
+          audioSize: (audioBlob.size / (1024 * 1024)).toFixed(2) + 'MB',
+          base64Length: base64Data.length
         });
 
-        const response = await fetch('/.netlify/functions/transcribe', {
+        const requestBody = {
+          audio: base64Data,
+          mimetype: audioBlob.type || 'audio/wav'
+        };
+
+        console.log('Sending request to:', endpoint);
+        const response = await fetch(endpoint, {
           method: 'POST',
-          body: JSON.stringify({
-            audio: base64Data,
-            mimetype: audioBlob.type || 'audio/wav'
-          }),
+          body: JSON.stringify(requestBody),
           headers: {
             'Content-Type': 'application/json'
           }
         });
 
+        console.log('Received response:', {
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries([...response.headers])
+        });
+
         let errorText;
         try {
           const responseData = await response.json();
+          console.log('Parsed response:', responseData);
+          
           if (!response.ok) {
             errorText = JSON.stringify(responseData);
             throw new Error(responseData.error || 'Failed to transcribe audio');
@@ -146,11 +159,17 @@ async function handleTranscribe() {
           updateTranscriptionsList();
         } catch (parseError) {
           errorText = await response.text();
-          console.error('Response parsing error:', parseError);
+          console.error('Response parsing error:', {
+            error: parseError,
+            responseText: errorText
+          });
           throw new Error('Failed to parse server response');
         }
       } catch (error) {
-        console.error('Server error:', errorText || error.message);
+        console.error('Server error:', {
+          message: error.message,
+          details: errorText
+        });
         throw error;
       }
     };
