@@ -5,14 +5,27 @@
   "main": "main.js",
   "scripts": {
     "start": "NODE_ENV=development electron .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:audio2text": "cd src/audio2text && next build",
+    "dev:audio2text": "cd src/audio2text && next dev"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@deepgram/sdk": "^3.11.1",
+    "@heroicons/react": "^2.1.1",
+    "autoprefixer": "^10.4.17",
     "busboy": "^1.6.0",
     "electron": "^28.1.0",
     "electron-store": "^7.0.3",
-    "node-fetch": "^2.6.7"
+    "framer-motion": "^11.0.3",
+    "next": "14.1.0",
+    "node-fetch": "^2.6.7",
+    "postcss": "^8.4.35",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3",
+    "wavesurfer.js": "^7.9.1"
   }
 }
