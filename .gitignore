@@ -42,3 +42,9 @@ Thumbs.db
 
 # Environment
 .env
+
+# Next.js
+.next/
+out/
+build
+dist
