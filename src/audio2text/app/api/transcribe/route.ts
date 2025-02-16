@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createApi } from '@deepgram/sdk';
+import { Deepgram } from '@deepgram/sdk';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -39,10 +39,10 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
 
     console.log('Initializing Deepgram client...');
-    const deepgram = createApi(apiKey);
+    const deepgram = new Deepgram(apiKey);
 
     console.log('Sending request to Deepgram...');
-    const response = await deepgram.transcribe({
+    const response = await deepgram.transcription.preRecorded({
       buffer,
       mimetype: file.type,
     }, {
