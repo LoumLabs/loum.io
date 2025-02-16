@@ -1,6 +1,10 @@
 [build]
-  publish = "."
-  functions = "netlify/functions"
+  base = "src/audio2text"
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
 [[redirects]]
   from = "/api/*"
