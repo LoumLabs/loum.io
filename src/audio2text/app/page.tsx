@@ -315,6 +315,7 @@ export default function Home() {
       // Add new transcription to list
       setTranscriptions(prev => [{
         id: Date.now(),
+        fileName: `Recording ${new Date().toLocaleString()}`,
         text: data.text,
         confidence: data.confidence,
         audioBlob: recordedBlob,
