@@ -10,7 +10,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "busboy": "^1.6.0",
     "electron": "^28.1.0",
     "electron-store": "^7.0.3",
     "node-fetch": "^2.6.7"
