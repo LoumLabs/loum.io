@@ -10,14 +10,14 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    // Parse the multipart form data
-    const audioData = event.body;
-    
-    // Log for debugging
-    console.log('Received request:', {
-      contentType: event.headers['content-type'],
-      bodyLength: event.body.length,
-    });
+    // Log request info for debugging
+    console.log('Request headers:', event.headers);
+    console.log('Request body length:', event.body.length);
+
+    // Convert base64 body to buffer if needed
+    const audioData = event.isBase64Encoded 
+      ? Buffer.from(event.body, 'base64')
+      : event.body;
 
     // Make request to Deepgram
     const response = await fetch('https://api.deepgram.com/v1/listen', {
@@ -26,17 +26,21 @@ exports.handler = async function(event, context) {
         'Authorization': `Token ${process.env.DEEPGRAM_API_KEY}`,
         'Content-Type': event.headers['content-type'] || 'audio/wav',
       },
-      body: audioData, // Send the raw audio data
+      body: audioData,
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Deepgram error:', errorText);
-      throw new Error(`Deepgram API error: ${response.statusText}`);
+      console.error('Deepgram error response:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
+      throw new Error(`Deepgram API error: ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('Deepgram response:', data);
+    console.log('Deepgram success response:', data);
 
     return {
       statusCode: 200,
@@ -49,7 +53,7 @@ exports.handler = async function(event, context) {
       }),
     };
   } catch (error) {
-    console.error('Error in function:', error);
+    console.error('Function error:', error);
     return {
       statusCode: 500,
       headers: {

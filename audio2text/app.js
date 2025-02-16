@@ -103,34 +103,43 @@ async function handleTranscribe() {
   if (!audioBlob) return;
 
   try {
-    const formData = new FormData();
-    formData.append('audio', audioBlob);
+    // Convert blob to base64
+    const reader = new FileReader();
+    reader.readAsArrayBuffer(audioBlob);
+    
+    reader.onload = async () => {
+      const arrayBuffer = reader.result;
+      
+      console.log('Sending file for transcription:', {
+        name: 'recording.wav',
+        type: audioBlob.type,
+        size: (audioBlob.size / (1024 * 1024)).toFixed(2) + 'MB'
+      });
 
-    console.log('Sending file for transcription:', audioBlob);
+      const response = await fetch('/.netlify/functions/transcribe', {
+        method: 'POST',
+        body: arrayBuffer,
+        headers: {
+          'Content-Type': audioBlob.type || 'audio/wav'
+        }
+      });
 
-    const response = await fetch('/.netlify/functions/transcribe', {
-      method: 'POST',
-      body: audioBlob,
-      headers: {
-        'Content-Type': audioBlob.type || 'audio/wav'
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Server error:', errorText);
+        throw new Error('Failed to transcribe audio');
       }
-    });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Server error:', errorText);
-      throw new Error('Failed to transcribe audio');
-    }
+      const data = await response.json();
+      const transcription = {
+        id: Date.now(),
+        text: data.text,
+        audioUrl: audioUrl,
+      };
 
-    const data = await response.json();
-    const transcription = {
-      id: Date.now(),
-      text: data.text,
-      audioUrl: audioUrl,
+      transcriptions.unshift(transcription);
+      updateTranscriptionsList();
     };
-
-    transcriptions.unshift(transcription);
-    updateTranscriptionsList();
   } catch (error) {
     console.error('Transcription error:', error);
     alert('Error transcribing audio. Please try again.');
