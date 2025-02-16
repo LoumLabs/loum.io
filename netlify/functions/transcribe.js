@@ -1,9 +1,9 @@
 const fetch = require('node-fetch');
+const busboy = require('busboy');
 
 exports.handler = async function(event, context) {
   console.log('Received request:', {
     method: event.httpMethod,
-    path: event.path,
     contentType: event.headers['content-type'],
     bodyLength: event.body?.length
   });
@@ -21,53 +21,27 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    // Parse the JSON body
-    let requestBody;
-    try {
-      requestBody = JSON.parse(event.body);
-      console.log('Parsed request body:', {
-        hasAudio: !!requestBody.audio,
-        audioLength: requestBody.audio?.length,
-        mimetype: requestBody.mimetype,
-      });
-    } catch (parseError) {
-      console.error('JSON parse error:', {
-        error: parseError.message,
-        bodyStart: event.body.substring(0, 100) + '...',
-        contentType: event.headers['content-type']
-      });
+    // Parse the multipart form data
+    const { audioBuffer, contentType } = await parseFormData(event);
+    
+    if (!audioBuffer) {
       return {
         statusCode: 400,
         headers: {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*'
         },
-        body: JSON.stringify({
-          error: 'Invalid JSON in request body',
-          details: parseError.message
-        })
+        body: JSON.stringify({ error: 'No audio file provided' })
       };
     }
 
-    const { audio, mimetype } = requestBody;
-    
-    if (!audio) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({
-          error: 'No audio data provided'
-        })
-      };
-    }
+    // Convert the audio buffer to base64
+    const audioBase64 = audioBuffer.toString('base64');
 
     // Log request info for debugging
     console.log('Request info:', {
-      mimetype,
-      audioLength: audio.length,
+      mimetype: contentType,
+      audioLength: audioBase64.length,
       apiKey: process.env.DEEPGRAM_API_KEY ? 'Present' : 'Missing'
     });
 
@@ -87,7 +61,7 @@ exports.handler = async function(event, context) {
     // Make request to Deepgram
     console.log('Making Deepgram request:', {
       url: 'https://api.deepgram.com/v1/listen',
-      mimetype,
+      mimetype: contentType,
       hasApiKey: true
     });
 
@@ -98,8 +72,8 @@ exports.handler = async function(event, context) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        buffer: audio,
-        mimetype: mimetype || 'audio/wav'
+        buffer: audioBase64,
+        mimetype: contentType || 'audio/wav'
       })
     });
 
@@ -182,4 +156,36 @@ exports.handler = async function(event, context) {
       }),
     };
   }
+}
+
+function parseFormData(event) {
+  return new Promise((resolve, reject) => {
+    const bb = busboy({ headers: event.headers });
+    let audioBuffer = null;
+    let contentType = null;
+
+    bb.on('file', (name, file, info) => {
+      const chunks = [];
+      contentType = info.mimeType;
+
+      file.on('data', (data) => {
+        chunks.push(data);
+      });
+
+      file.on('end', () => {
+        audioBuffer = Buffer.concat(chunks);
+      });
+    });
+
+    bb.on('finish', () => {
+      resolve({ audioBuffer, contentType });
+    });
+
+    bb.on('error', (error) => {
+      reject(error);
+    });
+
+    bb.write(Buffer.from(event.body, event.isBase64Encoded ? 'base64' : 'utf8'));
+    bb.end();
+  });
 }
