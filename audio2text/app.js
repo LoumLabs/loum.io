@@ -108,40 +108,56 @@ async function handleTranscribe() {
     reader.readAsDataURL(audioBlob);
     
     reader.onload = async () => {
-      const base64Data = reader.result.split(',')[1]; // Remove the data URL prefix
-      
-      console.log('Sending file for transcription:', {
-        name: 'recording.wav',
-        type: audioBlob.type,
-        size: (audioBlob.size / (1024 * 1024)).toFixed(2) + 'MB'
-      });
+      try {
+        const base64Data = reader.result.split(',')[1]; // Remove the data URL prefix
+        
+        console.log('Sending file for transcription:', {
+          name: 'recording.wav',
+          type: audioBlob.type,
+          size: (audioBlob.size / (1024 * 1024)).toFixed(2) + 'MB'
+        });
 
-      const response = await fetch('/.netlify/functions/transcribe', {
-        method: 'POST',
-        body: JSON.stringify({
-          audio: base64Data,
-          mimetype: audioBlob.type || 'audio/wav'
-        }),
-        headers: {
-          'Content-Type': 'application/json'
+        const response = await fetch('/.netlify/functions/transcribe', {
+          method: 'POST',
+          body: JSON.stringify({
+            audio: base64Data,
+            mimetype: audioBlob.type || 'audio/wav'
+          }),
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        let errorText;
+        try {
+          const responseData = await response.json();
+          if (!response.ok) {
+            errorText = JSON.stringify(responseData);
+            throw new Error(responseData.error || 'Failed to transcribe audio');
+          }
+
+          const transcription = {
+            id: Date.now(),
+            text: responseData.text,
+            audioUrl: audioUrl,
+          };
+
+          transcriptions.unshift(transcription);
+          updateTranscriptionsList();
+        } catch (parseError) {
+          errorText = await response.text();
+          console.error('Response parsing error:', parseError);
+          throw new Error('Failed to parse server response');
         }
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Server error:', errorText);
-        throw new Error('Failed to transcribe audio');
+      } catch (error) {
+        console.error('Server error:', errorText || error.message);
+        throw error;
       }
+    };
 
-      const data = await response.json();
-      const transcription = {
-        id: Date.now(),
-        text: data.text,
-        audioUrl: audioUrl,
-      };
-
-      transcriptions.unshift(transcription);
-      updateTranscriptionsList();
+    reader.onerror = (error) => {
+      console.error('FileReader error:', error);
+      throw new Error('Failed to read audio file');
     };
   } catch (error) {
     console.error('Transcription error:', error);
