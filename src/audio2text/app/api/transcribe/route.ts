@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Deepgram } from '@deepgram/sdk';
+import { createApi } from '@deepgram/sdk';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -39,16 +39,17 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
 
     console.log('Initializing Deepgram client...');
-    const deepgram = new Deepgram(apiKey);
+    const deepgram = createApi(apiKey);
 
     console.log('Sending request to Deepgram...');
-    const response = await deepgram.transcription.preRecorded({
+    const response = await deepgram.transcribe({
       buffer,
       mimetype: file.type,
     }, {
       model: 'general',
       language: 'en-US',
-      smart_format: true as any // Type assertion to bypass type check
+      punctuate: true,
+      utterances: true
     });
 
     if (!response?.results?.channels?.[0]?.alternatives?.[0]) {
