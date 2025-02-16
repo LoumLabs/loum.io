@@ -10,23 +10,27 @@ exports.handler = async function(event, context) {
   }
 
   try {
+    // Parse the JSON body
+    const { audio, mimetype } = JSON.parse(event.body);
+    
     // Log request info for debugging
-    console.log('Request headers:', event.headers);
-    console.log('Request body length:', event.body.length);
-
-    // Convert base64 body to buffer if needed
-    const audioData = event.isBase64Encoded 
-      ? Buffer.from(event.body, 'base64')
-      : event.body;
+    console.log('Request info:', {
+      mimetype,
+      audioLength: audio.length,
+      apiKey: process.env.DEEPGRAM_API_KEY ? 'Present' : 'Missing'
+    });
 
     // Make request to Deepgram
     const response = await fetch('https://api.deepgram.com/v1/listen', {
       method: 'POST',
       headers: {
         'Authorization': `Token ${process.env.DEEPGRAM_API_KEY}`,
-        'Content-Type': event.headers['content-type'] || 'audio/wav',
+        'Content-Type': 'application/json',
       },
-      body: audioData,
+      body: JSON.stringify({
+        buffer: audio,
+        mimetype: mimetype || 'audio/wav'
+      })
     });
 
     if (!response.ok) {
@@ -40,7 +44,10 @@ exports.handler = async function(event, context) {
     }
 
     const data = await response.json();
-    console.log('Deepgram success response:', data);
+    console.log('Deepgram success response:', {
+      hasResults: !!data.results,
+      channels: data.results?.channels?.length || 0
+    });
 
     return {
       statusCode: 200,

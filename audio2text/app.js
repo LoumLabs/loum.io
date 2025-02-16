@@ -105,10 +105,10 @@ async function handleTranscribe() {
   try {
     // Convert blob to base64
     const reader = new FileReader();
-    reader.readAsArrayBuffer(audioBlob);
+    reader.readAsDataURL(audioBlob);
     
     reader.onload = async () => {
-      const arrayBuffer = reader.result;
+      const base64Data = reader.result.split(',')[1]; // Remove the data URL prefix
       
       console.log('Sending file for transcription:', {
         name: 'recording.wav',
@@ -118,9 +118,12 @@ async function handleTranscribe() {
 
       const response = await fetch('/.netlify/functions/transcribe', {
         method: 'POST',
-        body: arrayBuffer,
+        body: JSON.stringify({
+          audio: base64Data,
+          mimetype: audioBlob.type || 'audio/wav'
+        }),
         headers: {
-          'Content-Type': audioBlob.type || 'audio/wav'
+          'Content-Type': 'application/json'
         }
       });
 
