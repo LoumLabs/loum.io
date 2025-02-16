@@ -8,6 +8,17 @@
   status = 200
 
 [[redirects]]
+  from = "/audio2text/*"
+  to = "/audio2text/_next/static/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/audio2text"
+  to = "/audio2text/index.html"
+  status = 200
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
