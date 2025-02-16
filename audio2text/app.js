@@ -110,24 +110,21 @@ async function handleTranscribe() {
     reader.onload = async () => {
       try {
         const base64Data = reader.result.split(',')[1]; // Remove the data URL prefix
-        const endpoint = '/.netlify/functions/transcribe';
-        
-        console.log('Preparing transcription request:', {
-          endpoint,
-          audioType: audioBlob.type,
-          audioSize: (audioBlob.size / (1024 * 1024)).toFixed(2) + 'MB',
-          base64Length: base64Data.length
-        });
-
-        const requestBody = {
+        const requestData = {
           audio: base64Data,
           mimetype: audioBlob.type || 'audio/wav'
         };
+        
+        console.log('Preparing transcription request:', {
+          endpoint: '/api/transcribe',
+          audioType: audioBlob.type,
+          audioSize: (audioBlob.size / (1024 * 1024)).toFixed(2) + 'MB',
+          requestDataSize: JSON.stringify(requestData).length
+        });
 
-        console.log('Sending request to:', endpoint);
-        const response = await fetch(endpoint, {
+        const response = await fetch('/api/transcribe', {
           method: 'POST',
-          body: JSON.stringify(requestBody),
+          body: JSON.stringify(requestData),
           headers: {
             'Content-Type': 'application/json'
           }
@@ -136,47 +133,45 @@ async function handleTranscribe() {
         console.log('Received response:', {
           status: response.status,
           statusText: response.statusText,
-          headers: Object.fromEntries([...response.headers])
+          headers: Object.fromEntries(response.headers.entries())
         });
 
-        let errorText;
+        const responseText = await response.text();
+        console.log('Raw response:', responseText);
+
+        let responseData;
         try {
-          const responseData = await response.json();
+          responseData = JSON.parse(responseText);
           console.log('Parsed response:', responseData);
-          
-          if (!response.ok) {
-            errorText = JSON.stringify(responseData);
-            throw new Error(responseData.error || 'Failed to transcribe audio');
-          }
-
-          const transcription = {
-            id: Date.now(),
-            text: responseData.text,
-            audioUrl: audioUrl,
-          };
-
-          transcriptions.unshift(transcription);
-          updateTranscriptionsList();
         } catch (parseError) {
-          errorText = await response.text();
-          console.error('Response parsing error:', {
+          console.error('Failed to parse response as JSON:', {
             error: parseError,
-            responseText: errorText
+            responseText
           });
-          throw new Error('Failed to parse server response');
+          throw new Error('Invalid JSON response from server');
         }
+
+        if (!response.ok) {
+          throw new Error(responseData.error || 'Failed to transcribe audio');
+        }
+
+        const transcription = {
+          id: Date.now(),
+          text: responseData.text,
+          audioUrl: audioUrl,
+        };
+
+        transcriptions.unshift(transcription);
+        updateTranscriptionsList();
       } catch (error) {
-        console.error('Server error:', {
-          message: error.message,
-          details: errorText
-        });
-        throw error;
+        console.error('Request error:', error);
+        alert('Error transcribing audio: ' + error.message);
       }
     };
 
     reader.onerror = (error) => {
       console.error('FileReader error:', error);
-      throw new Error('Failed to read audio file');
+      alert('Error reading audio file');
     };
   } catch (error) {
     console.error('Transcription error:', error);
