@@ -1,5 +1,5 @@
-const fetch = require('node-fetch');
 const busboy = require('busboy');
+const fetch = require('node-fetch');
 
 exports.handler = async function(event, context) {
   console.log('Received request:', {
@@ -8,7 +8,6 @@ exports.handler = async function(event, context) {
     bodyLength: event.body?.length
   });
 
-  // Only allow POST requests
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
@@ -16,7 +15,7 @@ exports.handler = async function(event, context) {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*'
       },
-      body: JSON.stringify({ error: 'Method Not Allowed' }),
+      body: JSON.stringify({ error: 'Method not allowed' })
     };
   }
 
@@ -35,97 +34,30 @@ exports.handler = async function(event, context) {
       };
     }
 
-    // Convert the audio buffer to base64
-    const audioBase64 = audioBuffer.toString('base64');
-
-    // Log request info for debugging
-    console.log('Request info:', {
-      mimetype: contentType,
-      audioLength: audioBase64.length,
-      apiKey: process.env.DEEPGRAM_API_KEY ? 'Present' : 'Missing'
-    });
-
-    if (!process.env.DEEPGRAM_API_KEY) {
-      return {
-        statusCode: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({
-          error: 'Deepgram API key not configured'
-        })
-      };
-    }
-
-    // Make request to Deepgram
-    console.log('Making Deepgram request:', {
-      url: 'https://api.deepgram.com/v1/listen',
-      mimetype: contentType,
-      hasApiKey: true
-    });
-
+    // Send to Deepgram
     const response = await fetch('https://api.deepgram.com/v1/listen', {
       method: 'POST',
       headers: {
         'Authorization': `Token ${process.env.DEEPGRAM_API_KEY}`,
-        'Content-Type': 'application/json',
+        'Content-Type': contentType || 'audio/wav'
       },
-      body: JSON.stringify({
-        buffer: audioBase64,
-        mimetype: contentType || 'audio/wav'
-      })
+      body: audioBuffer
     });
 
-    const responseText = await response.text();
-    console.log('Deepgram response:', {
-      status: response.status,
-      statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries()),
-      bodyLength: responseText.length
-    });
+    const data = await response.json();
+    console.log('Deepgram response:', data);
 
     if (!response.ok) {
+      console.error('Deepgram error:', data);
       return {
         statusCode: response.status,
         headers: {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*'
         },
-        body: JSON.stringify({
-          error: 'Deepgram API error',
-          details: responseText
-        })
+        body: JSON.stringify({ error: 'Deepgram API error', details: data })
       };
     }
-
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('Failed to parse Deepgram response:', {
-        error: parseError,
-        responseText: responseText.substring(0, 100) + '...'
-      });
-      return {
-        statusCode: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({
-          error: 'Invalid JSON response from Deepgram',
-          details: parseError.message
-        })
-      };
-    }
-
-    const transcript = data.results?.channels[0]?.alternatives[0]?.transcript;
-
-    console.log('Successfully transcribed:', {
-      hasTranscript: !!transcript,
-      length: transcript?.length,
-    });
 
     return {
       statusCode: 200,
@@ -134,29 +66,21 @@ exports.handler = async function(event, context) {
         'Access-Control-Allow-Origin': '*',
       },
       body: JSON.stringify({
-        text: transcript || 'No transcription available',
-      }),
+        text: data.results?.channels[0]?.alternatives[0]?.transcript || ''
+      })
     };
   } catch (error) {
-    console.error('Function error:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-    });
-
+    console.error('Server error:', error);
     return {
       statusCode: 500,
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
       },
-      body: JSON.stringify({ 
-        error: 'Failed to transcribe audio',
-        details: error.message
-      }),
+      body: JSON.stringify({ error: error.message || 'Internal server error' })
     };
   }
-}
+};
 
 function parseFormData(event) {
   return new Promise((resolve, reject) => {
