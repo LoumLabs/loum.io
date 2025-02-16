@@ -6,13 +6,3 @@
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
-
-[[redirects]]
-  from = "/audio2text/*"
-  to = "/audio2text/:splat"
-  status = 200
-
-[[redirects]]
-  from = "/"
-  to = "/audio2text"
-  status = 302
