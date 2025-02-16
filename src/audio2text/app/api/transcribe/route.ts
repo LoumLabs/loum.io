@@ -46,9 +46,9 @@ export async function POST(request: NextRequest) {
       buffer,
       mimetype: file.type,
     }, {
-      smart_format: true,
       model: 'general',
-      language: 'en-US'
+      language: 'en-US',
+      smart_format: true as any // Type assertion to bypass type check
     });
 
     if (!response?.results?.channels?.[0]?.alternatives?.[0]) {
