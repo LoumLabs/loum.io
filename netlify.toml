@@ -1,5 +1,5 @@
 [build]
-  command = "mkdir -p dist && cp index.html dist/ && cd src/audio2text && npm install && npm run build && cp -r .next/standalone/* ../../dist/"
+  command = "mkdir -p dist && cp index.html dist/ && cd src/audio2text && npm install && npm run build && mkdir -p ../../dist/audio2text && cp -r .next/standalone/* ../../dist/audio2text/ && cp -r .next/static ../../dist/audio2text/_next/static/"
   publish = "dist"
 
 [build.environment]
@@ -14,8 +14,23 @@
   nextConfigDir = "src/audio2text"
 
 [[redirects]]
-  from = "/audio2text/*"
+  from = "/audio2text/_next/*"
+  to = "/audio2text/_next/static/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/audio2text/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/audio2text"
   to = "/audio2text/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/audio2text/*"
+  to = "/audio2text/:splat"
   status = 200
 
 [[redirects]]
