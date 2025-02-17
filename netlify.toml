@@ -1,5 +1,5 @@
 [build]
-  command = "mkdir -p dist && cp index.html dist/ && cd src/audio2text && npm install && npm run build && mkdir -p ../../dist/audio2text && cp -r .next/standalone/* ../../dist/audio2text/ && cp -r .next/static ../../dist/audio2text/.next/"
+  command = "mkdir -p dist && cp index.html dist/ && cd src/audio2text && npm install && npm run build"
   publish = "dist"
 
 [build.environment]
@@ -10,15 +10,9 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-[[redirects]]
-  from = "/audio2text/_next/*"
-  to = "/audio2text/.next/static/:splat"
-  status = 200
-
-[[redirects]]
-  from = "/audio2text/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
+[plugins.inputs]
+  nextConfigDir = "src/audio2text"
+  publishDir = "dist/audio2text"
 
 [[redirects]]
   from = "/audio2text/*"
