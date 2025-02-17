@@ -12,9 +12,16 @@
     cd src/audio2text && 
     npm install && 
     npm run build && 
+    echo "Contents of .next directory:" &&
+    ls -la .next &&
+    echo "\nContents of .next/standalone:" &&
+    ls -la .next/standalone &&
     mkdir -p ../../dist/audio2text/_next/static && 
     cp -r .next/standalone/* ../../dist/audio2text/ && 
-    cp -r .next/static/* ../../dist/audio2text/_next/static/
+    cp -r .next/static/* ../../dist/audio2text/_next/static/ &&
+    echo "\nFinal contents of dist/audio2text:" &&
+    cd ../../dist/audio2text &&
+    ls -la
   """
   publish = "dist"
 
