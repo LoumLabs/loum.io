@@ -314,12 +314,12 @@ export default function Home() {
       
       // Add new transcription to list
       setTranscriptions(prev => [{
-        id: Date.now(),
+        id: Date.now().toString(),
         fileName: `Recording ${new Date().toLocaleString()}`,
         text: data.text,
         confidence: data.confidence,
         audioBlob: recordedBlob,
-        waveformId: `wf${Date.now()}`,
+        waveformId: `wf${Date.now().toString()}`,
         timestamp: new Date()
       }, ...prev]);
 
@@ -336,7 +336,7 @@ export default function Home() {
   };
 
   const handleRecordingComplete = async (blob: Blob) => {
-    const id = Date.now();
+    const id = Date.now().toString();
     const recordingDate = new Date();
     
     setTranscriptions(prev => [{
