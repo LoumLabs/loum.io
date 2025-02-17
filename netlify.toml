@@ -8,9 +8,8 @@
     mkdir -p ../../dist/audio2text/_next/static && 
     cp -r .next/standalone/* ../../dist/audio2text/ && 
     cp -r .next/static/* ../../dist/audio2text/_next/static/ &&
-    cp -r .next/server ../../dist/audio2text/ &&
-    cp -r .next/required-server-files.json ../../dist/audio2text/ &&
-    cp .next/BUILD_ID ../../dist/audio2text/
+    cp -r package.json ../../dist/audio2text/ &&
+    cp -r node_modules ../../dist/audio2text/
   """
   publish = "dist"
 
@@ -30,19 +29,16 @@
   status = 200
 
 [[redirects]]
-  from = "/audio2text/*"
-  to = "/audio2text/server/pages/:splat"
+  from = "/audio2text"
+  to = "/audio2text/index.html"
   status = 200
-  force = true
 
 [[redirects]]
-  from = "/audio2text"
-  to = "/audio2text/server/pages/index.html"
+  from = "/audio2text/*"
+  to = "/audio2text/index.html"
   status = 200
-  force = true
 
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-  conditions = {Path = ["/"]}
