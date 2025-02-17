@@ -2,6 +2,7 @@
   command = """
     mkdir -p dist && 
     cp index.html dist/ && 
+    cp -r src/mixer dist/mixer &&
     cd src/audio2text && 
     npm install && 
     npm run build && 
