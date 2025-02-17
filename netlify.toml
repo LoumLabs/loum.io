@@ -12,16 +12,9 @@
     cd src/audio2text && 
     npm install && 
     npm run build && 
-    echo "Contents of .next directory:" &&
-    ls -la .next &&
-    echo "\nContents of .next/standalone:" &&
-    ls -la .next/standalone &&
-    mkdir -p ../../dist/audio2text/_next/static && 
-    cp -r .next/standalone/* ../../dist/audio2text/ && 
-    cp -r .next/static/* ../../dist/audio2text/_next/static/ &&
-    echo "\nFinal contents of dist/audio2text:" &&
-    cd ../../dist/audio2text &&
-    ls -la
+    echo "Contents of out directory:" &&
+    ls -la out &&
+    cp -r out/* ../../dist/audio2text/
   """
   publish = "dist"
 
@@ -31,18 +24,8 @@
   NEXT_PUBLIC_API_URL = "/.netlify/functions"
 
 [[redirects]]
-  from = "/audio2text/_next/*"
-  to = "/audio2text/_next/static/:splat"
-  status = 200
-
-[[redirects]]
   from = "/audio2text/api/*"
   to = "/.netlify/functions/:splat"
-  status = 200
-
-[[redirects]]
-  from = "/audio2text/*"
-  to = "/audio2text/app/page"
   status = 200
 
 [[redirects]]
