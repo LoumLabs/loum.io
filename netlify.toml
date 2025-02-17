@@ -1,7 +1,7 @@
 [build]
   base = "src/audio2text"
-  command = "npm install && npm run build"
-  publish = ".next"
+  command = "mkdir -p dist && cp index.html dist/ && cd src/audio2text && npm install && npm run build && mkdir -p ../../dist/audio2text && cp -r .next/* ../../dist/audio2text/"
+  publish = "dist"
 
 [build.environment]
   NODE_VERSION = "18.19.0"
@@ -12,8 +12,8 @@
   package = "@netlify/plugin-nextjs"
 
 [[redirects]]
-  from = "/audio2text/*"
-  to = "/audio2text/_next/:splat"
+  from = "/audio2text/_next/*"
+  to = "/audio2text/:splat"
   status = 200
 
 [[redirects]]
@@ -22,6 +22,12 @@
   status = 200
 
 [[redirects]]
-  from = "/"
-  to = "/audio2text"
-  status = 301
+  from = "/audio2text/*"
+  to = "/audio2text/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false
