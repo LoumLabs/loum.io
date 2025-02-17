@@ -1,4 +1,5 @@
 [build]
+  base = "src/audio2text"
   command = "chmod +x build.sh && ./build.sh"
   publish = "dist"
 
@@ -10,28 +11,13 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-[build.processing]
-  skip_processing = false
-
-[build.processing.html]
-  pretty_urls = true
-
-[[redirects]]
-  from = "/audio2text/_next/*"
-  to = "/audio2text/.next/:splat"
-  status = 200
-
 [[redirects]]
   from = "/audio2text/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
 
 [[redirects]]
-  from = "/audio2text"
-  to = "/audio2text/index.html"
-  status = 200
-
-[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  force = false
