@@ -28,8 +28,14 @@ export async function POST(request: Request) {
       utterances: true
     });
 
-    const { results } = response;
-    const transcript = results.channels[0].alternatives[0];
+    if (!response?.results?.channels?.[0]?.alternatives?.[0]) {
+      return NextResponse.json(
+        { error: 'No transcript generated' },
+        { status: 500 }
+      );
+    }
+
+    const transcript = response.results.channels[0].alternatives[0];
 
     return NextResponse.json({
       text: transcript.transcript,
