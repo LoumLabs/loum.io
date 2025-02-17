@@ -4,8 +4,7 @@ const nextConfig = {
   basePath: '/audio2text',
   images: {
     unoptimized: true
-  },
-  trailingSlash: true
+  }
 }
 
 module.exports = nextConfig

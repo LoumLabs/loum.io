@@ -41,13 +41,8 @@
   status = 200
 
 [[redirects]]
-  from = "/audio2text"
-  to = "/audio2text/index.html"
-  status = 200
-
-[[redirects]]
   from = "/audio2text/*"
-  to = "/audio2text/index.html"
+  to = "/audio2text/app/page"
   status = 200
 
 [[redirects]]
