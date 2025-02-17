@@ -1,5 +1,14 @@
 [build]
-  command = "mkdir -p dist && cp index.html dist/ && cd src/audio2text && npm install && npm run build && mkdir -p ../../dist/audio2text && cp -r .next/standalone/* ../../dist/audio2text/ && cp -r .next/static ../../dist/audio2text/_next/static/"
+  command = """
+    mkdir -p dist && 
+    cp index.html dist/ && 
+    cd src/audio2text && 
+    npm install && 
+    npm run build && 
+    mkdir -p ../../dist/audio2text/_next/static && 
+    cp -r .next/standalone/* ../../dist/audio2text/ && 
+    cp -r .next/static/* ../../dist/audio2text/_next/static/
+  """
   publish = "dist"
 
 [build.environment]
