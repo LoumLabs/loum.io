@@ -1,15 +1,11 @@
 [build]
-  base = "src/audio2text"
-  command = "chmod +x build.sh && ./build.sh"
+  command = "cd src/audio2text && npm install && npm run build && mkdir -p ../../dist && cp -r out/* ../../dist/"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "18.19.0"
   NEXT_TELEMETRY_DISABLED = "1"
   NEXT_PUBLIC_API_URL = "/.netlify/functions"
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
 
 [[redirects]]
   from = "/audio2text/api/*"
