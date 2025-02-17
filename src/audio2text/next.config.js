@@ -2,10 +2,9 @@
 const nextConfig = {
   output: 'standalone',
   basePath: '/audio2text',
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/audio2text' : '',
-  images: {
-    unoptimized: true
-  }
+  experimental: {
+    outputFileTracingRoot: process.env.NEXT_PRIVATE_OUTPUT_TRACE_ROOT || process.cwd(),
+  },
 }
 
 module.exports = nextConfig
