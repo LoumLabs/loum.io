@@ -666,8 +666,9 @@ export default function Home() {
                         </button>
                         {!transcription.processing && transcription.text === 'Click Transcribe to process' && (
                           <button
-                            onClick={() => handleTranscribe(transcription.id, transcription.audioBlob)}
+                            onClick={() => transcription.audioBlob && handleTranscribe(transcription.id, transcription.audioBlob)}
                             className="text-sm px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                            disabled={!transcription.audioBlob}
                           >
                             Transcribe
                           </button>
