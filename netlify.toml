@@ -10,9 +10,6 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-[plugins.inputs]
-  nextConfigDir = "src/audio2text"
-
 [[redirects]]
   from = "/audio2text/_next/*"
   to = "/audio2text/_next/static/:splat"
