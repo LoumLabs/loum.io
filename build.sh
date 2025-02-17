@@ -14,7 +14,7 @@ npm install
 npm run build
 
 # Copy audio2text build to dist
-cp -r .next/* ../dist/audio2text/
-cp -r public/* ../dist/audio2text/
+cp -r .next/* ../../dist/audio2text/
+cp -r public/* ../../dist/audio2text/
 
 echo "Build completed!"
