@@ -7,7 +7,9 @@
     npm run build && 
     mkdir -p ../../dist/audio2text/_next/static && 
     cp -r .next/standalone/* ../../dist/audio2text/ && 
-    cp -r .next/static/* ../../dist/audio2text/_next/static/
+    cp -r .next/static/* ../../dist/audio2text/_next/static/ &&
+    cp -r .next/server ../../dist/audio2text/ &&
+    cp -r .next/required-server-files.json ../../dist/audio2text/
   """
   publish = "dist"
 
@@ -15,9 +17,6 @@
   NODE_VERSION = "18.19.0"
   NEXT_TELEMETRY_DISABLED = "1"
   NEXT_PUBLIC_API_URL = "/.netlify/functions"
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
 
 [[redirects]]
   from = "/audio2text/_next/*"
@@ -36,7 +35,7 @@
 
 [[redirects]]
   from = "/audio2text/*"
-  to = "/audio2text/:splat"
+  to = "/audio2text/server"
   status = 200
 
 [[redirects]]
