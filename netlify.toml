@@ -10,9 +10,15 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
+[build.processing]
+  skip_processing = false
+
+[build.processing.html]
+  pretty_urls = true
+
 [[redirects]]
-  from = "/audio2text/*"
-  to = "/audio2text/_next/:splat"
+  from = "/audio2text/_next/*"
+  to = "/audio2text/.next/:splat"
   status = 200
 
 [[redirects]]
