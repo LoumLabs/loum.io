@@ -1,6 +1,5 @@
 [build]
-  base = "src/audio2text"
-  command = "mkdir -p dist && cp index.html dist/ && cd src/audio2text && npm install && npm run build && mkdir -p ../../dist/audio2text && cp -r .next/* ../../dist/audio2text/"
+  command = "mkdir -p dist && cp index.html dist/ && cd src/audio2text && npm install && npm run build && cp -r .next/* ../../dist/audio2text/"
   publish = "dist"
 
 [build.environment]
