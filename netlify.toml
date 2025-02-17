@@ -1,5 +1,5 @@
 [build]
-  command = "mkdir -p dist && cp index.html dist/ && cd src/audio2text && npm install && npm run build"
+  command = "bash ./build.sh"
   publish = "dist"
 
 [build.environment]
@@ -12,7 +12,6 @@
 
 [plugins.inputs]
   nextConfigDir = "src/audio2text"
-  publishDir = "dist/audio2text"
 
 [[redirects]]
   from = "/audio2text/*"
