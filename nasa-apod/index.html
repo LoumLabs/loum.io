@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NASA APOD Sonification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        select, button {
+            padding: 8px 12px;
+            font-size: 16px;
+            border-radius: 4px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #444;
+        }
+        button {
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #444;
+        }
+        #apod-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        #loading {
+            color: #fff;
+            font-size: 18px;
+            margin: 20px 0;
+        }
+        #error-message {
+            color: #ff4444;
+            margin: 20px 0;
+        }
+        .info {
+            background: #333;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>NASA APOD Sonification</h1>
+    
+    <div class="controls">
+        <select id="image-source">
+            <option value="apod">APOD (Image of the Day)</option>
+            <option value="aurora">Static Image 1 (Bird Aurora)</option>
+            <option value="sunset">Static Image 2 (Sunset)</option>
+        </select>
+        <button id="play-btn">Play</button>
+    </div>
+
+    <div id="loading" style="display: none;">Loading...</div>
+    <div id="error-message" style="display: none;"></div>
+    
+    <img id="apod-image" style="display: none;" alt="APOD Image">
+    
+    <div class="info">
+        <h2 id="apod-title"></h2>
+        <p id="apod-date"></p>
+        <p id="apod-explanation"></p>
+        <p id="apod-copyright"></p>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <script src="nasa-apod.js"></script>
+</body>
+</html>

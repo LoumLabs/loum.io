@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NASA APOD Sonification</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <script src="nasa-apod.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #1a1a1a;
+            color: #ffffff;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        #image-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            box-sizing: border-box;
+        }
+        #apod-image {
+            width: 100%;
+            height: 100%;
+            display: none;
+            opacity: 0;
+            transition: all 0.3s ease-in-out;
+            cursor: pointer;
+            object-fit: contain;
+        }
+        #apod-image.loaded {
+            opacity: 1;
+            display: block;
+        }
+        #apod-image.expanded {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100vh;
+            margin: 0;
+            padding: 0;
+            z-index: 900;
+            object-fit: cover;
+            background-color: #1a1a1a;
+        }
+        /* Hide other elements when image is expanded */
+        #apod-image.expanded ~ #info-btn,
+        #apod-image.expanded ~ .image-info,
+        #apod-image.expanded ~ #controls {
+            display: none;
+        }
+        .image-info {
+            position: fixed;
+            bottom: 80px;
+            left: 20px;
+            max-width: calc(100% - 400px);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: left;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+            pointer-events: none;
+            transform-origin: bottom left;
+            transform: translateY(10px);
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        .image-info.show {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+        #info-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.7);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+            color: white;
+            font-family: serif;
+            font-style: italic;
+            font-size: 20px;
+        }
+        #info-btn:hover {
+            background: rgba(0, 0, 0, 0.9);
+        }
+        #image-source {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.7);
+            border: none;
+            border-radius: 4px;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            z-index: 1001;
+            transition: background 0.3s;
+            width: 200px;
+        }
+        #image-source:hover {
+            background: rgba(0, 0, 0, 0.9);
+        }
+        #apod-title {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        #apod-date {
+            color: #aaa;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        #apod-explanation {
+            font-size: 14px;
+            line-height: 1.4;
+            margin-bottom: 5px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        #apod-copyright {
+            color: #aaa;
+            font-size: 12px;
+            font-style: italic;
+        }
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 1000;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+            z-index: 1001;
+        }
+        #error-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ff4444;
+            text-align: center;
+            margin: 20px;
+            display: none;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 8px;
+            z-index: 1001;
+        }
+    </style>
+</head>
+<body>
+    <div id="image-container">
+        <img id="apod-image" crossorigin="anonymous" alt="NASA Astronomy Picture of the Day">
+        <select id="image-source">
+            <option value="apod">APOD (Image of the Day)</option>
+            <option value="aurora">Static Image 1 (Bird Aurora)</option>
+            <option value="sunset">Static Image 2 (Sunset)</option>
+        </select>
+        <button id="info-btn">i</button>
+        <div class="image-info">
+            <div id="apod-title"></div>
+            <div id="apod-date"></div>
+            <div id="apod-explanation"></div>
+            <div id="apod-copyright"></div>
+        </div>
+    </div>
+    
+    <div id="controls">
+        <button id="play-btn">Play sound</button>
+    </div>
+    
+    <div id="loading">Loading...</div>
+    <div id="error-message"></div>
+</body>
+</html>
