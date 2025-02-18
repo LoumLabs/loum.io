@@ -32,6 +32,8 @@
             transition: all 0.3s ease-in-out;
             cursor: pointer;
             object-fit: contain;
+            position: relative;
+            z-index: 1;
         }
         #apod-image.loaded {
             opacity: 1;
@@ -104,23 +106,33 @@
         #info-btn:hover {
             background: rgba(0, 0, 0, 0.9);
         }
-        #image-source {
+        #image-source, #visualization-toggle {
             position: fixed;
-            top: 20px;
             right: 20px;
-            padding: 8px 12px;
+            padding: 8px;
+            margin: 5px;
             background: rgba(0, 0, 0, 0.7);
-            border: none;
-            border-radius: 4px;
+            border: 1px solid #444;
             color: white;
-            font-size: 14px;
+            border-radius: 4px;
             cursor: pointer;
             z-index: 1001;
-            transition: background 0.3s;
             width: 200px;
+            font-size: 14px;
+            transition: background 0.3s;
         }
-        #image-source:hover {
-            background: rgba(0, 0, 0, 0.9);
+        
+        #image-source {
+            top: 20px;
+        }
+        
+        #visualization-toggle {
+            top: 70px;
+        }
+        
+        #image-source:hover, #visualization-toggle:hover {
+            background: rgba(0, 0, 0, 0.8);
+            border-color: #666;
         }
         #apod-title {
             font-size: 20px;
@@ -196,7 +208,7 @@
         #scan-overlay {
             position: absolute;
             pointer-events: none;
-            z-index: 901;
+            z-index: 2;
             transition: width 0.3s, height 0.3s, left 0.3s, top 0.3s;
         }
     </style>
@@ -209,6 +221,10 @@
             <option value="apod">APOD (Image of the Day)</option>
             <option value="aurora">Static Image 1 (Bird Aurora)</option>
             <option value="sunset">Static Image 2 (Sunset)</option>
+        </select>
+        <select id="visualization-toggle">
+            <option value="on">Visualization On</option>
+            <option value="off">Visualization Off</option>
         </select>
         <button id="info-btn">i</button>
         <div class="image-info">

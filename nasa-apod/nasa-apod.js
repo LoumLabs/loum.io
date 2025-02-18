@@ -16,6 +16,7 @@ let scanDirection = { x: 1, y: 1 };
 let scanInterval = null;
 let lastAnalysis = null;
 let scanOverlayContext = null;
+let visualizationEnabled = true;
 
 // Initialize audio
 async function initAudio() {
@@ -192,38 +193,42 @@ function analyzePixelArea(x, y, radius = 10) {
 function initScanOverlay() {
     const canvas = document.getElementById('scan-overlay');
     const img = document.getElementById('apod-image');
+    const container = document.getElementById('image-container');
     
     // Update canvas size to match image
     function updateCanvasSize() {
-        const rect = img.getBoundingClientRect();
-        const computedStyle = window.getComputedStyle(img);
+        // Get container dimensions
+        const containerRect = container.getBoundingClientRect();
         
         // Get the actual rendered dimensions of the image
         const imageWidth = img.naturalWidth;
         const imageHeight = img.naturalHeight;
-        const containerWidth = rect.width;
-        const containerHeight = rect.height;
         
         // Calculate the rendered dimensions maintaining aspect ratio
         let renderWidth, renderHeight;
         const imageAspect = imageWidth / imageHeight;
-        const containerAspect = containerWidth / containerHeight;
+        const containerAspect = containerRect.width / containerRect.height;
         
         if (imageAspect > containerAspect) {
             // Image is wider relative to container
-            renderHeight = containerHeight;
+            renderHeight = containerRect.height;
             renderWidth = renderHeight * imageAspect;
         } else {
             // Image is taller relative to container
-            renderWidth = containerWidth;
+            renderWidth = containerRect.width;
             renderHeight = renderWidth / imageAspect;
         }
         
         // Center the canvas
+        const left = (containerRect.width - renderWidth) / 2;
+        const top = (containerRect.height - renderHeight) / 2;
+        
+        // Update canvas style
+        canvas.style.position = 'absolute';
         canvas.style.width = `${renderWidth}px`;
         canvas.style.height = `${renderHeight}px`;
-        canvas.style.left = `${(containerWidth - renderWidth) / 2}px`;
-        canvas.style.top = `${(containerHeight - renderHeight) / 2}px`;
+        canvas.style.left = `${left}px`;
+        canvas.style.top = `${top}px`;
         
         // Set canvas dimensions for proper rendering
         canvas.width = renderWidth;
@@ -242,7 +247,7 @@ function initScanOverlay() {
 
 // Draw scan line
 function drawScanLine() {
-    if (!scanOverlayContext || !lastAnalysis || !isPlaying) return;
+    if (!scanOverlayContext || !lastAnalysis || !isPlaying || !visualizationEnabled) return;
     
     const canvas = scanOverlayContext.canvas;
     scanOverlayContext.clearRect(0, 0, canvas.width, canvas.height);
@@ -605,16 +610,25 @@ async function fetchAPOD() {
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize UI elements
     const playButton = document.getElementById('play-btn');
-    const infoButton = document.getElementById('info-btn');
-    const infoPanel = document.querySelector('.image-info');
     const imageSource = document.getElementById('image-source');
+    const visualizationToggle = document.getElementById('visualization-toggle');
     const img = document.getElementById('apod-image');
+    const infoBtn = document.getElementById('info-btn');
+    const infoPanel = document.querySelector('.image-info');
+    const errorMessage = document.getElementById('error-message');
     
-    if (!playButton || !infoButton || !infoPanel || !imageSource || !img) {
-        console.error('Required UI elements not found');
-        return;
-    }
-
+    // Handle visualization toggle
+    visualizationToggle.addEventListener('change', () => {
+        visualizationEnabled = visualizationToggle.value === 'on';
+        const canvas = document.getElementById('scan-overlay');
+        if (!visualizationEnabled) {
+            // Clear the canvas when visualization is disabled
+            if (scanOverlayContext) {
+                scanOverlayContext.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+    });
+    
     // Toggle window-filling view
     function toggleExpanded() {
         img.classList.toggle('expanded');
@@ -659,7 +673,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    infoButton.addEventListener('click', () => {
+    infoBtn.addEventListener('click', () => {
         infoPanel.classList.toggle('show');
     });
     
