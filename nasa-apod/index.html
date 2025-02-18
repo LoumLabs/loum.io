@@ -16,13 +16,20 @@
             overflow-x: hidden;
         }
         #image-container {
-            width: 100vw;
+            position: relative;
+            width: 100%;
             height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
+            background: #000;
+            overflow: hidden;
+        }
+        .image-wrapper {
             position: relative;
-            box-sizing: border-box;
+            display: inline-block;
+            max-width: 100%;
+            max-height: 100vh;
         }
         #apod-image {
             width: 100%;
@@ -32,8 +39,6 @@
             transition: all 0.3s ease-in-out;
             cursor: pointer;
             object-fit: contain;
-            position: relative;
-            z-index: 1;
         }
         #apod-image.loaded {
             opacity: 1;
@@ -60,6 +65,14 @@
         #apod-image.expanded ~ .image-info,
         #apod-image.expanded ~ #controls {
             display: none;
+        }
+        #scan-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
         }
         .image-info {
             position: fixed;
@@ -205,18 +218,14 @@
             border-radius: 8px;
             z-index: 1001;
         }
-        #scan-overlay {
-            position: absolute;
-            pointer-events: none;
-            z-index: 2;
-            transition: width 0.3s, height 0.3s, left 0.3s, top 0.3s;
-        }
     </style>
 </head>
 <body>
     <div id="image-container">
-        <img id="apod-image" crossorigin="anonymous" alt="NASA Astronomy Picture of the Day">
-        <canvas id="scan-overlay"></canvas>
+        <div class="image-wrapper">
+            <img id="apod-image" crossorigin="anonymous" alt="NASA Astronomy Picture of the Day">
+            <canvas id="scan-overlay"></canvas>
+        </div>
         <select id="image-source">
             <option value="apod">APOD (Image of the Day)</option>
             <option value="aurora">Static Image 1 (Bird Aurora)</option>

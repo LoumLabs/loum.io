@@ -193,22 +193,16 @@ function analyzePixelArea(x, y, radius = 10) {
 function initScanOverlay() {
     const canvas = document.getElementById('scan-overlay');
     const img = document.getElementById('apod-image');
-    const container = document.getElementById('image-container');
     
     // Update canvas size to match image
     function updateCanvasSize() {
-        const containerRect = container.getBoundingClientRect();
-        const imgRect = img.getBoundingClientRect();
-        
-        // Set canvas size to match visible image area
-        canvas.style.width = `${imgRect.width}px`;
-        canvas.style.height = `${imgRect.height}px`;
-        canvas.style.left = `${imgRect.left - containerRect.left}px`;
-        canvas.style.top = `${imgRect.top - containerRect.top}px`;
+        // Get the actual rendered dimensions of the image
+        const imageWidth = img.naturalWidth;
+        const imageHeight = img.naturalHeight;
         
         // Set canvas dimensions for proper rendering
-        canvas.width = imgRect.width;
-        canvas.height = imgRect.height;
+        canvas.width = imageWidth;
+        canvas.height = imageHeight;
         
         scanOverlayContext = canvas.getContext('2d');
     }
@@ -228,9 +222,9 @@ function drawScanLine() {
     const canvas = scanOverlayContext.canvas;
     scanOverlayContext.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Calculate actual position based on image dimensions and canvas size
-    const x = (scanPosition.x / lastAnalysis.width) * canvas.width;
-    const y = (scanPosition.y / lastAnalysis.height) * canvas.height;
+    // Calculate position based on analysis dimensions
+    const x = Math.floor((scanPosition.x / lastAnalysis.width) * canvas.width);
+    const y = Math.floor((scanPosition.y / lastAnalysis.height) * canvas.height);
     
     // Draw vertical scan line
     scanOverlayContext.beginPath();
