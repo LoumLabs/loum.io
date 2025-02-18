@@ -16,7 +16,7 @@ let scanDirection = { x: 1, y: 1 };
 let scanInterval = null;
 let lastAnalysis = null;
 let scanOverlayContext = null;
-let visualizationEnabled = true;
+let visualizationEnabled = false; // Default to off
 
 // Initialize audio
 async function initAudio() {
@@ -597,6 +597,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const infoBtn = document.getElementById('info-btn');
     const infoPanel = document.querySelector('.image-info');
     const errorMessage = document.getElementById('error-message');
+    
+    // Set initial visualization state
+    visualizationToggle.value = 'off';
     
     // Handle visualization toggle
     visualizationToggle.addEventListener('change', () => {
