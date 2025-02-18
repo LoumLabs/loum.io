@@ -1,5 +1,5 @@
 // Constants
-const API_BASE_URL = 'http://localhost:3001';
+const NASA_API_URL = 'https://api.nasa.gov/planetary/apod';
 const NASA_API_KEY = 'jjI5Itcch87urx6LfudFewle91AzBZz3RxCanubs';
 const STATIC_IMAGES = {
     aurora: 'https://apod.nasa.gov/apod/image/2502/BirdAurora_Coulon_2581.jpg',
@@ -443,7 +443,7 @@ async function fetchAPOD() {
         
         // Handle different image sources
         if (imageSource.value === 'apod') {
-            const apiUrl = `${API_BASE_URL}/api/nasa-apod?api_key=${NASA_API_KEY}`;
+            const apiUrl = `${NASA_API_URL}?api_key=${NASA_API_KEY}`;
             console.log('Fetching APOD data from:', apiUrl);
             
             const response = await fetch(apiUrl);
@@ -468,7 +468,7 @@ async function fetchAPOD() {
         img.crossOrigin = 'Anonymous';
         img.style.opacity = '0';
         img.style.transition = 'opacity 1s ease-in-out';
-        img.src = `${API_BASE_URL}/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+        img.src = `${imageUrl}`;
         
         // Wait for image to load before analyzing
         await new Promise((resolve, reject) => {
