@@ -196,19 +196,30 @@ function initScanOverlay() {
     
     // Update canvas size to match image
     function updateCanvasSize() {
-        // Get the actual rendered dimensions of the image
-        const imageWidth = img.naturalWidth;
-        const imageHeight = img.naturalHeight;
+        const imgRect = img.getBoundingClientRect();
+        
+        // Set canvas size to match visible image area
+        canvas.style.width = `${imgRect.width}px`;
+        canvas.style.height = `${imgRect.height}px`;
         
         // Set canvas dimensions for proper rendering
-        canvas.width = imageWidth;
-        canvas.height = imageHeight;
+        canvas.width = imgRect.width;
+        canvas.height = imgRect.height;
+        
+        // Position canvas over image
+        const wrapper = img.parentElement;
+        const wrapperRect = wrapper.getBoundingClientRect();
+        canvas.style.left = `${imgRect.left - wrapperRect.left}px`;
+        canvas.style.top = `${imgRect.top - wrapperRect.top}px`;
         
         scanOverlayContext = canvas.getContext('2d');
     }
     
     // Update canvas size when image loads or window resizes
-    img.addEventListener('load', updateCanvasSize);
+    img.addEventListener('load', () => {
+        // Wait a bit for the image to be fully rendered
+        setTimeout(updateCanvasSize, 100);
+    });
     window.addEventListener('resize', updateCanvasSize);
     if (img.complete) {
         updateCanvasSize();
