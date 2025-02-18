@@ -196,15 +196,48 @@ function initScanOverlay() {
     // Update canvas size to match image
     function updateCanvasSize() {
         const rect = img.getBoundingClientRect();
-        canvas.width = rect.width;
-        canvas.height = rect.height;
+        const computedStyle = window.getComputedStyle(img);
+        
+        // Get the actual rendered dimensions of the image
+        const imageWidth = img.naturalWidth;
+        const imageHeight = img.naturalHeight;
+        const containerWidth = rect.width;
+        const containerHeight = rect.height;
+        
+        // Calculate the rendered dimensions maintaining aspect ratio
+        let renderWidth, renderHeight;
+        const imageAspect = imageWidth / imageHeight;
+        const containerAspect = containerWidth / containerHeight;
+        
+        if (imageAspect > containerAspect) {
+            // Image is wider relative to container
+            renderHeight = containerHeight;
+            renderWidth = renderHeight * imageAspect;
+        } else {
+            // Image is taller relative to container
+            renderWidth = containerWidth;
+            renderHeight = renderWidth / imageAspect;
+        }
+        
+        // Center the canvas
+        canvas.style.width = `${renderWidth}px`;
+        canvas.style.height = `${renderHeight}px`;
+        canvas.style.left = `${(containerWidth - renderWidth) / 2}px`;
+        canvas.style.top = `${(containerHeight - renderHeight) / 2}px`;
+        
+        // Set canvas dimensions for proper rendering
+        canvas.width = renderWidth;
+        canvas.height = renderHeight;
+        
         scanOverlayContext = canvas.getContext('2d');
     }
     
     // Update canvas size when image loads or window resizes
     img.addEventListener('load', updateCanvasSize);
     window.addEventListener('resize', updateCanvasSize);
-    updateCanvasSize();
+    if (img.complete) {
+        updateCanvasSize();
+    }
 }
 
 // Draw scan line
