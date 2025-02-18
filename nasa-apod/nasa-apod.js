@@ -197,42 +197,18 @@ function initScanOverlay() {
     
     // Update canvas size to match image
     function updateCanvasSize() {
-        // Get container dimensions
         const containerRect = container.getBoundingClientRect();
+        const imgRect = img.getBoundingClientRect();
         
-        // Get the actual rendered dimensions of the image
-        const imageWidth = img.naturalWidth;
-        const imageHeight = img.naturalHeight;
-        
-        // Calculate the rendered dimensions maintaining aspect ratio
-        let renderWidth, renderHeight;
-        const imageAspect = imageWidth / imageHeight;
-        const containerAspect = containerRect.width / containerRect.height;
-        
-        if (imageAspect > containerAspect) {
-            // Image is wider relative to container
-            renderHeight = containerRect.height;
-            renderWidth = renderHeight * imageAspect;
-        } else {
-            // Image is taller relative to container
-            renderWidth = containerRect.width;
-            renderHeight = renderWidth / imageAspect;
-        }
-        
-        // Center the canvas
-        const left = (containerRect.width - renderWidth) / 2;
-        const top = (containerRect.height - renderHeight) / 2;
-        
-        // Update canvas style
-        canvas.style.position = 'absolute';
-        canvas.style.width = `${renderWidth}px`;
-        canvas.style.height = `${renderHeight}px`;
-        canvas.style.left = `${left}px`;
-        canvas.style.top = `${top}px`;
+        // Set canvas size to match visible image area
+        canvas.style.width = `${imgRect.width}px`;
+        canvas.style.height = `${imgRect.height}px`;
+        canvas.style.left = `${imgRect.left - containerRect.left}px`;
+        canvas.style.top = `${imgRect.top - containerRect.top}px`;
         
         // Set canvas dimensions for proper rendering
-        canvas.width = renderWidth;
-        canvas.height = renderHeight;
+        canvas.width = imgRect.width;
+        canvas.height = imgRect.height;
         
         scanOverlayContext = canvas.getContext('2d');
     }
