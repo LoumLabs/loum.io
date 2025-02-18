@@ -193,11 +193,21 @@
             border-radius: 8px;
             z-index: 1001;
         }
+        #scan-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 901;
+        }
     </style>
 </head>
 <body>
     <div id="image-container">
         <img id="apod-image" crossorigin="anonymous" alt="NASA Astronomy Picture of the Day">
+        <canvas id="scan-overlay"></canvas>
         <select id="image-source">
             <option value="apod">APOD (Image of the Day)</option>
             <option value="aurora">Static Image 1 (Bird Aurora)</option>

@@ -15,6 +15,7 @@ let scanPosition = { x: 0, y: 0 };
 let scanDirection = { x: 1, y: 1 };
 let scanInterval = null;
 let lastAnalysis = null;
+let scanOverlayContext = null;
 
 // Initialize audio
 async function initAudio() {
@@ -185,6 +186,51 @@ function analyzePixelArea(x, y, radius = 10) {
             blue: totalBlue / (pixelCount * 255)
         }
     };
+}
+
+// Initialize scan overlay
+function initScanOverlay() {
+    const canvas = document.getElementById('scan-overlay');
+    const img = document.getElementById('apod-image');
+    
+    // Update canvas size to match image
+    function updateCanvasSize() {
+        const rect = img.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+        scanOverlayContext = canvas.getContext('2d');
+    }
+    
+    // Update canvas size when image loads or window resizes
+    img.addEventListener('load', updateCanvasSize);
+    window.addEventListener('resize', updateCanvasSize);
+    updateCanvasSize();
+}
+
+// Draw scan line
+function drawScanLine() {
+    if (!scanOverlayContext || !lastAnalysis || !isPlaying) return;
+    
+    const canvas = scanOverlayContext.canvas;
+    scanOverlayContext.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Calculate actual position based on image dimensions and canvas size
+    const x = (scanPosition.x / lastAnalysis.width) * canvas.width;
+    const y = (scanPosition.y / lastAnalysis.height) * canvas.height;
+    
+    // Draw vertical scan line
+    scanOverlayContext.beginPath();
+    scanOverlayContext.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    scanOverlayContext.lineWidth = 2;
+    scanOverlayContext.moveTo(x, 0);
+    scanOverlayContext.lineTo(x, canvas.height);
+    scanOverlayContext.stroke();
+    
+    // Draw small circle at current scan position
+    scanOverlayContext.beginPath();
+    scanOverlayContext.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    scanOverlayContext.arc(x, y, 4, 0, Math.PI * 2);
+    scanOverlayContext.fill();
 }
 
 // Start sound generation
@@ -365,6 +411,9 @@ async function startSound() {
             effects.delay.feedback.rampTo(Math.min(0.25, 0.1 + colorBalance.blue * 0.15), 0.3);
             effects.delay.wet.rampTo(Math.min(0.2, 0.1 + colorBalance.green * 0.1), 0.3);
             effects.reverb.wet.rampTo(Math.min(0.4, 0.2 + colorBalance.red * 0.2), 0.3); // More reverb
+            
+            // Draw scan line
+            drawScanLine();
             
             // Calculate vertical movement
             currentVerticalStep++;
@@ -588,6 +637,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         fetchAPOD();
     });
+    
+    // Initialize scan overlay
+    initScanOverlay();
     
     // Load today's image
     fetchAPOD();
