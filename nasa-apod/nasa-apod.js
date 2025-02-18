@@ -21,8 +21,12 @@ async function initAudio() {
     if (audioContext) return;
     
     try {
+        // Resume audio context on mobile
+        if (Tone.context.state !== 'running') {
+            await Tone.context.resume();
+        }
         await Tone.start();
-        console.log("Audio context started");
+        console.log("Audio context started, state:", Tone.context.state);
         
         // Create synth
         synth = new Tone.MonoSynth({
@@ -550,6 +554,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     playButton.addEventListener('click', async () => {
         try {
+            // Always try to resume the audio context first
+            if (Tone.context.state !== 'running') {
+                await Tone.context.resume();
+            }
+            
             // Initialize audio if needed
             if (!audioContext) {
                 await initAudio();
