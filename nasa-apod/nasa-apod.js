@@ -252,9 +252,9 @@ function drawScanLine() {
     const canvas = scanOverlayContext.canvas;
     scanOverlayContext.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Calculate actual position based on image dimensions and canvas size
-    const x = (scanPosition.x / lastAnalysis.width) * canvas.width;
-    const y = (scanPosition.y / lastAnalysis.height) * canvas.height;
+    // Calculate position relative to canvas size
+    const x = Math.floor((scanPosition.x / lastAnalysis.width) * canvas.width);
+    const y = Math.floor((scanPosition.y / lastAnalysis.height) * canvas.height);
     
     // Draw vertical scan line
     scanOverlayContext.beginPath();
@@ -289,6 +289,10 @@ async function startSound() {
     Tone.Transport.cancel();
     
     isPlaying = true;
+    
+    // Reset scan position to start of image
+    scanPosition = { x: 0, y: 0 };
+    scanDirection = { x: 1, y: 1 };
     
     // Analyze initial area
     const initialAnalysis = analyzePixelArea(0, 0);
@@ -398,9 +402,6 @@ async function startSound() {
         y: 16       // Back to slower scanning
     };
     
-    scanPosition = { x: 0, y: 0 };
-    scanDirection = { x: 1, y: 1 };
-    
     let verticalScanCount = 0;
     const verticalScansBeforeHorizontalMove = 3; // More scans before moving horizontally
     const stepsPerVerticalScan = 40; // More steps for smoother movement
@@ -466,20 +467,21 @@ async function startSound() {
                         verticalScanCount = 0;
                         scanPosition.x += scanDirection.x * 3; // Slower horizontal movement
                         
-                        if (scanPosition.x >= lastAnalysis.width || scanPosition.x < 0) {
-                            scanDirection.x *= -1;
-                            scanPosition.x = Math.max(0, Math.min(scanPosition.x, lastAnalysis.width - 1));
+                        // Reset scan position if we reach image bounds
+                        if (scanPosition.x >= lastAnalysis.width) {
+                            scanPosition.x = 0;
                         }
                     }
                 }
             }
             
-            // Smoother vertical movement
-            const progress = currentVerticalStep / stepsPerVerticalScan;
-            const sinValue = Math.sin(progress * Math.PI);
-            scanPosition.y = Math.floor((lastAnalysis.height - 1) * (scanDirection.y === 1 ? sinValue : 1 - sinValue));
+            // Update vertical position
+            scanPosition.y += scanDirection.y * (lastAnalysis.height / stepsPerVerticalScan);
+            // Clamp vertical position to image bounds
+            scanPosition.y = Math.max(0, Math.min(scanPosition.y, lastAnalysis.height - 1));
+            
         }
-    }, scanSpeed.y);
+    }, 16);
     
     // Start transport
     Tone.Transport.start();
