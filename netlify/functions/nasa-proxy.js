@@ -11,15 +11,22 @@ exports.handler = async function(event, context) {
       };
     }
 
+    let finalUrl = url;
+    // If this is a NASA API request, add our API key
+    if (url.startsWith('https://api.nasa.gov/')) {
+      const separator = url.includes('?') ? '&' : '?';
+      finalUrl = `${url}${separator}api_key=${process.env.NASA_API_KEY}`;
+    }
+
     // Only allow NASA APOD URLs
-    if (!url.startsWith('https://apod.nasa.gov/') && !url.startsWith('https://api.nasa.gov/')) {
+    if (!finalUrl.startsWith('https://apod.nasa.gov/') && !finalUrl.startsWith('https://api.nasa.gov/')) {
       return {
         statusCode: 403,
         body: JSON.stringify({ error: 'Only NASA APOD URLs are allowed' })
       };
     }
 
-    const response = await fetch(url);
+    const response = await fetch(finalUrl);
     const contentType = response.headers.get('content-type');
     const buffer = await response.buffer();
 

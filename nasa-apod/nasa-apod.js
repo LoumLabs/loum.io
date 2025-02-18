@@ -1,6 +1,5 @@
 // Constants
 const NASA_API_URL = 'https://api.nasa.gov/planetary/apod';
-const NASA_API_KEY = 'jjI5Itcch87urx6LfudFewle91AzBZz3RxCanubs';
 const PROXY_URL = '/.netlify/functions/nasa-proxy';
 const STATIC_IMAGES = {
     aurora: 'https://apod.nasa.gov/apod/image/2502/BirdAurora_Coulon_2581.jpg',
@@ -444,11 +443,10 @@ async function fetchAPOD() {
         
         // Handle different image sources
         if (imageSource.value === 'apod') {
-            const apiUrl = `${NASA_API_URL}?api_key=${NASA_API_KEY}`;
-            console.log('Fetching APOD data from:', apiUrl);
+            console.log('Fetching APOD data...');
             
             // Proxy the API request through our Netlify function
-            const response = await fetch(`${PROXY_URL}?url=${encodeURIComponent(apiUrl)}`);
+            const response = await fetch(`${PROXY_URL}?url=${encodeURIComponent(NASA_API_URL)}`);
             imageData = await response.json();
             
             if (!response.ok || imageData.error) {
