@@ -29,5 +29,8 @@
     "tone": "^14.7.77",
     "typescript": "^5.3.3",
     "wavesurfer.js": "^7.9.1"
+  },
+  "devDependencies": {
+    "netlify-cli": "^18.1.0"
   }
 }
