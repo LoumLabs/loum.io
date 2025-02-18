@@ -16,7 +16,7 @@ let scanDirection = { x: 1, y: 1 };
 let scanInterval = null;
 let lastAnalysis = null;
 let scanOverlayContext = null;
-let visualizationEnabled = false; // Default to off
+let visualizationEnabled = true; // Default to on
 
 // Initialize audio
 async function initAudio() {
@@ -599,7 +599,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorMessage = document.getElementById('error-message');
     
     // Set initial visualization state
-    visualizationToggle.value = 'off';
+    visualizationToggle.value = 'on';
     
     // Handle visualization toggle
     visualizationToggle.addEventListener('change', () => {
