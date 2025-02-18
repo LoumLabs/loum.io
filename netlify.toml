@@ -6,6 +6,7 @@
     cp -r audiodata dist/ &&
     cp -r meter dist/ &&
     cp -r mixer dist/ &&
+    cp -r nasa-apod dist/ &&
     cp -r tuner dist/ &&
     cp main.js dist/ &&
     cp preload.js dist/
