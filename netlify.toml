@@ -8,6 +8,7 @@
     cp -r mixer dist/ &&
     cp -r nasa-apod dist/ &&
     cp -r tuner dist/ &&
+    cp -r randcamp dist/ &&
     cp main.js dist/ &&
     cp preload.js dist/
   """
@@ -19,7 +20,7 @@
   NEXT_PUBLIC_API_URL = "/.netlify/functions"
 
 [[redirects]]
-  from = "/audio2text/api/*"
+  from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
 
@@ -27,4 +28,3 @@
   from = "/*"
   to = "/index.html"
   status = 200
-  conditions = {Path = ["/"]}
