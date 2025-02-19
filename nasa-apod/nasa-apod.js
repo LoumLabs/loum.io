@@ -383,7 +383,7 @@ async function startSound() {
     scanDirection = { x: 1, y: 1 };
     
     let verticalScanCount = 0;
-    const verticalScansBeforeHorizontalMove = 3; // More scans before moving horizontally
+    const verticalScansBeforeHorizontalMove = 1; // Changed from 3 to 1 to move after one complete up-down cycle
     const stepsPerVerticalScan = 40; // More steps for smoother movement
     let currentVerticalStep = 0;
     
