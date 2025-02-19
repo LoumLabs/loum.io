@@ -1,71 +1,89 @@
-// Initial album list with album IDs
-const albums = [
-    {
-        id: '494503896',  // Defenders Of The City
-        url: 'https://supermadnes.bandcamp.com/album/defenders-of-the-city'
-    },
-    {
-        id: '1876423409', // Live at Rare Bird Farm
-        url: 'https://catclydeband.bandcamp.com/album/live-at-rare-bird-farm-a-benefit-album-for-western-north-carolina'
-    },
-    {
-        id: '3711838002', // Disk Musik
-        url: 'https://phantomlimblabel.bandcamp.com/album/disk-musik-a-dd-records-compilation'
-    }
-];
-
-// Keep track of current album
+// Load albums from JSON file
+let albums = [];
 let currentAlbumId = null;
-
-// DOM elements
-const nextButton = document.getElementById('nextButton');
 
 // Function to get a random album (different from current)
 function getRandomAlbum() {
-    // Filter out current album
-    const availableAlbums = albums.filter(album => album.id !== currentAlbumId);
+    if (!albums || albums.length === 0) {
+        console.error('No albums available');
+        return null;
+    }
     
-    // Get random album from remaining options
+    // Filter out current album to prevent repeats
+    const availableAlbums = albums.filter(album => album.id !== currentAlbumId);
+    if (availableAlbums.length === 0) {
+        // If we've filtered out all albums, reset and use the full list
+        availableAlbums = albums;
+    }
+    
     const randomIndex = Math.floor(Math.random() * availableAlbums.length);
     const newAlbum = availableAlbums[randomIndex];
-    
-    // Update current album ID
     currentAlbumId = newAlbum.id;
     return newAlbum;
 }
 
-// Function to create player iframe
-function createPlayerIframe(album) {
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'width: 348px; height: 466px;';
-    iframe.setAttribute('seamless', '');
-    iframe.src = `https://bandcamp.com/EmbeddedPlayer/album=${album.id}/size=large/bgcol=ffffff/linkcol=0687f5/tracklist=false/transparent=true/`;
+function loadRandomAlbum() {
+    const album = getRandomAlbum();
+    if (!album) return;  // Don't proceed if no album is available
     
-    const fallbackLink = document.createElement('a');
-    fallbackLink.href = album.url;
-    fallbackLink.textContent = 'View album on Bandcamp';
-    iframe.appendChild(fallbackLink);
-    
-    return iframe;
-}
-
-// Function to switch players
-function switchPlayer(newAlbum) {
-    // Remove current player if it exists
-    const currentPlayer = document.querySelector('iframe');
-    if (currentPlayer) {
-        currentPlayer.remove();
+    const embed = document.getElementById('embed');
+    if (!embed) {
+        console.error('Embed container not found');
+        return;
     }
     
-    // Create and insert new player
-    const newPlayer = createPlayerIframe(newAlbum);
-    document.querySelector('.container').insertBefore(newPlayer, nextButton);
+    // Clear existing content
+    embed.innerHTML = '';
+    
+    // Create new iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.border = 0;
+    iframe.width = "350px";
+    iframe.height = "470px";
+    iframe.setAttribute('src', `https://bandcamp.com/EmbeddedPlayer/album=${album.id}/size=large/bgcol=333333/linkcol=0f91ff/tracklist=false/transparent=true/`);
+    iframe.setAttribute('seamless', '');
+    embed.appendChild(iframe);
+    
+    // Update link to album
+    const albumLink = document.getElementById('album-link');
+    if (albumLink) {
+        albumLink.href = album.url;
+    }
 }
 
-// Load initial album
-switchPlayer(getRandomAlbum());
-
-// Add click handler for next button
-nextButton.addEventListener('click', () => {
-    switchPlayer(getRandomAlbum());
+// Initialize the app when the DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    // Load albums from JSON file
+    fetch('bandcamp_albums.json')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (!Array.isArray(data) || data.length === 0) {
+                throw new Error('No albums found in JSON file');
+            }
+            albums = data;
+            console.log(`Loaded ${albums.length} albums`);
+            loadRandomAlbum();
+        })
+        .catch(error => {
+            console.error('Error loading albums:', error);
+            // Fallback to a default album if loading fails
+            albums = [{
+                id: "1618145259",
+                url: "https://cloudcore.bandcamp.com/album/bad-posture"
+            }];
+            loadRandomAlbum();
+        });
+    
+    // Add click handler for next button
+    const button = document.getElementById('next-button');
+    if (button) {
+        button.addEventListener('click', loadRandomAlbum);
+    } else {
+        console.error('Next button not found');
+    }
 });
